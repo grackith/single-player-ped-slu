@@ -1,0 +1,4 @@
+repository "slu-ped/slu-ped@2475341377281@cloud"
+  path "/"
+    br "/main"
+    co "/main"
