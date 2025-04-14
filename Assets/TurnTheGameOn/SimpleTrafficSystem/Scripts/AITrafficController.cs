@@ -8,6 +8,7 @@
     using Unity.Mathematics;
     using Unity.Jobs;
     using System.Linq;
+    using System;
 
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficcontroller")]
     public class AITrafficController : MonoBehaviour
@@ -212,9 +213,55 @@
         }
         public void Set_RoutePointPositionArray(int _index)
         {
-            routePointPositionNL[_index] = carRouteList[_index].waypointDataList[currentRoutePointIndexNL[_index]]._transform.position;
-            finalRoutePointPositionNL[_index] = carRouteList[_index].waypointDataList[carRouteList[_index].waypointDataList.Count - 1]._transform.position;
+            // Validate index against carRouteList
+            if (_index < 0 || _index >= carRouteList.Count)
+            {
+                Debug.LogWarning($"Invalid index {_index} in Set_RoutePointPositionArray: Out of bounds for carRouteList. Skipping update.");
+                return;
+            }
+
+            // Validate route has waypoints
+            if (carRouteList[_index] == null || carRouteList[_index].waypointDataList == null || carRouteList[_index].waypointDataList.Count == 0)
+            {
+                Debug.LogWarning($"Car route at index {_index} has no waypoints. Skipping update.");
+                return;
+            }
+
+            // Validate and correct currentRoutePointIndexNL
+            if (currentRoutePointIndexNL[_index] < 0 || currentRoutePointIndexNL[_index] >= carRouteList[_index].waypointDataList.Count)
+            {
+                // Instead of error, fix the issue by clamping the index
+                currentRoutePointIndexNL[_index] = Mathf.Clamp(currentRoutePointIndexNL[_index], 0, carRouteList[_index].waypointDataList.Count - 1);
+                Debug.LogWarning($"Fixed currentRoutePointIndexNL[{_index}] to valid value: {currentRoutePointIndexNL[_index]}");
+            }
+
+            // Now access the route point safely
+            Transform waypointTransform = carRouteList[_index].waypointDataList[currentRoutePointIndexNL[_index]]._transform;
+            if (waypointTransform != null)
+            {
+                routePointPositionNL[_index] = waypointTransform.position;
+            }
+            else
+            {
+                Debug.LogWarning($"Waypoint transform is null for route {_index} at point {currentRoutePointIndexNL[_index]}");
+            }
+
+            // Set final route point safely
+            if (carRouteList[_index].waypointDataList.Count > 0)
+            {
+                Transform finalTransform = carRouteList[_index].waypointDataList[carRouteList[_index].waypointDataList.Count - 1]._transform;
+                if (finalTransform != null)
+                {
+                    finalRoutePointPositionNL[_index] = finalTransform.position;
+                }
+                else
+                {
+                    Debug.LogWarning($"Final waypoint transform is null for route {_index}");
+                }
+            }
         }
+
+
         public void SetVisibleState(int _index, bool _isVisible)
         {
             if (isVisibleNL.IsCreated) isVisibleNL[_index] = _isVisible;
@@ -292,6 +339,12 @@
         }
         public AITrafficWaypointRoute GetCarRoute(int _index)
         {
+            // Validate index before accessing
+            if (_index < 0 || _index >= carRouteList.Count)
+            {
+                Debug.LogWarning($"GetCarRoute: Invalid index {_index}. Total routes: {carRouteList.Count}");
+                return null;
+            }
             return carRouteList[_index];
         }
         public AITrafficCar[] GetTrafficCars()
@@ -325,7 +378,7 @@
             return null;
         }
         #endregion
-
+         
         #region Registers
         public int RegisterCarAI(AITrafficCar carAI, AITrafficWaypointRoute route)
 
@@ -510,26 +563,15 @@
             trafficSpawnPoints.Remove(_TrafficSpawnPoint);
             availableSpawnPoints.Clear();
         }
-        public void ReregisterAllRoutes()
+
+        
+        public int RegisterAITrafficWaypointRoute(AITrafficWaypointRoute _route)
         {
-            // Clear existing route registrations
-            if (carRouteList != null)
-            {
-                carRouteList.Clear();
-            }
-
-            // Find all routes in the scene
-            var routes = FindObjectsOfType<AITrafficWaypointRoute>(true);
-            foreach (var route in routes)
-            {
-                if (!allWaypointRoutesList.Contains(route))
-                {
-                    RegisterAITrafficWaypointRoute(route);
-                }
-            }
-
-            Debug.Log($"Re-registered {allWaypointRoutesList.Count} routes with traffic controller");
+            int index = allWaypointRoutesList.Count;
+            allWaypointRoutesList.Add(_route);
+            return index;
         }
+
         public void RegisterAllRoutesInScene()
         {
             // Find all routes in the current scene
@@ -541,15 +583,9 @@
                 if (route != null && !route.isRegistered)
                 {
                     RegisterAITrafficWaypointRoute(route);
-                    Debug.Log($"Registered route: {route.name}");
+                    //Debug.Log($"Registered route: {route.name}");
                 }
             }
-        }
-        public int RegisterAITrafficWaypointRoute(AITrafficWaypointRoute _route)
-        {
-            int index = allWaypointRoutesList.Count;
-            allWaypointRoutesList.Add(_route);
-            return index;
         }
         public void RemoveAITrafficWaypointRoute(AITrafficWaypointRoute _route)
         {
@@ -814,6 +850,18 @@
             }
         }
 
+        private int _density = 200;
+        public int Density
+        {
+            get { return _density; }
+            set
+            {
+                _density = value;
+                currentDensity = carList.Count - trafficPool.Count;
+                Debug.Log($"Traffic density changed to {value}. Current vehicles: {currentDensity}");
+            }
+        }
+
         // Add this new method to encapsulate the Native List initialization
         public void InitializeNativeLists()
         {
@@ -897,7 +945,7 @@
             carCount = 0;
             isInitialized = false;
 
-            Debug.Log("Native Lists Initialized");
+            //Debug.Log("Native Lists Initialized");
         }
         public void ForceCreateSpawnPoints()
         {
@@ -1012,17 +1060,6 @@
             return carRouteList;
         }
 
-        //public AITrafficWaypointRoute GetCarRoute(int _index)
-        //{
-        //    // Validate index before accessing
-        //    if (_index < 0 || _index >= carRouteList.Count)
-        //    {
-        //        Debug.LogError($"Invalid car route index: {_index}. Total routes: {carRouteList.Count}");
-        //        return null;
-        //    }
-        //    return carRouteList[_index];
-        //}
-        // Add this method to your AITrafficController class
         public List<AITrafficPoolEntry> GetTrafficPool()
         {
             return trafficPool;
@@ -1094,20 +1131,6 @@
             isInitialized = true;
         }
         // Add to AITrafficController.cs
-        private bool isJobSystemValid()
-        {
-            // Check if all required arrays are valid and have matching lengths
-            if (!driveTargetTAA.isCreated || driveTargetTAA.length == 0)
-                return false;
-
-            if (!carTAA.isCreated || carTAA.length != driveTargetTAA.length)
-                return false;
-
-            if (carCount <= 0 || carCount != driveTargetTAA.length)
-                return false;
-
-            return true;
-        }
         // Add to AITrafficController.cs
         public bool ValidateJobSystem()
         {
@@ -1144,195 +1167,384 @@
                 return false;
             }
         }
-        public void RebuildTransformArrays()
+
+        // Add this validation method
+        private bool isJobSystemValid()
         {
-            // Dispose existing arrays
-            if (driveTargetTAA.isCreated) driveTargetTAA.Dispose();
-            if (carTAA.isCreated) carTAA.Dispose();
-            if (frontRightWheelTAA.isCreated) frontRightWheelTAA.Dispose();
-            if (frontLeftWheelTAA.isCreated) frontLeftWheelTAA.Dispose();
-            if (backRightWheelTAA.isCreated) backRightWheelTAA.Dispose();
-            if (backLeftWheelTAA.isCreated) backLeftWheelTAA.Dispose();
+            // Check if all required arrays are valid and have matching lengths
+            if (!driveTargetTAA.isCreated || driveTargetTAA.length == 0)
+                return false;
 
-            // Create new arrays of known size
-            List<Transform> validDriveTargets = new List<Transform>();
-            List<Transform> validCarTransforms = new List<Transform>();
-            List<Transform> validFRWheels = new List<Transform>();
-            List<Transform> validFLWheels = new List<Transform>();
-            List<Transform> validBRWheels = new List<Transform>();
-            List<Transform> validBLWheels = new List<Transform>();
+            if (!carTAA.isCreated || carTAA.length != driveTargetTAA.length)
+                return false;
 
-            // Only add valid transforms
-            for (int i = 0; i < carList.Count; i++)
-            {
-                if (carList[i] == null || carList[i].transform == null)
-                    continue;
+            if (carCount <= 0 || carCount != driveTargetTAA.length)
+                return false;
 
-                // Create drive target if needed
-                Transform driveTarget = carList[i].transform.Find("DriveTarget");
-                if (driveTarget == null)
-                {
-                    driveTarget = new GameObject("DriveTarget").transform;
-                    driveTarget.SetParent(carList[i].transform);
-                    driveTarget.localPosition = Vector3.zero;
-                }
-
-                // Only add if we have valid wheel transforms
-                if (carList[i]._wheels == null || carList[i]._wheels.Length < 4)
-                    continue;
-
-                if (carList[i]._wheels[0].meshTransform == null ||
-                    carList[i]._wheels[1].meshTransform == null ||
-                    carList[i]._wheels[2].meshTransform == null ||
-                    carList[i]._wheels[3].meshTransform == null)
-                    continue;
-
-                // Add all valid transforms
-                validDriveTargets.Add(driveTarget);
-                validCarTransforms.Add(carList[i].transform);
-                validFRWheels.Add(carList[i]._wheels[0].meshTransform);
-                validFLWheels.Add(carList[i]._wheels[1].meshTransform);
-                validBRWheels.Add(carList[i]._wheels[2].meshTransform);
-                validBLWheels.Add(carList[i]._wheels[3].meshTransform);
-            }
-
-            // Create arrays with the validated transforms
-            driveTargetTAA = new TransformAccessArray(validDriveTargets.Count);
-            carTAA = new TransformAccessArray(validDriveTargets.Count);
-            frontRightWheelTAA = new TransformAccessArray(validDriveTargets.Count);
-            frontLeftWheelTAA = new TransformAccessArray(validDriveTargets.Count);
-            backRightWheelTAA = new TransformAccessArray(validDriveTargets.Count);
-            backLeftWheelTAA = new TransformAccessArray(validDriveTargets.Count);
-
-            // Add transforms to arrays
-            for (int i = 0; i < validDriveTargets.Count; i++)
-            {
-                driveTargetTAA.Add(validDriveTargets[i]);
-                carTAA.Add(validCarTransforms[i]);
-                frontRightWheelTAA.Add(validFRWheels[i]);
-                frontLeftWheelTAA.Add(validFLWheels[i]);
-                backRightWheelTAA.Add(validBRWheels[i]);
-                backLeftWheelTAA.Add(validBLWheels[i]);
-            }
-
-            Debug.Log($"Rebuilt transform arrays with {validDriveTargets.Count} valid vehicles");
+            return true;
         }
+       
 
         /// <summary>
         /// Directly spawns vehicles using routes in the scene, bypassing the normal spawn system
         /// </summary>
         /// <param name="forcedAmount">Maximum number of vehicles to spawn across all routes</param>
         /// 
+        // Add this to AITrafficController.cs
 
-        public void SpawnVehiclesOnAllRoutes(int carsPerRoute = 3)
+        IEnumerator SpawnStartupTrafficCoroutine()
         {
-            Debug.Log($"Starting direct vehicle spawn with {carsPerRoute} cars per route");
+            // First wait to ensure scene is properly loaded
+            yield return new WaitForEndOfFrame();
 
-            var routes = FindObjectsOfType<AITrafficWaypointRoute>();
-            if (routes.Length == 0)
+            Debug.Log("Starting traffic spawn initialization...");
+
+            try
             {
-                Debug.LogError("No routes found in the scene!");
-                return;
+                // Basic validation checks
+                if (trafficPrefabs == null || trafficPrefabs.Length == 0)
+                {
+                    Debug.LogError("No traffic prefabs assigned! Traffic initialization aborted.");
+                    yield break;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error checking traffic prefabs: {ex.Message}");
+                yield break;
             }
 
-            int totalSpawned = 0;
-
-            foreach (var route in routes)
+            // Check if we need to initialize spawn points - moved outside try-catch
+            if (trafficSpawnPoints == null || trafficSpawnPoints.Count == 0)
             {
-                if (route.waypointDataList == null || route.waypointDataList.Count < 3)
-                    continue;
-
-                // Pick valid waypoints to start cars, spacing them out
-                List<int> validWaypointIndices = new List<int>();
-                for (int i = 0; i < route.waypointDataList.Count; i += 5)
+                Debug.Log("No spawn points found, attempting to initialize...");
+                try
                 {
-                    if (i < route.waypointDataList.Count && route.waypointDataList[i]._transform != null)
-                        validWaypointIndices.Add(i);
+                    InitializeSpawnPoints();
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"Error initializing spawn points: {ex.Message}");
+                }
+                yield return new WaitForEndOfFrame(); // Safe to yield outside try-catch
+            }
+
+            // After attempting initialization, check again - moved outside try-catch
+            if (trafficSpawnPoints == null || trafficSpawnPoints.Count == 0)
+            {
+                Debug.LogError("No traffic spawn points available even after initialization! Attempting to force create spawn points...");
+                try
+                {
+                    ForceCreateSpawnPoints();
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"Error force creating spawn points: {ex.Message}");
+                }
+                yield return new WaitForEndOfFrame(); // Safe to yield outside try-catch
+
+                // Final check
+                if (trafficSpawnPoints == null || trafficSpawnPoints.Count == 0)
+                {
+                    Debug.LogError("Failed to create any spawn points. Traffic initialization aborted.");
+                    yield break;
+                }
+            }
+
+            // The rest of your method can be inside a try/catch again
+            try
+            {
+                // Initialize variables
+                availableSpawnPoints.Clear();
+                currentDensity = 0;
+                currentAmountToSpawn = Mathf.Min(density, carsInPool);
+
+                // Get spawn point center reference
+                if (centerPoint == null)
+                {
+                    centerPoint = Camera.main != null ? Camera.main.transform : transform;
+                    Debug.Log("No center point assigned, using " + centerPoint.name);
                 }
 
-                // Randomize to avoid patterns
-                validWaypointIndices = validWaypointIndices.OrderBy(x => UnityEngine.Random.value).ToList();
+                //Debug.Log($"Successfully initialized with {trafficSpawnPoints.Count} spawn points");
 
-                // Spawn cars at these positions
-                int carsSpawnedOnRoute = 0;
-                for (int i = 0; i < Mathf.Min(carsPerRoute, validWaypointIndices.Count); i++)
+                // Rest of the method continues here...
+
+                // The rest of your existing implementation...
+
+
+                // Find and validate available spawn points
+                int validSpawnPoints = 0;
+                for (int i = 0; i < trafficSpawnPoints.Count; i++)
                 {
-                    if (trafficPrefabs == null || trafficPrefabs.Length == 0)
-                        break;
-
-                    int waypointIndex = validWaypointIndices[i];
-
-                    // Pick a compatible car type
-                    AITrafficCar prefabToUse = null;
-                    foreach (var prefab in trafficPrefabs)
+                    // Skip null or invalid spawn points
+                    if (trafficSpawnPoints[i] == null || trafficSpawnPoints[i].transformCached == null)
                     {
-                        if (prefab == null) continue;
-
-                        bool typeMatched = false;
-                        foreach (var routeType in route.vehicleTypes)
-                        {
-                            if (routeType == prefab.vehicleType)
-                            {
-                                typeMatched = true;
-                                prefabToUse = prefab;
-                                break;
-                            }
-                        }
-
-                        if (typeMatched) break;
+                        continue;
                     }
-
-                    if (prefabToUse == null) continue;
 
                     try
                     {
-                        // Create the car
-                        Vector3 spawnPos = route.waypointDataList[waypointIndex]._transform.position;
-                        spawnPos.y += 0.5f; // Raise slightly
+                        // Calculate distance (handle position exceptions)
+                        distanceToSpawnPoint = Vector3.Distance(centerPoint.position, trafficSpawnPoints[i].transformCached.position);
 
-                        Quaternion spawnRot = route.waypointDataList[waypointIndex]._transform.rotation;
-                        GameObject car = Instantiate(prefabToUse.gameObject, spawnPos, spawnRot);
-                        AITrafficCar carComponent = car.GetComponent<AITrafficCar>();
-
-                        if (carComponent != null)
+                        if (!trafficSpawnPoints[i].isTrigger)
                         {
-                            // Register car with route
-                            carComponent.RegisterCar(route);
-
-                            // Set current waypoint index
-                            if (carComponent.assignedIndex >= 0 &&
-                                currentRoutePointIndexNL.IsCreated &&
-                                carComponent.assignedIndex < currentRoutePointIndexNL.Length)
-                            {
-                                currentRoutePointIndexNL[carComponent.assignedIndex] = waypointIndex;
-                            }
-
-                            // Start driving
-                            carComponent.StartDriving();
-
-                            carsSpawnedOnRoute++;
-                            totalSpawned++;
-
-                            // Parent cars if needed
-                            if (setCarParent && carParent != null)
-                            {
-                                car.transform.SetParent(carParent);
-                            }
+                            availableSpawnPoints.Add(trafficSpawnPoints[i]);
+                            validSpawnPoints++;
                         }
                     }
                     catch (System.Exception ex)
                     {
-                        Debug.LogWarning($"Error spawning car: {ex.Message}");
+                        Debug.LogWarning($"Error processing spawn point {i}: {ex.Message}");
                     }
                 }
 
-                Debug.Log($"Spawned {carsSpawnedOnRoute} cars on route {route.name}");
+                //Debug.Log($"Found {validSpawnPoints} valid spawn points out of {trafficSpawnPoints.Count} total");
+
+                if (availableSpawnPoints.Count == 0)
+                {
+                    Debug.LogWarning("No valid spawn points after filtering. Traffic initialization will be limited.");
+                }
+
+                // Step 1: Spawn initial traffic at valid spawn points
+                int successfullySpawned = 0;
+
+                // Only attempt to spawn if we have spawn points
+                if (availableSpawnPoints.Count > 0)
+                {
+                    for (int i = 0; i < Mathf.Min(density, availableSpawnPoints.Count); i++)
+                    {
+                        // Try each prefab type
+                        for (int j = 0; j < trafficPrefabs.Length; j++)
+                        {
+                            if (trafficPrefabs[j] == null) continue;
+
+                            if (availableSpawnPoints.Count == 0) break;
+
+                            // Get random spawn point safely
+                            int spawnPointIndex = UnityEngine.Random.Range(0, availableSpawnPoints.Count);
+                            if (spawnPointIndex >= availableSpawnPoints.Count) continue; // Extra safety
+
+                            // Safety check for null references
+                            if (availableSpawnPoints[spawnPointIndex] == null ||
+                                availableSpawnPoints[spawnPointIndex].transformCached == null ||
+                                availableSpawnPoints[spawnPointIndex].waypoint == null ||
+                                availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.parentRoute == null ||
+                                availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.parentRoute.vehicleTypes == null)
+                            {
+                                availableSpawnPoints.RemoveAt(spawnPointIndex);
+                                continue;
+                            }
+
+                            // Calculate spawn position
+                            spawnPosition = availableSpawnPoints[spawnPointIndex].transformCached.position + spawnOffset;
+                            var spawnRotation = availableSpawnPoints[spawnPointIndex].transformCached.rotation;
+                            var parentRoute = availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.parentRoute;
+
+                            // Validate vehicle type compatibility
+                            bool typeMatched = false;
+                            for (int k = 0; k < parentRoute.vehicleTypes.Length; k++)
+                            {
+                                if (parentRoute.vehicleTypes[k] == trafficPrefabs[j].vehicleType)
+                                {
+                                    typeMatched = true;
+                                    break;
+                                }
+                            }
+
+                            if (!typeMatched) continue;
+
+                            try
+                            {
+                                // Safety check for waypoint indices
+                                if (parentRoute.waypointDataList == null ||
+                                    parentRoute.waypointDataList.Count == 0 ||
+                                    availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber < 0 ||
+                                    availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber >= parentRoute.waypointDataList.Count ||
+                                    parentRoute.waypointDataList[availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber]._transform == null)
+                                {
+                                    continue; // Skip if waypoint data is invalid
+                                }
+
+                                // Instantiate the vehicle
+                                GameObject spawnedVehicle = Instantiate(trafficPrefabs[j].gameObject, spawnPosition, spawnRotation);
+                                AITrafficCar carComponent = spawnedVehicle.GetComponent<AITrafficCar>();
+
+                                if (carComponent != null)
+                                {
+                                    // Register car with route
+                                    carComponent.RegisterCar(parentRoute);
+
+                                    // Make it look at the next waypoint
+                                    Transform targetWaypoint = parentRoute.waypointDataList[availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber]._transform;
+                                    spawnedVehicle.transform.LookAt(targetWaypoint);
+
+                                    successfullySpawned++;
+                                }
+                                else
+                                {
+                                    Debug.LogWarning("Could not find AITrafficCar component on spawned vehicle!");
+                                    Destroy(spawnedVehicle);
+                                }
+                            }
+                            catch (System.Exception ex)
+                            {
+                                Debug.LogError($"Error spawning vehicle: {ex.Message}");
+                            }
+
+                            // Remove the used spawn point
+                            if (spawnPointIndex < availableSpawnPoints.Count)
+                            {
+                                availableSpawnPoints.RemoveAt(spawnPointIndex);
+                            }
+
+                            if (currentAmountToSpawn > 0) currentAmountToSpawn--;
+                            if (currentAmountToSpawn <= 0) break;
+                        }
+
+                        if (currentAmountToSpawn <= 0 || availableSpawnPoints.Count == 0) break;
+                    }
+                }
+
+                Debug.Log($"Successfully spawned {successfullySpawned} vehicles in the scene");
+
+                // Step 2: Populate the car pool with additional cars
+                int pooledCarsToCreate = Mathf.Max(0, carsInPool - carCount);
+                int pooledCarsCreated = 0;
+
+                for (int i = 0; i < pooledCarsToCreate; i++)
+                {
+                    // Verify we have at least one route to assign
+                    if (carRouteList.Count == 0)
+                    {
+                        Debug.LogError("No routes available for pooled cars! Aborting pool creation.");
+                        break;
+                    }
+
+                    for (int j = 0; j < trafficPrefabs.Length; j++)
+                    {
+                        if (trafficPrefabs[j] == null) continue;
+
+                        if (carCount >= carsInPool) break;
+
+                        try
+                        {
+                            // Create disabled car at pool position
+                            GameObject pooledVehicle = Instantiate(trafficPrefabs[j].gameObject, disabledPosition, Quaternion.identity);
+                            AITrafficCar carComponent = pooledVehicle.GetComponent<AITrafficCar>();
+
+                            if (carComponent != null)
+                            {
+                                // Register with first route
+                                carComponent.RegisterCar(carRouteList[0]);
+                                carComponent.ReinitializeRouteConnection();
+
+                                // Add to pool immediately
+                                MoveCarToPool(carComponent.assignedIndex);
+                                pooledCarsCreated++;
+                            }
+                            else
+                            {
+                                Debug.LogWarning("Could not find AITrafficCar component on pooled vehicle!");
+                                Destroy(pooledVehicle);
+                            }
+                        }
+                        catch (System.Exception ex)
+                        {
+                            Debug.LogError($"Error creating pooled vehicle: {ex.Message}");
+                        }
+                    }
+                }
+
+                Debug.Log($"Created {pooledCarsCreated} additional vehicles in the car pool");
+
+                // Step 3: Set up routes and parenting for active cars
+                int initializedCarCount = 0;
+
+                for (int i = 0; i < carCount; i++)
+                {
+                    try
+                    {
+                        // Skip null car entries
+                        if (i >= carList.Count || carList[i] == null)
+                        {
+                            continue;
+                        }
+
+                        // Skip if carRouteList is invalid
+                        if (i >= carRouteList.Count || carRouteList[i] == null ||
+                            carRouteList[i].waypointDataList == null || carRouteList[i].waypointDataList.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        // Skip if currentRoutePointIndexNL is out of range
+                        if (i >= currentRoutePointIndexNL.Length || currentRoutePointIndexNL[i] < 0 ||
+                            currentRoutePointIndexNL[i] >= carRouteList[i].waypointDataList.Count)
+                        {
+                            continue;
+                        }
+
+                        // Set route position data
+                        if (carRouteList[i].waypointDataList[currentRoutePointIndexNL[i]]._transform != null)
+                        {
+                            routePointPositionNL[i] = carRouteList[i].waypointDataList[currentRoutePointIndexNL[i]]._transform.position;
+                        }
+
+                        if (carRouteList[i].waypointDataList.Count > 0 &&
+                            carRouteList[i].waypointDataList[carRouteList[i].waypointDataList.Count - 1]._transform != null)
+                        {
+                            finalRoutePointPositionNL[i] = carRouteList[i].waypointDataList[carRouteList[i].waypointDataList.Count - 1]._transform.position;
+                        }
+
+                        // Start driving
+                        carList[i].StartDriving();
+                        initializedCarCount++;
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"Error initializing car {i}: {ex.Message}");
+                    }
+                }
+
+                Debug.Log($"Started driving for {initializedCarCount} cars");
+
+                // Step 4: Set parenting if needed
+                if (setCarParent)
+                {
+                    if (carParent == null) carParent = transform;
+
+                    int parentedCars = 0;
+                    for (int i = 0; i < carCount; i++)
+                    {
+                        if (i < carList.Count && carList[i] != null)
+                        {
+                            try
+                            {
+                                carList[i].transform.SetParent(carParent);
+                                parentedCars++;
+                            }
+                            catch (System.Exception ex)
+                            {
+                                Debug.LogWarning($"Error parenting car {i}: {ex.Message}");
+                            }
+                        }
+                    }
+
+                    Debug.Log($"Set parent for {parentedCars} cars to {carParent.name}");
+                }
+
+                isInitialized = true;
+                Debug.Log("Traffic system initialization complete");
             }
-
-            Debug.Log($"Total vehicles spawned: {totalSpawned}");
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Critical error in SpawnStartupTrafficCoroutine: {ex.Message}\n{ex.StackTrace}");
+                isInitialized = true; // Try to recover
+            }
         }
-
-        public void DirectlySpawnVehicles(int forcedAmount = 20)
+        public void DirectlySpawnVehicles(int forcedAmount = 1)
         {
             Debug.Log($"Starting direct traffic spawn with forced amount: {forcedAmount}");
 
@@ -1409,138 +1621,88 @@
                 }
 
                 // Spawn vehicles at valid waypoints
-
                 int routeSpawnCount = 0;
-
                 foreach (int waypointIndex in validWaypointIndices)
-
                 {
-
                     if (routeSpawnCount >= vehiclesPerRoute || spawnedVehicles >= forcedAmount)
-
                         break;
 
-
-
                     // Get base position from waypoint
-
                     Vector3 spawnPos = route.waypointDataList[waypointIndex]._transform.position;
 
-
-
                     // Add slight randomness to prevent overlap
-
                     spawnPos.y += 0.5f; // Raise slightly to avoid ground clipping
-
                     spawnPos.x += UnityEngine.Random.Range(-1.0f, 1.0f);
-
                     spawnPos.z += UnityEngine.Random.Range(-1.0f, 1.0f);
 
-
-
                     // Calculate proper rotation facing the next waypoint
-
                     int nextWaypointIndex = Mathf.Min(waypointIndex + 1, route.waypointDataList.Count - 1);
-
                     Vector3 nextWaypointPos = route.waypointDataList[nextWaypointIndex]._transform.position;
-
                     Quaternion spawnRot = Quaternion.LookRotation(nextWaypointPos - spawnPos);
 
-
-
                     // Choose random compatible prefab
-
                     AITrafficCar prefab = compatiblePrefabs[UnityEngine.Random.Range(0, compatiblePrefabs.Count)];
 
-
-
                     try
-
                     {
-
                         // Instantiate vehicle
-
                         GameObject vehicle = Instantiate(prefab.gameObject, spawnPos, spawnRot);
-
                         AITrafficCar carComponent = vehicle.GetComponent<AITrafficCar>();
 
-
-
                         if (carComponent != null)
-
                         {
-
-                            // Clear any existing route assignments to prevent conflicts
-
-                            carComponent.waypointRoute = null;
-
-
+                            // CRITICAL: Explicitly set the route reference before registering
+                            carComponent.waypointRoute = route;
 
                             // Register explicitly with the route
-
                             carComponent.RegisterCar(route);
+                            //carComponent.ReinitializeRouteConnection(); // Add this line
 
-
-
-                            // Set explicit current waypoint index to the spawned waypoint
-
-                            if (carComponent.assignedIndex >= 0)
-
+                            Transform driveTarget = carComponent.transform.Find("DriveTarget");
+                            if (driveTarget == null)
                             {
-
-                                Set_CurrentRoutePointIndexArray(carComponent.assignedIndex, waypointIndex,
-
-                                    route.waypointDataList[waypointIndex]._waypoint);
-
-                                Set_RoutePointPositionArray(carComponent.assignedIndex);
-
-
-
-                                // Explicitly set active flags in the controller
-
-                                isDrivingNL[carComponent.assignedIndex] = true;
-
-                                isActiveNL[carComponent.assignedIndex] = true;
-
-                                canProcessNL[carComponent.assignedIndex] = true;
-
+                                driveTarget = new GameObject("DriveTarget").transform;
+                                driveTarget.SetParent(carComponent.transform);
+                                driveTarget.localPosition = Vector3.zero;
                             }
 
+                            // Position drive target at NEXT waypoint
+                            if (waypointIndex + 1 < route.waypointDataList.Count)
+                            {
+                                driveTarget.position = route.waypointDataList[waypointIndex + 1]._transform.position;
+                            }
 
+                            // Set explicit current waypoint index
+                            if (carComponent.assignedIndex >= 0)
+                            {
+                                // This is critical - uncomment/add this line
+                                Set_CurrentRoutePointIndexArray(carComponent.assignedIndex, waypointIndex, route.waypointDataList[waypointIndex]._waypoint);
+                                Set_RoutePointPositionArray(carComponent.assignedIndex);
+
+                                // Explicitly set active flags in the controller
+                                isDrivingNL[carComponent.assignedIndex] = true;
+                                isActiveNL[carComponent.assignedIndex] = true;
+                                canProcessNL[carComponent.assignedIndex] = true;
+                            }
+                            carComponent.ReinitializeRouteConnection(); // Add this line
 
                             // Now start driving
-
                             carComponent.StartDriving();
 
-
-
                             // Record this position as used
-
                             usedPositions.Add(spawnPos);
-
                             routeSpawnCount++;
-
                             spawnedVehicles++;
-
-
-
-                            Debug.Log($"Spawned {prefab.name} at waypoint {waypointIndex} on route {route.name}");
-
                         }
-
                     }
-
                     catch (System.Exception ex)
-
                     {
-
                         Debug.LogWarning($"Error spawning vehicle on route {route.name}: {ex.Message}");
-
                     }
-
                 }
-
             }
+
+            Debug.Log($"Direct spawning complete: {spawnedVehicles} vehicles spawned");
         }
 
 
@@ -2018,101 +2180,63 @@
             }
         }
 
-        //private void OnDestroy()
-        //{
-        //    DisposeArrays(true);
-        //}
-
-        void DisposeArrays(bool _isQuit)
+        public void LogTransformArrayInfo()
         {
-            if (_isQuit)
+            Debug.Log($"--- Transform Arrays Status ---");
+            Debug.Log($"driveTargetTAA created: {driveTargetTAA.isCreated}, length: {(driveTargetTAA.isCreated ? driveTargetTAA.length : 0)}");
+            Debug.Log($"carTAA created: {carTAA.isCreated}, length: {(carTAA.isCreated ? carTAA.length : 0)}");
+            Debug.Log($"Total carCount: {carCount}");
+            Debug.Log($"carList count: {carList.Count}");
+            Debug.Log($"isDrivingNL length: {isDrivingNL.Length}");
+            Debug.Log($"------------------------");
+        }
+        public void ForceAllCarsToMoveDirectly()
+        {
+            // Rebuild arrays first to ensure we have the most up-to-date car information
+            RebuildTransformArrays();
+
+            for (int i = 0; i < carCount; i++)
             {
-                // Same NativeList disposals as before, but with IsCreated checks
-                if (currentRoutePointIndexNL.IsCreated) currentRoutePointIndexNL.Dispose();
-                if (waypointDataListCountNL.IsCreated) waypointDataListCountNL.Dispose();
-                if (carTransformPreviousPositionNL.IsCreated) carTransformPreviousPositionNL.Dispose();
-                if (carTransformPositionNL.IsCreated) carTransformPositionNL.Dispose();
-                if (finalRoutePointPositionNL.IsCreated) finalRoutePointPositionNL.Dispose();
-                if (routePointPositionNL.IsCreated) routePointPositionNL.Dispose();
-                if (forceChangeLanesNL.IsCreated) forceChangeLanesNL.Dispose();
-                if (isChangingLanesNL.IsCreated) isChangingLanesNL.Dispose();
-                if (canChangeLanesNL.IsCreated) canChangeLanesNL.Dispose();
-                if (isDrivingNL.IsCreated) isDrivingNL.Dispose();
-                if (isActiveNL.IsCreated) isActiveNL.Dispose();
-                if (speedNL.IsCreated) speedNL.Dispose();
-                if (routeProgressNL.IsCreated) routeProgressNL.Dispose();
-                if (targetSpeedNL.IsCreated) targetSpeedNL.Dispose();
-                if (accelNL.IsCreated) accelNL.Dispose();
-                if (speedLimitNL.IsCreated) speedLimitNL.Dispose();
-                if (targetAngleNL.IsCreated) targetAngleNL.Dispose();
-                if (dragNL.IsCreated) dragNL.Dispose();
-                if (angularDragNL.IsCreated) angularDragNL.Dispose();
-                if (overrideDragNL.IsCreated) overrideDragNL.Dispose();
-                if (localTargetNL.IsCreated) localTargetNL.Dispose();
-                if (steerAngleNL.IsCreated) steerAngleNL.Dispose();
-                if (motorTorqueNL.IsCreated) motorTorqueNL.Dispose();
-                if (accelerationInputNL.IsCreated) accelerationInputNL.Dispose();
-                if (brakeTorqueNL.IsCreated) brakeTorqueNL.Dispose();
-                if (moveHandBrakeNL.IsCreated) moveHandBrakeNL.Dispose();
-                if (overrideInputNL.IsCreated) overrideInputNL.Dispose();
-                if (distanceToEndPointNL.IsCreated) distanceToEndPointNL.Dispose();
-                if (overrideAccelerationPowerNL.IsCreated) overrideAccelerationPowerNL.Dispose();
-                if (overrideBrakePowerNL.IsCreated) overrideBrakePowerNL.Dispose();
-                if (isBrakingNL.IsCreated) isBrakingNL.Dispose();
-                if (FRwheelPositionNL.IsCreated) FRwheelPositionNL.Dispose();
-                if (FRwheelRotationNL.IsCreated) FRwheelRotationNL.Dispose();
-                if (FLwheelPositionNL.IsCreated) FLwheelPositionNL.Dispose();
-                if (FLwheelRotationNL.IsCreated) FLwheelRotationNL.Dispose();
-                if (BRwheelPositionNL.IsCreated) BRwheelPositionNL.Dispose();
-                if (BRwheelRotationNL.IsCreated) BRwheelRotationNL.Dispose();
-                if (BLwheelPositionNL.IsCreated) BLwheelPositionNL.Dispose();
-                if (BLwheelRotationNL.IsCreated) BLwheelRotationNL.Dispose();
-                if (previousFrameSpeedNL.IsCreated) previousFrameSpeedNL.Dispose();
-                if (brakeTimeNL.IsCreated) brakeTimeNL.Dispose();
-                if (topSpeedNL.IsCreated) topSpeedNL.Dispose();
-                if (frontSensorTransformPositionNL.IsCreated) frontSensorTransformPositionNL.Dispose();
-                if (frontSensorLengthNL.IsCreated) frontSensorLengthNL.Dispose();
-                if (frontSensorSizeNL.IsCreated) frontSensorSizeNL.Dispose();
-                if (sideSensorLengthNL.IsCreated) sideSensorLengthNL.Dispose();
-                if (sideSensorSizeNL.IsCreated) sideSensorSizeNL.Dispose();
-                if (minDragNL.IsCreated) minDragNL.Dispose();
-                if (minAngularDragNL.IsCreated) minAngularDragNL.Dispose();
-                if (frontHitDistanceNL.IsCreated) frontHitDistanceNL.Dispose();
-                if (leftHitDistanceNL.IsCreated) leftHitDistanceNL.Dispose();
-                if (rightHitDistanceNL.IsCreated) rightHitDistanceNL.Dispose();
-                if (frontHitNL.IsCreated) frontHitNL.Dispose();
-                if (leftHitNL.IsCreated) leftHitNL.Dispose();
-                if (rightHitNL.IsCreated) rightHitNL.Dispose();
-                if (stopForTrafficLightNL.IsCreated) stopForTrafficLightNL.Dispose();
-                if (yieldForCrossTrafficNL.IsCreated) yieldForCrossTrafficNL.Dispose();
-                if (routeIsActiveNL.IsCreated) routeIsActiveNL.Dispose();
-                if (isVisibleNL.IsCreated) isVisibleNL.Dispose();
-                if (isDisabledNL.IsCreated) isDisabledNL.Dispose();
-                if (withinLimitNL.IsCreated) withinLimitNL.Dispose();
-                if (distanceToPlayerNL.IsCreated) distanceToPlayerNL.Dispose();
-                if (accelerationPowerNL.IsCreated) accelerationPowerNL.Dispose();
-                if (isEnabledNL.IsCreated) isEnabledNL.Dispose();
-                if (outOfBoundsNL.IsCreated) outOfBoundsNL.Dispose();
-                if (lightIsActiveNL.IsCreated) lightIsActiveNL.Dispose();
-                if (canProcessNL.IsCreated) canProcessNL.Dispose();
+                if (carList[i] != null && carList[i].isActiveAndEnabled)
+                {
+                    // Force the car to be active and driving
+                    isDrivingNL[i] = true;
+                    isActiveNL[i] = true;
+                    canProcessNL[i] = true;
+
+                    // Reset any error states
+                    overrideInputNL[i] = false;
+                    isBrakingNL[i] = false;
+
+                    // Directly apply movement logic
+                    if (currentWaypointList[i] != null && currentWaypointList[i].onReachWaypointSettings.nextPointInRoute != null)
+                    {
+                        // Calculate direction to next waypoint
+                        Vector3 targetPosition = currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.transform.position;
+                        Vector3 direction = (targetPosition - carList[i].transform.position).normalized;
+
+                        // Apply movement directly to the rigidbody
+                        if (rigidbodyList[i] != null)
+                        {
+                            // Add force in the direction of the next waypoint
+                            rigidbodyList[i].velocity = direction * speedLimitNL[i] * 0.5f;
+
+                            // Rotate car towards target
+                            Quaternion targetRotation = Quaternion.LookRotation(direction);
+                            rigidbodyList[i].rotation = Quaternion.Slerp(rigidbodyList[i].rotation, targetRotation, Time.deltaTime * 2f);
+
+                            // Ensure the car isn't stuck
+                            rigidbodyList[i].drag = 0.1f;
+                            rigidbodyList[i].angularDrag = 0.1f;
+                        }
+                    }
+                }
             }
 
-            // Keep the existing TAA array and native array disposal code
-            if (driveTargetTAA.isCreated) driveTargetTAA.Dispose();
-            if (carTAA.isCreated) carTAA.Dispose();
-            if (frontRightWheelTAA.isCreated) frontRightWheelTAA.Dispose();
-            if (frontLeftWheelTAA.isCreated) frontLeftWheelTAA.Dispose();
-            if (backRightWheelTAA.isCreated) backRightWheelTAA.Dispose();
-            if (backLeftWheelTAA.isCreated) backLeftWheelTAA.Dispose();
-
-            if (frontBoxcastCommands.IsCreated) frontBoxcastCommands.Dispose();
-            if (leftBoxcastCommands.IsCreated) leftBoxcastCommands.Dispose();
-            if (rightBoxcastCommands.IsCreated) rightBoxcastCommands.Dispose();
-            if (frontBoxcastResults.IsCreated) frontBoxcastResults.Dispose();
-            if (leftBoxcastResults.IsCreated) leftBoxcastResults.Dispose();
-            if (rightBoxcastResults.IsCreated) rightBoxcastResults.Dispose();
-            DisposeAllNativeCollections();
+            Debug.Log("Emergency car movement complete");
         }
+
+
 
         public void DisposeAllNativeCollections()
         {
@@ -2221,11 +2345,102 @@
 
             isInitialized = false;
 
-            Debug.Log("All Native Collections Disposed and Lists Cleared");
+            //Debug.Log("All Native Collections Disposed and Lists Cleared");
         }
+        void DisposeArrays(bool _isQuit)
+        {
+            if (_isQuit)
+            {
+                // Same NativeList disposals as before, but with IsCreated checks
+                if (currentRoutePointIndexNL.IsCreated) currentRoutePointIndexNL.Dispose();
+                if (waypointDataListCountNL.IsCreated) waypointDataListCountNL.Dispose();
+                if (carTransformPreviousPositionNL.IsCreated) carTransformPreviousPositionNL.Dispose();
+                if (carTransformPositionNL.IsCreated) carTransformPositionNL.Dispose();
+                if (finalRoutePointPositionNL.IsCreated) finalRoutePointPositionNL.Dispose();
+                if (routePointPositionNL.IsCreated) routePointPositionNL.Dispose();
+                if (forceChangeLanesNL.IsCreated) forceChangeLanesNL.Dispose();
+                if (isChangingLanesNL.IsCreated) isChangingLanesNL.Dispose();
+                if (canChangeLanesNL.IsCreated) canChangeLanesNL.Dispose();
+                if (isDrivingNL.IsCreated) isDrivingNL.Dispose();
+                if (isActiveNL.IsCreated) isActiveNL.Dispose();
+                if (speedNL.IsCreated) speedNL.Dispose();
+                if (routeProgressNL.IsCreated) routeProgressNL.Dispose();
+                if (targetSpeedNL.IsCreated) targetSpeedNL.Dispose();
+                if (accelNL.IsCreated) accelNL.Dispose();
+                if (speedLimitNL.IsCreated) speedLimitNL.Dispose();
+                if (targetAngleNL.IsCreated) targetAngleNL.Dispose();
+                if (dragNL.IsCreated) dragNL.Dispose();
+                if (angularDragNL.IsCreated) angularDragNL.Dispose();
+                if (overrideDragNL.IsCreated) overrideDragNL.Dispose();
+                if (localTargetNL.IsCreated) localTargetNL.Dispose();
+                if (steerAngleNL.IsCreated) steerAngleNL.Dispose();
+                if (motorTorqueNL.IsCreated) motorTorqueNL.Dispose();
+                if (accelerationInputNL.IsCreated) accelerationInputNL.Dispose();
+                if (brakeTorqueNL.IsCreated) brakeTorqueNL.Dispose();
+                if (moveHandBrakeNL.IsCreated) moveHandBrakeNL.Dispose();
+                if (overrideInputNL.IsCreated) overrideInputNL.Dispose();
+                if (distanceToEndPointNL.IsCreated) distanceToEndPointNL.Dispose();
+                if (overrideAccelerationPowerNL.IsCreated) overrideAccelerationPowerNL.Dispose();
+                if (overrideBrakePowerNL.IsCreated) overrideBrakePowerNL.Dispose();
+                if (isBrakingNL.IsCreated) isBrakingNL.Dispose();
+                if (FRwheelPositionNL.IsCreated) FRwheelPositionNL.Dispose();
+                if (FRwheelRotationNL.IsCreated) FRwheelRotationNL.Dispose();
+                if (FLwheelPositionNL.IsCreated) FLwheelPositionNL.Dispose();
+                if (FLwheelRotationNL.IsCreated) FLwheelRotationNL.Dispose();
+                if (BRwheelPositionNL.IsCreated) BRwheelPositionNL.Dispose();
+                if (BRwheelRotationNL.IsCreated) BRwheelRotationNL.Dispose();
+                if (BLwheelPositionNL.IsCreated) BLwheelPositionNL.Dispose();
+                if (BLwheelRotationNL.IsCreated) BLwheelRotationNL.Dispose();
+                if (previousFrameSpeedNL.IsCreated) previousFrameSpeedNL.Dispose();
+                if (brakeTimeNL.IsCreated) brakeTimeNL.Dispose();
+                if (topSpeedNL.IsCreated) topSpeedNL.Dispose();
+                if (frontSensorTransformPositionNL.IsCreated) frontSensorTransformPositionNL.Dispose();
+                if (frontSensorLengthNL.IsCreated) frontSensorLengthNL.Dispose();
+                if (frontSensorSizeNL.IsCreated) frontSensorSizeNL.Dispose();
+                if (sideSensorLengthNL.IsCreated) sideSensorLengthNL.Dispose();
+                if (sideSensorSizeNL.IsCreated) sideSensorSizeNL.Dispose();
+                if (minDragNL.IsCreated) minDragNL.Dispose();
+                if (minAngularDragNL.IsCreated) minAngularDragNL.Dispose();
+                if (frontHitDistanceNL.IsCreated) frontHitDistanceNL.Dispose();
+                if (leftHitDistanceNL.IsCreated) leftHitDistanceNL.Dispose();
+                if (rightHitDistanceNL.IsCreated) rightHitDistanceNL.Dispose();
+                if (frontHitNL.IsCreated) frontHitNL.Dispose();
+                if (leftHitNL.IsCreated) leftHitNL.Dispose();
+                if (rightHitNL.IsCreated) rightHitNL.Dispose();
+                if (stopForTrafficLightNL.IsCreated) stopForTrafficLightNL.Dispose();
+                if (yieldForCrossTrafficNL.IsCreated) yieldForCrossTrafficNL.Dispose();
+                if (routeIsActiveNL.IsCreated) routeIsActiveNL.Dispose();
+                if (isVisibleNL.IsCreated) isVisibleNL.Dispose();
+                if (isDisabledNL.IsCreated) isDisabledNL.Dispose();
+                if (withinLimitNL.IsCreated) withinLimitNL.Dispose();
+                if (distanceToPlayerNL.IsCreated) distanceToPlayerNL.Dispose();
+                if (accelerationPowerNL.IsCreated) accelerationPowerNL.Dispose();
+                if (isEnabledNL.IsCreated) isEnabledNL.Dispose();
+                if (outOfBoundsNL.IsCreated) outOfBoundsNL.Dispose();
+                if (lightIsActiveNL.IsCreated) lightIsActiveNL.Dispose();
+                if (canProcessNL.IsCreated) canProcessNL.Dispose();
+            }
+
+            // Keep the existing TAA array and native array disposal code
+            if (driveTargetTAA.isCreated) driveTargetTAA.Dispose();
+            if (carTAA.isCreated) carTAA.Dispose();
+            if (frontRightWheelTAA.isCreated) frontRightWheelTAA.Dispose();
+            if (frontLeftWheelTAA.isCreated) frontLeftWheelTAA.Dispose();
+            if (backRightWheelTAA.isCreated) backRightWheelTAA.Dispose();
+            if (backLeftWheelTAA.isCreated) backLeftWheelTAA.Dispose();
+
+            if (frontBoxcastCommands.IsCreated) frontBoxcastCommands.Dispose();
+            if (leftBoxcastCommands.IsCreated) leftBoxcastCommands.Dispose();
+            if (rightBoxcastCommands.IsCreated) rightBoxcastCommands.Dispose();
+            if (frontBoxcastResults.IsCreated) frontBoxcastResults.Dispose();
+            if (leftBoxcastResults.IsCreated) leftBoxcastResults.Dispose();
+            if (rightBoxcastResults.IsCreated) rightBoxcastResults.Dispose();
+            DisposeAllNativeCollections();
+        }
+
         #endregion
 
-            #region Gizmos
+        #region Gizmos
         private bool spawnPointsAreHidden;
         private Vector3 gizmoOffset;
         private Matrix4x4 cubeTransform;
@@ -2548,6 +2763,7 @@
         // Add this method to AITrafficController.cs
         // Add this method to AITrafficController.cs
         // In AITrafficController.cs, modify RebuildInternalDataStructures:
+        // In AITrafficController.cs, add this method
         public void RebuildInternalDataStructures()
         {
             Debug.Log("Rebuilding all internal data structures for traffic controller");
@@ -2604,13 +2820,45 @@
                         routePointPositionNL[i] = carRouteList[i].waypointDataList[0]._transform.position;
                     }
 
-                    // Set other properties
-                    // (existing code)
+                    // Set final route point position
+                    if (carRouteList[i].waypointDataList.Count > 0 &&
+                        carRouteList[i].waypointDataList[carRouteList[i].waypointDataList.Count - 1]._transform != null)
+                    {
+                        finalRoutePointPositionNL[i] = carRouteList[i].waypointDataList[carRouteList[i].waypointDataList.Count - 1]._transform.position;
+                    }
+
+                    // Ensure DriveTarget transform exists and is properly set up
+                    Transform driveTarget = carList[i].transform.Find("DriveTarget");
+                    if (driveTarget == null)
+                    {
+                        driveTarget = new GameObject("DriveTarget").transform;
+                        driveTarget.SetParent(carList[i].transform);
+                        driveTarget.localPosition = Vector3.zero;
+                        driveTarget.localRotation = Quaternion.identity;
+                    }
+
+                    // If driveTargetTAA has this car's transform, update it
+                    if (i < driveTargetTAA.length && driveTargetTAA.isCreated)
+                    {
+                        // We can't directly modify the array element, so rebuilding is safer
+                        RebuildTransformArrays();
+                    }
                 }
+            }
+
+            // Ensure job system is valid
+            if (!isJobSystemValid())
+            {
+                Debug.LogWarning("Job system validation failed, rebuilding transform arrays...");
+                RebuildTransformArrays();
             }
 
             Debug.Log($"Rebuilt data structures for {carList.Count} vehicles");
         }
+
+        // Add this validation method
+
+
 
         public AITrafficCar GetCarFromPool(AITrafficWaypointRoute parentRoute, AITrafficVehicleType vehicleType)
         {
@@ -2663,6 +2911,7 @@
         {
             isActiveNL[_index] = true;
             carList[_index].gameObject.SetActive(true);
+            carList[_index].ReinitializeRouteConnection(); // ADD HERE
             carRouteList[_index] = parentRoute;
             carAIWaypointRouteInfo[_index] = parentRoute.routeInfo;
             carList[_index].StartDriving();
@@ -2721,6 +2970,14 @@
                     StartCoroutine(MoveCarToPoolCoroutine(i));
                 }
             }
+        }
+
+        // Add this to AITrafficController
+        // This should be in your AITrafficController class
+        public void RespawnTrafficAsInitial(int density)
+        {
+            this.density = density;
+            StartCoroutine(SpawnStartupTrafficCoroutine());
         }
 
         void SpawnTraffic()
@@ -2895,357 +3152,113 @@
                 }
             }
         }
-        IEnumerator SpawnStartupTrafficCoroutine()
+
+
+        // Add to AITrafficController.cs
+        public void ForceAllCarsToMove()
         {
-            // First wait to ensure scene is properly loaded
-            yield return new WaitForEndOfFrame();
+            Debug.Log("Forcing all cars to move");
 
-            Debug.Log("Starting traffic spawn initialization...");
+            var allCars = FindObjectsOfType<AITrafficCar>();
+            Debug.Log($"Found {allCars.Length} cars to force moving");
 
-            try
+            foreach (var car in allCars)
             {
-                // Basic validation checks
-                if (trafficPrefabs == null || trafficPrefabs.Length == 0)
-                {
-                    Debug.LogError("No traffic prefabs assigned! Traffic initialization aborted.");
-                    yield break;
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Error checking traffic prefabs: {ex.Message}");
-                yield break;
-            }
+                if (car == null || !car.gameObject.activeInHierarchy) continue;
 
-            // Check if we need to initialize spawn points - moved outside try-catch
-            if (trafficSpawnPoints == null || trafficSpawnPoints.Count == 0)
-            {
-                Debug.Log("No spawn points found, attempting to initialize...");
-                try
+                // Ensure drive target exists and is correctly positioned
+                Transform driveTarget = car.transform.Find("DriveTarget");
+                if (driveTarget == null)
                 {
-                    InitializeSpawnPoints();
+                    driveTarget = new GameObject("DriveTarget").transform;
+                    driveTarget.SetParent(car.transform);
+                    Debug.Log($"Created missing DriveTarget for {car.name}");
                 }
-                catch (System.Exception ex)
-                {
-                    Debug.LogError($"Error initializing spawn points: {ex.Message}");
-                }
-                yield return new WaitForEndOfFrame(); // Safe to yield outside try-catch
-            }
 
-            // After attempting initialization, check again - moved outside try-catch
-            if (trafficSpawnPoints == null || trafficSpawnPoints.Count == 0)
-            {
-                Debug.LogError("No traffic spawn points available even after initialization! Attempting to force create spawn points...");
-                try
+                // Ensure drive target is aimed at next waypoint
+                if (car.waypointRoute != null && car.assignedIndex >= 0)
                 {
-                    ForceCreateSpawnPoints();
+                    int currentIndex = currentRoutePointIndexNL[car.assignedIndex];
+                    if (currentIndex + 1 < car.waypointRoute.waypointDataList.Count)
+                    {
+                        // Position drive target at next waypoint
+                        driveTarget.position = car.waypointRoute.waypointDataList[currentIndex + 1]._transform.position;
+                        Debug.Log($"Repositioned drive target for {car.name}");
+                    }
                 }
-                catch (System.Exception ex)
-                {
-                    Debug.LogError($"Error force creating spawn points: {ex.Message}");
-                }
-                yield return new WaitForEndOfFrame(); // Safe to yield outside try-catch
 
-                // Final check
-                if (trafficSpawnPoints == null || trafficSpawnPoints.Count == 0)
-                {
-                    Debug.LogError("Failed to create any spawn points. Traffic initialization aborted.");
-                    yield break;
-                }
+                // Restart driving process
+                if (car.isDriving) car.StopDriving();
+                car.StartDriving();
+                car.ForceWaypointPathUpdate();
+                Debug.Log($"Reset driving state for {car.name}");
             }
 
-            // The rest of your method can be inside a try/catch again
-            try
+            // Rebuild transform arrays to ensure proper job system connection
+            RebuildTransformArrays();
+            RebuildInternalDataStructures();
+        }
+
+        // This is the key method to fix TransformAccessArray issues
+        public void RebuildTransformArrays()
+        {
+            // Dispose existing arrays properly first
+            if (driveTargetTAA.isCreated) driveTargetTAA.Dispose();
+            if (carTAA.isCreated) carTAA.Dispose();
+
+            // Prepare lists to store valid transforms
+            List<Transform> validDriveTargets = new List<Transform>();
+            List<Transform> validCars = new List<Transform>();
+
+            // Collect ONLY valid transforms with null checks
+            for (int i = 0; i < carCount; i++)
             {
-                // Initialize variables
-                availableSpawnPoints.Clear();
-                currentDensity = 0;
-                currentAmountToSpawn = Mathf.Min(density, carsInPool);
-
-                // Get spawn point center reference
-                if (centerPoint == null)
+                if (carList[i] != null && carList[i].gameObject != null)
                 {
-                    centerPoint = Camera.main != null ? Camera.main.transform : transform;
-                    Debug.Log("No center point assigned, using " + centerPoint.name);
-                }
-
-                Debug.Log($"Successfully initialized with {trafficSpawnPoints.Count} spawn points");
-
-                // Rest of the method continues here...
-
-                // The rest of your existing implementation...
-            
-
-        // Find and validate available spawn points
-            int validSpawnPoints = 0;
-                for (int i = 0; i < trafficSpawnPoints.Count; i++)
-                {
-                    // Skip null or invalid spawn points
-                    if (trafficSpawnPoints[i] == null || trafficSpawnPoints[i].transformCached == null)
+                    // Find the DriveTarget child transform instead of accessing a property
+                    Transform driveTarget = carList[i].transform.Find("DriveTarget");
+                    if (driveTarget != null)
                     {
-                        continue;
+                        validDriveTargets.Add(driveTarget);
+                        validCars.Add(carList[i].transform);
                     }
-
-                    try
+                    else
                     {
-                        // Calculate distance (handle position exceptions)
-                        distanceToSpawnPoint = Vector3.Distance(centerPoint.position, trafficSpawnPoints[i].transformCached.position);
-
-                        if (!trafficSpawnPoints[i].isTrigger)
-                        {
-                            availableSpawnPoints.Add(trafficSpawnPoints[i]);
-                            validSpawnPoints++;
-                        }
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogWarning($"Error processing spawn point {i}: {ex.Message}");
+                        Debug.LogWarning($"Car at index {i} has no DriveTarget child transform");
                     }
                 }
+            }
 
-                Debug.Log($"Found {validSpawnPoints} valid spawn points out of {trafficSpawnPoints.Count} total");
+            // Create new arrays with the valid transforms
+            driveTargetTAA = new TransformAccessArray(validDriveTargets.ToArray());
+            carTAA = new TransformAccessArray(validCars.ToArray());
 
-                if (availableSpawnPoints.Count == 0)
-                {
-                    Debug.LogWarning("No valid spawn points after filtering. Traffic initialization will be limited.");
-                }
+            Debug.Log($"Rebuilt transform arrays with {validDriveTargets.Count} valid cars");
 
-                // Step 1: Spawn initial traffic at valid spawn points
-                int successfullySpawned = 0;
+            // If we have a mismatch between expected and actual car count, debug it
+            if (validDriveTargets.Count != carCount)
+            {
+                Debug.LogWarning($"Car count mismatch: {validDriveTargets.Count} valid cars found but carCount is {carCount}");
 
-                // Only attempt to spawn if we have spawn points
-                if (availableSpawnPoints.Count > 0)
-                {
-                    for (int i = 0; i < Mathf.Min(density, availableSpawnPoints.Count); i++)
-                    {
-                        // Try each prefab type
-                        for (int j = 0; j < trafficPrefabs.Length; j++)
-                        {
-                            if (trafficPrefabs[j] == null) continue;
-
-                            if (availableSpawnPoints.Count == 0) break;
-
-                            // Get random spawn point safely
-                            int spawnPointIndex = UnityEngine.Random.Range(0, availableSpawnPoints.Count);
-                            if (spawnPointIndex >= availableSpawnPoints.Count) continue; // Extra safety
-
-                            // Safety check for null references
-                            if (availableSpawnPoints[spawnPointIndex] == null ||
-                                availableSpawnPoints[spawnPointIndex].transformCached == null ||
-                                availableSpawnPoints[spawnPointIndex].waypoint == null ||
-                                availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.parentRoute == null ||
-                                availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.parentRoute.vehicleTypes == null)
-                            {
-                                availableSpawnPoints.RemoveAt(spawnPointIndex);
-                                continue;
-                            }
-
-                            // Calculate spawn position
-                            spawnPosition = availableSpawnPoints[spawnPointIndex].transformCached.position + spawnOffset;
-                            var spawnRotation = availableSpawnPoints[spawnPointIndex].transformCached.rotation;
-                            var parentRoute = availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.parentRoute;
-
-                            // Validate vehicle type compatibility
-                            bool typeMatched = false;
-                            for (int k = 0; k < parentRoute.vehicleTypes.Length; k++)
-                            {
-                                if (parentRoute.vehicleTypes[k] == trafficPrefabs[j].vehicleType)
-                                {
-                                    typeMatched = true;
-                                    break;
-                                }
-                            }
-
-                            if (!typeMatched) continue;
-
-                            try
-                            {
-                                // Safety check for waypoint indices
-                                if (parentRoute.waypointDataList == null ||
-                                    parentRoute.waypointDataList.Count == 0 ||
-                                    availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber < 0 ||
-                                    availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber >= parentRoute.waypointDataList.Count ||
-                                    parentRoute.waypointDataList[availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber]._transform == null)
-                                {
-                                    continue; // Skip if waypoint data is invalid
-                                }
-
-                                // Instantiate the vehicle
-                                GameObject spawnedVehicle = Instantiate(trafficPrefabs[j].gameObject, spawnPosition, spawnRotation);
-                                AITrafficCar carComponent = spawnedVehicle.GetComponent<AITrafficCar>();
-
-                                if (carComponent != null)
-                                {
-                                    // Register car with route
-                                    carComponent.RegisterCar(parentRoute);
-
-                                    // Make it look at the next waypoint
-                                    Transform targetWaypoint = parentRoute.waypointDataList[availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber]._transform;
-                                    spawnedVehicle.transform.LookAt(targetWaypoint);
-
-                                    successfullySpawned++;
-                                }
-                                else
-                                {
-                                    Debug.LogWarning("Could not find AITrafficCar component on spawned vehicle!");
-                                    Destroy(spawnedVehicle);
-                                }
-                            }
-                            catch (System.Exception ex)
-                            {
-                                Debug.LogError($"Error spawning vehicle: {ex.Message}");
-                            }
-
-                            // Remove the used spawn point
-                            if (spawnPointIndex < availableSpawnPoints.Count)
-                            {
-                                availableSpawnPoints.RemoveAt(spawnPointIndex);
-                            }
-
-                            if (currentAmountToSpawn > 0) currentAmountToSpawn--;
-                            if (currentAmountToSpawn <= 0) break;
-                        }
-
-                        if (currentAmountToSpawn <= 0 || availableSpawnPoints.Count == 0) break;
-                    }
-                }
-
-                Debug.Log($"Successfully spawned {successfullySpawned} vehicles in the scene");
-
-                // Step 2: Populate the car pool with additional cars
-                int pooledCarsToCreate = Mathf.Max(0, carsInPool - carCount);
-                int pooledCarsCreated = 0;
-
-                for (int i = 0; i < pooledCarsToCreate; i++)
-                {
-                    // Verify we have at least one route to assign
-                    if (carRouteList.Count == 0)
-                    {
-                        Debug.LogError("No routes available for pooled cars! Aborting pool creation.");
-                        break;
-                    }
-
-                    for (int j = 0; j < trafficPrefabs.Length; j++)
-                    {
-                        if (trafficPrefabs[j] == null) continue;
-
-                        if (carCount >= carsInPool) break;
-
-                        try
-                        {
-                            // Create disabled car at pool position
-                            GameObject pooledVehicle = Instantiate(trafficPrefabs[j].gameObject, disabledPosition, Quaternion.identity);
-                            AITrafficCar carComponent = pooledVehicle.GetComponent<AITrafficCar>();
-
-                            if (carComponent != null)
-                            {
-                                // Register with first route
-                                carComponent.RegisterCar(carRouteList[0]);
-
-                                // Add to pool immediately
-                                MoveCarToPool(carComponent.assignedIndex);
-                                pooledCarsCreated++;
-                            }
-                            else
-                            {
-                                Debug.LogWarning("Could not find AITrafficCar component on pooled vehicle!");
-                                Destroy(pooledVehicle);
-                            }
-                        }
-                        catch (System.Exception ex)
-                        {
-                            Debug.LogError($"Error creating pooled vehicle: {ex.Message}");
-                        }
-                    }
-                }
-
-                Debug.Log($"Created {pooledCarsCreated} additional vehicles in the car pool");
-
-                // Step 3: Set up routes and parenting for active cars
-                int initializedCarCount = 0;
-
+                // Log details about invalid cars for debugging
                 for (int i = 0; i < carCount; i++)
                 {
-                    try
-                    {
-                        // Skip null car entries
-                        if (i >= carList.Count || carList[i] == null)
-                        {
-                            continue;
-                        }
-
-                        // Skip if carRouteList is invalid
-                        if (i >= carRouteList.Count || carRouteList[i] == null ||
-                            carRouteList[i].waypointDataList == null || carRouteList[i].waypointDataList.Count == 0)
-                        {
-                            continue;
-                        }
-
-                        // Skip if currentRoutePointIndexNL is out of range
-                        if (i >= currentRoutePointIndexNL.Length || currentRoutePointIndexNL[i] < 0 ||
-                            currentRoutePointIndexNL[i] >= carRouteList[i].waypointDataList.Count)
-                        {
-                            continue;
-                        }
-
-                        // Set route position data
-                        if (carRouteList[i].waypointDataList[currentRoutePointIndexNL[i]]._transform != null)
-                        {
-                            routePointPositionNL[i] = carRouteList[i].waypointDataList[currentRoutePointIndexNL[i]]._transform.position;
-                        }
-
-                        if (carRouteList[i].waypointDataList.Count > 0 &&
-                            carRouteList[i].waypointDataList[carRouteList[i].waypointDataList.Count - 1]._transform != null)
-                        {
-                            finalRoutePointPositionNL[i] = carRouteList[i].waypointDataList[carRouteList[i].waypointDataList.Count - 1]._transform.position;
-                        }
-
-                        // Start driving
-                        carList[i].StartDriving();
-                        initializedCarCount++;
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogWarning($"Error initializing car {i}: {ex.Message}");
-                    }
+                    if (carList[i] == null)
+                        Debug.LogWarning($"Car at index {i} is null");
+                    else if (carList[i].gameObject == null)
+                        Debug.LogWarning($"Car at index {i} has null gameObject");
+                    else if (carList[i].transform.Find("DriveTarget") == null)
+                        Debug.LogWarning($"Car at index {i} has no DriveTarget child transform");
                 }
-
-                Debug.Log($"Started driving for {initializedCarCount} cars");
-
-                // Step 4: Set parenting if needed
-                if (setCarParent)
-                {
-                    if (carParent == null) carParent = transform;
-
-                    int parentedCars = 0;
-                    for (int i = 0; i < carCount; i++)
-                    {
-                        if (i < carList.Count && carList[i] != null)
-                        {
-                            try
-                            {
-                                carList[i].transform.SetParent(carParent);
-                                parentedCars++;
-                            }
-                            catch (System.Exception ex)
-                            {
-                                Debug.LogWarning($"Error parenting car {i}: {ex.Message}");
-                            }
-                        }
-                    }
-
-                    Debug.Log($"Set parent for {parentedCars} cars to {carParent.name}");
-                }
-
-                isInitialized = true;
-                Debug.Log("Traffic system initialization complete");
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Critical error in SpawnStartupTrafficCoroutine: {ex.Message}\n{ex.StackTrace}");
-                isInitialized = true; // Try to recover
             }
         }
+        
+       
+
+      
+
+
+
         #endregion
 
         #region Runtime API for Dynamic Content - Some Require Pooling
@@ -3295,6 +3308,135 @@
             }
             usePooling = true;
             EnableRegisteredTrafficEverywhere();
+        }
+        public void RebuildRouteConnections()
+        {
+            // First clear and rebuild the lists
+            ClearRouteRegistrations();
+
+            // Find all routes in the scene
+            var routes = FindObjectsOfType<AITrafficWaypointRoute>(true);
+
+            // Register routes with controller
+            foreach (var route in routes)
+            {
+                if (route != null)
+                {
+                    // Ensure route is active
+                    if (!route.gameObject.activeInHierarchy)
+                        route.gameObject.SetActive(true);
+
+                    // Register the route
+                    route.RegisterRoute();
+
+                    // Also register directly with controller
+                    if (!allWaypointRoutesList.Contains(route))
+                    {
+                        RegisterAITrafficWaypointRoute(route);
+                    }
+                }
+            }
+
+            // Initialize cars if needed
+            if (carCount > 0 && carList.Count > 0)
+            {
+                for (int i = 0; i < carCount; i++)
+                {
+                    if (i < carList.Count && carList[i] != null && carList[i].waypointRoute != null)
+                    {
+                        // Set the route and update indexes
+                        Set_WaypointRoute(i, carList[i].waypointRoute);
+                        Set_WaypointDataListCountArray(i);
+                        Set_RoutePointPositionArray(i);
+                    }
+                }
+            }
+
+            Debug.Log($"Rebuilt route connections with {allWaypointRoutesList.Count} routes");
+        }
+        public void EnsureAllVehiclesHaveValidRoutes()
+        {
+            int fixedVehicles = 0;
+
+            for (int i = 0; i < carList.Count; i++)
+            {
+                // Skip inactive cars
+                if (!carList[i].gameObject.activeInHierarchy)
+                    continue;
+
+                // Check if the car has a valid route
+                if (carList[i].waypointRoute == null || !carList[i].isDriving)
+                {
+                    Debug.Log($"Vehicle {carList[i].name} has no route or isn't driving. Attempting to fix.");
+
+                    // Find a compatible route
+                    AITrafficWaypointRoute compatibleRoute = null;
+
+                    foreach (var route in allWaypointRoutesList)
+                    {
+                        bool isCompatible = false;
+                        foreach (var vehicleType in route.vehicleTypes)
+                        {
+                            if (vehicleType == carList[i].vehicleType)
+                            {
+                                isCompatible = true;
+                                break;
+                            }
+                        }
+
+                        if (isCompatible)
+                        {
+                            compatibleRoute = route;
+                            break;
+                        }
+                    }
+
+                    if (compatibleRoute != null)
+                    {
+                        // Register car with route
+                        carList[i].StopDriving();
+                        carList[i].RegisterCar(compatibleRoute);
+
+                        // Set current route point index
+                        int nearestWaypointIndex = FindNearestWaypointIndex(carList[i].transform.position, compatibleRoute);
+                        if (carList[i].assignedIndex >= 0 && nearestWaypointIndex >= 0)
+                        {
+                            Set_CurrentRoutePointIndexArray(carList[i].assignedIndex, nearestWaypointIndex,
+                                compatibleRoute.waypointDataList[nearestWaypointIndex]._waypoint);
+                        }
+
+                        // Start driving
+                        carList[i].StartDriving();
+                        fixedVehicles++;
+                    }
+                }
+            }
+
+            Debug.Log($"Fixed {fixedVehicles} vehicles with invalid routes");
+        }
+
+        private int FindNearestWaypointIndex(Vector3 position, AITrafficWaypointRoute route)
+        {
+            if (route == null || route.waypointDataList == null || route.waypointDataList.Count == 0)
+                return -1;
+
+            float closestDistance = float.MaxValue;
+            int nearestIndex = -1;
+
+            for (int i = 0; i < route.waypointDataList.Count; i++)
+            {
+                if (route.waypointDataList[i]._transform == null)
+                    continue;
+
+                float distance = Vector3.Distance(position, route.waypointDataList[i]._transform.position);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    nearestIndex = i;
+                }
+            }
+
+            return nearestIndex;
         }
         #endregion
     }

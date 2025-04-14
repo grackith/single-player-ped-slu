@@ -18,6 +18,8 @@ namespace TurnTheGameOn.SimpleTrafficSystem
     public class TrafficSystemManager : MonoBehaviour
     {
         private static TrafficSystemManager _instance;
+        // Add this to the TrafficSystemManager class
+        public bool isSpawningInProgress = false;
         public static TrafficSystemManager Instance
         {
             get
@@ -60,15 +62,9 @@ namespace TurnTheGameOn.SimpleTrafficSystem
 
             // Find the traffic controller on startup
             FindTrafficController();
-
-            // Register for scene loading events
-            SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
-        private void OnDestroy()
-        {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-        }
+
 
         public void FindTrafficController()
         {
@@ -87,242 +83,238 @@ namespace TurnTheGameOn.SimpleTrafficSystem
             }
         }
 
-        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            if (mode == LoadSceneMode.Additive)
-            {
-                StartCoroutine(ProcessNewlyLoadedScene(scene));
-            }
-        }
-
-        private IEnumerator ProcessNewlyLoadedScene(Scene scene)
-        {
-            // Wait for the scene to fully initialize
-            yield return new WaitForEndOfFrame();
-
-            // Register any routes or spawn points from the new scene
-            RegisterSceneContentWithTrafficSystem(scene);
-        }
-
-        // Call this when a new scenario scene is loaded
-        public void RegisterSceneContentWithTrafficSystem(Scene scene)
-        {
-            if (trafficController == null)
-            {
-                Debug.LogWarning("Cannot register scene with traffic system: No traffic controller found");
-                return;
-            }
-
-            Debug.Log($"Registering content from scene {scene.name} with traffic system");
-
-            // Register routes
-            var routesInScene = FindObjectsOfType<AITrafficWaypointRoute>()
-                .Where(r => r.gameObject.scene == scene)
-                .ToArray();
-
-            foreach (var route in routesInScene)
-            {
-                if (!route.isRegistered)
-                {
-                    trafficController.RegisterAITrafficWaypointRoute(route);
-                    Debug.Log($"Registered route: {route.name}");
-                }
-            }
-
-            // Register spawn points
-            var spawnPointsInScene = FindObjectsOfType<AITrafficSpawnPoint>()
-                .Where(s => s.gameObject.scene == scene)
-                .ToArray();
-
-            foreach (var spawnPoint in spawnPointsInScene)
-            {
-                // Make sure spawn points are active
-                if (!spawnPoint.gameObject.activeInHierarchy)
-                {
-                    spawnPoint.gameObject.SetActive(true);
-                }
-
-                // Register with controller
-                trafficController.RegisterSpawnPoint(spawnPoint);
-                Debug.Log($"Registered spawn point: {spawnPoint.name}");
-            }
-        }
-
         // Call this when preparing to switch scenarios
+        // Clean up TrafficSystemManager by removing redundant methods
         public void PrepareForScenarioChange()
         {
-            if (trafficController == null)
-            {
-                Debug.LogWarning("Cannot prepare for scenario change: No traffic controller found");
-                return;
-            }
+            if (trafficController == null) return;
 
             Debug.Log("Preparing traffic system for scenario change");
-
-            // Set flag to prevent duplicate detection during transition
             preventDuplicateDetection = true;
 
-            // Clear all cars and pool to start fresh
-            trafficController.MoveAllCarsToPool();
-
-            isRebuilding = true;
+            // Stop all traffic processing
+            trafficController.enabled = false;
         }
-
-        // Call this after the new scenario is loaded
-        public void InitializeTrafficInNewScenario()
+        public IEnumerator PrepareForNewScenario(int density)
         {
             if (trafficController == null)
             {
-                Debug.LogWarning("Cannot initialize traffic in new scenario: No traffic controller found");
-                return;
+                FindTrafficController();
+                if (trafficController == null)
+                {
+                    Debug.LogError("No traffic controller found!");
+                    yield break;
+                }
             }
 
-            if (!isRebuilding)
+            Debug.Log($"Preparing traffic system for new scenario with density {density}");
+
+            // Initialize controller if needed
+            if (!trafficController.enabled)
             {
-                Debug.Log("Starting traffic system initialization for new scenario");
-                isRebuilding = true;
+                trafficController.enabled = true;
+                yield return new WaitForSeconds(0.2f);
             }
 
-            StartCoroutine(InitializeTrafficCoroutine());
+            // Set new density
+            trafficController.density = density;
+
+            // Register all routes in new scene
+            trafficController.RegisterAllRoutesInScene();
+
+            // Initialize spawn points
+            trafficController.InitializeSpawnPoints();
+
+            // Rebuild data structures
+            trafficController.RebuildInternalDataStructures();
+
+            // Reset flag
+            preventDuplicateDetection = false;
+
+            Debug.Log("Traffic system prepared for new scenario");
         }
 
-        private IEnumerator InitializeTrafficCoroutine()
+        public void InitializeTrafficInNewScenario()
         {
-            // Wait a frame to ensure everything is properly loaded
-            yield return new WaitForEndOfFrame();
+            if (trafficController == null) return;
 
             Debug.Log("Initializing traffic in new scenario");
 
-            // Register all routes first
-            if (trafficController != null)
-            {
-                trafficController.RegisterAllRoutesInScene();
+            // Re-enable the controller
+            trafficController.enabled = true;
 
-                // Force reconstruction of spawn points if needed
-                var spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
-                if (spawnPoints.Length == 0)
-                {
-                    // If no spawn points found, force create them
-                    trafficController.ForceCreateSpawnPoints();
-                }
-
-                // Validate job system (this ensures all data structures are properly initialized)
-                bool valid = trafficController.ValidateJobSystem();
-
-                if (!valid)
-                {
-                    Debug.LogWarning("Traffic controller job system validation failed. Attempting recovery...");
-                    trafficController.RebuildInternalDataStructures();
-                    yield return new WaitForEndOfFrame();
-                }
-
-                // Spawn vehicles on routes
-                trafficController.DirectlySpawnVehicles(20); // Adjust default count as needed
-            }
-
-            // Connect with traffic lights
-            ConnectCarsToTrafficLights();
-
-            // Reset flags
+            // Reset flag
             preventDuplicateDetection = false;
-            isRebuilding = false;
-
-            Debug.Log("Traffic initialization in new scenario complete");
         }
 
-        public void ConnectCarsToTrafficLights()
+
+
+
+
+        
+
+        
+
+        // Flag to prevent duplicate detection during scenario transitions
+
+        public IEnumerator SpawnScenarioTraffic(int density)
         {
-            // Find all traffic light managers in the scene
-            var trafficLightManagers = FindObjectsOfType<AITrafficLightManager>();
-
-            if (trafficLightManagers.Length == 0)
+            if (isSpawningInProgress)
             {
-                Debug.LogWarning("No traffic light managers found in the scene");
-                return;
+                Debug.LogWarning("Spawn already in progress, ignoring duplicate request");
+                yield break;
             }
 
-            Debug.Log($"Found {trafficLightManagers.Length} traffic light managers");
+            isSpawningInProgress = true;
+            Debug.Log($"TrafficSystemManager: Starting controlled spawn with density {density}");
 
-            // Reset each traffic light manager
-            foreach (var manager in trafficLightManagers)
+            bool originalPoolingState = false;
+            bool originalControllerState = false;
+
+            try
             {
-                manager.ResetLightManager();
-            }
-
-            // Get all active traffic cars
-            AITrafficCar[] cars = FindObjectsOfType<AITrafficCar>();
-
-            // Add car light manager component if missing
-            foreach (var car in cars)
-            {
-                if (car == null) continue;
-
-                // Add component if missing (will auto-connect to traffic lights)
-                if (!car.GetComponent<AITrafficCarLightManager>())
+                // Make sure controller is ready
+                if (trafficController == null)
                 {
-                    car.gameObject.AddComponent<AITrafficCarLightManager>();
+                    FindTrafficController();
+                }
+
+                if (trafficController == null)
+                {
+                    Debug.LogError("Cannot spawn traffic: No controller found");
+                    yield break;
+                }
+
+                // CRITICAL: Completely disable controller first
+                originalControllerState = trafficController.enabled;
+                trafficController.enabled = false;
+                yield return new WaitForSeconds(0.2f);
+
+                // Store original pooling state
+                originalPoolingState = trafficController.usePooling;
+                trafficController.usePooling = false;
+
+                // AGGRESSIVELY remove ALL existing cars
+                var existingCars = FindObjectsOfType<AITrafficCar>();
+                Debug.Log($"Removing {existingCars.Length} existing cars before spawning");
+                foreach (var car in existingCars)
+                {
+                    if (car != null && car.gameObject != null)
+                    {
+                        Destroy(car.gameObject);
+                    }
+                }
+
+                // Wait longer for destruction to complete
+                yield return new WaitForSeconds(0.5f);
+
+                // Reset the pool completely
+                trafficController.ResetTrafficPool();
+
+                // Fully reinitialize controller
+                trafficController.DisposeAllNativeCollections();
+                trafficController.InitializeNativeLists();
+
+                // NOW re-enable the controller
+                trafficController.enabled = true;
+                yield return new WaitForSeconds(0.3f);
+
+                // Update the desired density setting
+                trafficController.density = density;
+
+                // Register routes and initialize spawn points
+                trafficController.RegisterAllRoutesInScene();
+                trafficController.InitializeSpawnPoints();
+                yield return new WaitForSeconds(0.3f);
+
+                // Direct spawn with specific count
+                Debug.Log($"Directly spawning exactly {density} vehicles with automatic spawning disabled");
+                trafficController.DirectlySpawnVehicles(density);
+
+                // Wait longer for spawning to complete
+                yield return new WaitForSeconds(0.7f);
+
+                // Rebuild controller structures
+                trafficController.RebuildTransformArrays();
+                trafficController.RebuildInternalDataStructures();
+
+                // IMPORTANT: Leave automatic spawning OFF for now
+                // Wait for everything to settle before re-enabling automatic spawning
+                yield return new WaitForSeconds(1.0f);
+
+                // Finally re-enable automatic spawning if it was on before
+                if (originalPoolingState)
+                {
+                    trafficController.usePooling = true;
+                    Debug.Log("Re-enabled automatic spawning");
                 }
             }
-        }
-
-        public IEnumerator EnsureRoutesAreConnected()
-        {
-            Debug.Log("Ensuring routes are properly connected");
-
-            // Get all routes
-            var routes = FindObjectsOfType<AITrafficWaypointRoute>();
-
-            // Make sure all routes are active
-            foreach (var route in routes)
+            finally
             {
-                if (route != null && !route.gameObject.activeInHierarchy)
+                // Even if there was an error, restore controller state
+                if (trafficController != null)
                 {
-                    route.gameObject.SetActive(true);
+                    if (!trafficController.enabled)
+                    {
+                        trafficController.enabled = originalControllerState;
+                    }
+                    trafficController.usePooling = originalPoolingState;
                 }
-            }
 
-            yield return null;
-        }
-
-        public void ReactivateTrafficLights()
-        {
-            var lightManagers = FindObjectsOfType<AITrafficLightManager>();
-
-            Debug.Log($"Reactivating {lightManagers.Length} traffic light managers");
-
-            foreach (var manager in lightManagers)
-            {
-                manager.ResetLightManager();
+                isSpawningInProgress = false;
+                Debug.Log("TrafficSystemManager: Spawning completed");
             }
         }
-
-        public void FixTrafficControllerSpawning()
+        // Refine the DisableTrafficSystemCoroutine to be more thorough
+        public IEnumerator DisableTrafficSystemCoroutine()
         {
             if (trafficController == null)
             {
-                Debug.LogWarning("Cannot fix traffic controller spawning: No controller found");
-                return;
+                yield break;
             }
 
-            // Rebuild all key structures
-            trafficController.RebuildInternalDataStructures();
-        }
+            Debug.Log("Disabling traffic system...");
 
-        public IEnumerator DisableTrafficSystemCoroutine()
-        {
-            if (trafficController != null)
+            // Set transition flag
+            preventDuplicateDetection = true;
+
+            // Do everything that doesn't need yield inside the try-catch
+            try
             {
-                // Safely disable all cars first
+                // First disable all traffic lights
+                var lightManagers = FindObjectsOfType<AITrafficLightManager>();
+                foreach (var manager in lightManagers)
+                {
+                    if (manager != null)
+                    {
+                        manager.enabled = false;
+                    }
+                }
+
+                // Stop all cars
                 trafficController.MoveAllCarsToPool();
-
-                yield return new WaitForSeconds(0.3f);
-
-                // Then disable the controller
-                trafficController.enabled = false;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error during early traffic system shutdown: {ex.Message}");
             }
 
-            yield return null;
+            // Now yield outside of try-catch
+            yield return new WaitForSeconds(0.3f);
+
+            // Continue rest of the logic
+            try
+            {
+                trafficController.DisposeAllNativeCollections();
+                trafficController.enabled = false;
+                Debug.Log("Traffic system disabled");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error during final traffic system cleanup: {ex.Message}");
+            }
         }
+
 
         public void ForceRespawnTraffic()
         {

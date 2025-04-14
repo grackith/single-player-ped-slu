@@ -5,10 +5,16 @@ using System.Collections.Generic;
 public class RedirectionScenarioController : MonoBehaviour
 {
     [Header("Redirection Settings")]
-    [SerializeField] private RedirectionManager redirectionManager;
+    [SerializeField] public RedirectionManager redirectionManager;
+    //[SerializeField] private RedirectionManager _redirectionManager;
+
+    // Add a public property to get the RedirectionManager
+    // This provides controlled read-only access from outside
+    //public RedirectionManager RedirectionManager => _redirectionManager;
 
     [Tooltip("Which redirection algorithm to use")]
     [SerializeField] private RedirectionAlgorithm redirectionAlgorithm = RedirectionAlgorithm.SteerToCenter;
+
 
     [Tooltip("Which reset method to use")]
     [SerializeField] private ResetMethod resetMethod = ResetMethod.TwoOneTurn;
