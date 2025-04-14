@@ -60,6 +60,41 @@
         private Vector3 goToPointWhenStoppedVector3;
         private List<int> newRoutePointsMatchingType = new List<int>();
         private int randomIndex;
+        // Add this to AITrafficCar.cs
+        private bool routeControlDisabled = false;
+
+        // Add this method to AITrafficCar.cs
+        public void DisableRouteControl()
+        {
+            if (!routeControlDisabled)
+            {
+                routeControlDisabled = true;
+                Debug.Log($"Route control disabled for {name}");
+
+                // Get drive target
+                Transform driveTarget = transform.Find("DriveTarget");
+                if (driveTarget != null)
+                {
+                    // Save current drive target position
+                    Vector3 currentTargetPos = driveTarget.position;
+
+                    // The critical part: set a flag in the controller that this car
+                    // should ignore route waypoint progression
+                    if (assignedIndex >= 0 && AITrafficController.Instance != null)
+                    {
+                        // Force car to continue in current direction
+                        transform.LookAt(currentTargetPos);
+
+                        // This is the key: create a forward momentum that's not tied to route
+                        Rigidbody rb = GetComponent<Rigidbody>();
+                        if (rb != null)
+                        {
+                            rb.velocity = transform.forward * 5f;
+                        }
+                    }
+                }
+            }
+        }
 
         //public void RegisterCar(AITrafficWaypointRoute route)
         //{
@@ -80,6 +115,28 @@
         /// Returns current acceleration input as a float 0-1.
         /// </summary>
         /// <returns></returns>
+        /// // Add this field to AITrafficCar class
+        private bool initialSpawnCompleted = false;
+
+        // Add this method to AITrafficCar class
+        public void CompleteInitialSpawn()
+        {
+            if (!initialSpawnCompleted)
+            {
+                initialSpawnCompleted = true;
+
+                // Keep the waypointRoute reference but tell the controller
+                // to rely primarily on drive target for movement
+                if (assignedIndex >= 0 && AITrafficController.Instance != null)
+                {
+                    // Set a flag in the controller that this car is now independent of route logic
+                    // but only for navigation purposes (keep current waypoint up to date)
+                    AITrafficController.Instance.Set_CanProcess(assignedIndex, true);
+                }
+
+                Debug.Log($"Car {name} released from strict route following");
+            }
+        }
         public float AccelerationInput()
         {
             return AITrafficController.Instance.GetAccelerationInput(assignedIndex);
@@ -189,9 +246,13 @@
             // Start the car
             isDriving = true;
             isActiveInTraffic = true;
+            SmoothWaypointFollowing();
+            CompleteInitialSpawn();
 
             // Allow some time for the state to be fully updated
             ForceWaypointPathUpdate();
+            // In the StartDriving() method, add this at the end
+            DisableRouteControl();
         }
 
         // In AITrafficCar.cs - Add this method
@@ -653,6 +714,8 @@
 
                 // Update route position array and handle stops
                 AITrafficController.Instance.Set_RoutePointPositionArray(assignedIndex);
+                SmoothWaypointFollowing();
+
 
                 if (onReachWaypointSettings.stopDriving)
                 {
@@ -678,6 +741,11 @@
                     }
                 }
                 catch { /* Last resort - silently fail if even recovery fails */ }
+            }
+            // In OnReachedWaypoint method, add at the end:
+            if (!routeControlDisabled)
+            {
+                DisableRouteControl();
             }
         }
 
@@ -977,6 +1045,86 @@
             // Restart driving
             StartDriving();
             return true;
+        }
+        // Add this to your AITrafficCar.cs as a new method (without replacing existing code)
+        public void SmoothWaypointFollowing()
+        {
+            if (waypointRoute == null || AITrafficController.Instance == null || assignedIndex < 0)
+                return;
+
+            try
+            {
+                // Instead of accessing the native list directly, use the current waypoint
+                AITrafficWaypoint currentWaypoint = AITrafficController.Instance.GetCurrentWaypoint(assignedIndex);
+                if (currentWaypoint == null || System.Object.ReferenceEquals(currentWaypoint.onReachWaypointSettings, null))
+                    return;
+
+                // Get current waypoint index
+                int currentIndex = currentWaypoint.onReachWaypointSettings.waypointIndexnumber;
+
+                // Skip if invalid index
+                if (currentIndex < 0 || currentIndex >= waypointRoute.waypointDataList.Count)
+                    return;
+
+                // Get current and next waypoint positions
+                Vector3 currentWaypointPos = waypointRoute.waypointDataList[currentIndex]._transform.position;
+
+                // Calculate next index carefully
+                int nextIndex = currentIndex + 1;
+                if (nextIndex >= waypointRoute.waypointDataList.Count)
+                {
+                    // We're at the end, check for connecting routes
+                    AITrafficWaypoint lastWaypoint = waypointRoute.waypointDataList[currentIndex]._waypoint;
+                    if (lastWaypoint != null &&
+                        !System.Object.ReferenceEquals(lastWaypoint.onReachWaypointSettings, null) &&
+                        !System.Object.ReferenceEquals(lastWaypoint.onReachWaypointSettings.newRoutePoints, null) &&
+                        lastWaypoint.onReachWaypointSettings.newRoutePoints.Length > 0)
+                    {
+                        // Use first waypoint of connecting route
+                        return; // Let normal connection logic handle this
+                    }
+                    else
+                    {
+                        nextIndex = currentIndex; // Stay at current if at end
+                    }
+                }
+
+                // Find or create drive target
+                Transform driveTarget = transform.Find("DriveTarget");
+                if (driveTarget == null)
+                {
+                    driveTarget = new GameObject("DriveTarget").transform;
+                    driveTarget.SetParent(transform);
+                }
+
+                // Position drive target correctly
+                Vector3 nextWaypointPos = waypointRoute.waypointDataList[nextIndex]._transform.position;
+
+                // Calculate distance to next waypoint
+                float distToNext = Vector3.Distance(transform.position, nextWaypointPos);
+
+                // If we're far from the next waypoint, create a smoother path
+                if (distToNext > 15f)
+                {
+                    // Calculate a point that's not too far ahead on the path
+                    Vector3 dirToNext = (nextWaypointPos - transform.position).normalized;
+                    float targetDistance = Mathf.Min(distToNext * 0.5f, 10f);
+                    Vector3 intermediateTarget = transform.position + dirToNext * targetDistance;
+
+                    // Set the drive target to this intermediate point
+                    driveTarget.position = intermediateTarget;
+                }
+                else
+                {
+                    // We're close enough to follow directly
+                    driveTarget.position = nextWaypointPos;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                // Silently fail to avoid disrupting working system
+                Debug.LogWarning($"Smooth waypoint following failed: {ex.Message}");
+            }
         }
 
 

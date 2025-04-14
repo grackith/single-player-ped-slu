@@ -4,6 +4,7 @@
     using System.Collections.Generic;
 
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficwaypoint")]
+    
     public class AITrafficWaypoint : MonoBehaviour
     {
         [Tooltip("Contains settings and references to components triggered by the attached collider's OnTriggerEnter(Collider) method.")]
@@ -129,6 +130,8 @@
         }
 
         private List<AITrafficWaypoint> newWaypointList = new List<AITrafficWaypoint>();
+        
+
 
         public void RemoveMissingLaneChangePoints()
         {

@@ -2238,6 +2238,51 @@
 
 
 
+        // Add to AITrafficController
+        public AITrafficCar GetRandomCarFromPool(AITrafficWaypointRoute parentRoute)
+        {
+            if (parentRoute == null)
+            {
+                Debug.LogError("Attempting to get random car from pool with null route");
+                return null;
+            }
+
+            // Create a list of compatible traffic pool entries
+            List<AITrafficPoolEntry> compatibleCars = new List<AITrafficPoolEntry>();
+
+            for (int i = 0; i < trafficPool.Count; i++)
+            {
+                for (int j = 0; j < parentRoute.vehicleTypes.Length; j++)
+                {
+                    if (trafficPool[i].trafficPrefab.vehicleType == parentRoute.vehicleTypes[j])
+                    {
+                        compatibleCars.Add(trafficPool[i]);
+                        break;
+                    }
+                }
+            }
+
+            // If we have compatible cars, pick one randomly
+            if (compatibleCars.Count > 0)
+            {
+                int randomIndex = UnityEngine.Random.Range(0, compatibleCars.Count);
+                AITrafficPoolEntry entry = compatibleCars[randomIndex];
+
+                int assignedIndex = entry.assignedIndex;
+                AITrafficCar loadCar = entry.trafficPrefab;
+
+                isDisabledNL[assignedIndex] = false;
+                rigidbodyList[assignedIndex].isKinematic = false;
+                EnableCar(carList[assignedIndex].assignedIndex, parentRoute);
+
+                trafficPool.Remove(entry);
+                return loadCar;
+            }
+
+            Debug.LogWarning("No compatible random cars in pool for route");
+            return null;
+        }
+
         public void DisposeAllNativeCollections()
         {
             // Native Lists Disposal
