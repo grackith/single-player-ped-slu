@@ -73,6 +73,7 @@ public class ScenarioManager : MonoBehaviour
     public AITrafficCar busPrefab; // Assign your bus prefab in the inspector
     public AITrafficWaypointRoute defaultBusRoute; // Default route if scenario doesn't specify one
     private Coroutine busSpawnCoroutine;
+    private BusSpawner busSpawner;
     #endregion
 
     #region Private Fields
@@ -163,6 +164,19 @@ public class ScenarioManager : MonoBehaviour
 
         // Initialize the redirected walking setup
         InitializeRedirectedWalking();
+        // Find or create the bus spawner
+        busSpawner = FindObjectOfType<BusSpawner>();
+        if (busSpawner == null)
+        {
+            Debug.LogWarning("No BusSpawner found in scene, creating one");
+            GameObject spawnerObj = new GameObject("BusSpawner");
+            busSpawner = spawnerObj.AddComponent<BusSpawner>();
+            DontDestroyOnLoad(spawnerObj); // Keep it across scenes
+
+            // Assign default values if available
+            busSpawner.busPrefab = busPrefab;
+            busSpawner.busRoute = busRoute;
+        }
     }
     private void EnsureManagerSceneIsLoaded()
     {
@@ -410,6 +424,10 @@ public class ScenarioManager : MonoBehaviour
     public AITrafficWaypointRoute busRoute;
 
     // Call this in TransitionToScenario after other initialization
+    // Replace your current ScheduleBusSpawn and SpawnBusAfterDelay methods with these improved versions
+
+    // Add these methods to your ScenarioManager class
+
     private void ScheduleBusSpawn(Scenario scenario)
     {
         Debug.Log($"ScheduleBusSpawn called for scenario: {scenario.scenarioName}, spawnBus: {scenario.spawnBus}");
@@ -445,15 +463,20 @@ public class ScenarioManager : MonoBehaviour
     {
         Debug.Log("Starting bus spawn process");
 
+        // 1. Validate bus prefab
         if (busPrefab == null)
         {
             Debug.LogError("Bus prefab not assigned in ScenarioManager!");
             yield break;
         }
 
-        // Determine which route to use
-        AITrafficWaypointRoute routeToUse = scenario.scenarioBusRoute != null ?
-                                         scenario.scenarioBusRoute : busRoute;
+        // 2. Determine which route to use
+        AITrafficWaypointRoute routeToUse = scenario.scenarioBusRoute;
+        if (routeToUse == null)
+        {
+            routeToUse = this.busRoute;
+            Debug.Log("Using default bus route");
+        }
 
         if (routeToUse == null)
         {
@@ -461,25 +484,41 @@ public class ScenarioManager : MonoBehaviour
             yield break;
         }
 
-        // Ensure the route is registered
+        // 3. Ensure the route is registered
+        AITrafficController controller = AITrafficController.Instance;
+        if (controller == null)
+        {
+            Debug.LogError("Traffic controller not found!");
+            yield break;
+        }
+
         if (!routeToUse.isRegistered)
         {
             Debug.Log("Bus route not registered, registering now");
-            AITrafficController controller = AITrafficController.Instance;
-            if (controller != null)
+            controller.RegisterAITrafficWaypointRoute(routeToUse);
+            routeToUse.RegisterRoute();
+        }
+
+        // 4. Find spawn points on the route
+        List<AITrafficSpawnPoint> validSpawnPoints = new List<AITrafficSpawnPoint>();
+
+        var allSpawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
+        Debug.Log($"Found {allSpawnPoints.Length} spawn points to check");
+
+        foreach (var sp in allSpawnPoints)
+        {
+            if (sp == null || sp.waypoint == null)
+                continue;
+
+            // Check if this spawn point is on our route
+            if (sp.waypoint.onReachWaypointSettings.parentRoute == routeToUse)
             {
-                controller.RegisterAITrafficWaypointRoute(routeToUse);
-                routeToUse.RegisterRoute();
+                validSpawnPoints.Add(sp);
+                Debug.Log($"Found valid spawn point: {sp.name}");
             }
         }
 
-        // Get all spawn points on the bus route
-        var spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>()
-            .Where(sp => sp != null && sp.waypoint != null &&
-                       sp.waypoint.onReachWaypointSettings.parentRoute == routeToUse)
-            .ToList();
-
-        if (spawnPoints.Count == 0)
+        if (validSpawnPoints.Count == 0)
         {
             Debug.LogWarning("No spawn points found on the bus route! Creating a temporary spawn point...");
 
@@ -493,7 +532,8 @@ public class ScenarioManager : MonoBehaviour
                 AITrafficSpawnPoint spawnPoint = spawnPointObj.AddComponent<AITrafficSpawnPoint>();
                 spawnPoint.waypoint = routeToUse.waypointDataList[0]._waypoint;
 
-                spawnPoints.Add(spawnPoint);
+                validSpawnPoints.Add(spawnPoint);
+                Debug.Log("Created temporary spawn point at first waypoint");
             }
             else
             {
@@ -502,52 +542,23 @@ public class ScenarioManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"Found {spawnPoints.Count} potential spawn points for the bus");
-
-        // Check each spawn point until we find one that's clear
+        // 5. Try each spawn point until we successfully spawn a bus
         bool busSpawned = false;
 
-        foreach (var spawnPoint in spawnPoints)
+        foreach (var spawnPoint in validSpawnPoints)
         {
             if (busSpawned) break;
 
             // Check if spawn point is clear
-            Vector3 spawnPosition = spawnPoint.transform.position + new Vector3(0, 0.1f, 0);
-            Collider[] nearbyColliders = Physics.OverlapSphere(spawnPosition, 8f); // Larger radius for bus
+            Vector3 spawnPosition = spawnPoint.transform.position + new Vector3(0, 0.5f, 0);
 
-            bool spawnPointClear = true;
-            foreach (var collider in nearbyColliders)
-            {
-                if (collider.GetComponent<AITrafficCar>() != null)
-                {
-                    Debug.Log($"Bus spawn point {spawnPoint.name} blocked by vehicle");
-                    spawnPointClear = false;
-                    break;
-                }
-            }
-
-            if (!spawnPointClear)
-            {
-                continue; // Try next spawn point
-            }
-
-            // We found a clear spawn point, spawn the bus here
-            Debug.Log($"Found clear spawn point for bus: {spawnPoint.name}");
-
-            // Get actual controller reference
-            AITrafficController controller = AITrafficController.Instance;
-            if (controller == null)
-            {
-                Debug.LogError("Traffic controller not found!");
-                yield break;
-            }
-
-            // STEP 1: Instantiate the bus
+            // Try to spawn the bus
             GameObject busObject = null;
             AITrafficCar busCar = null;
 
             try
             {
+                // Instantiate the bus
                 busObject = Instantiate(busPrefab.gameObject, spawnPosition, spawnPoint.transform.rotation);
                 busObject.name = "ScenarioBus_" + scenario.scenarioName;
 
@@ -556,96 +567,358 @@ public class ScenarioManager : MonoBehaviour
                 {
                     Debug.LogError("Bus prefab doesn't have AITrafficCar component!");
                     Destroy(busObject);
-                    continue; // Try next spawn point
+                    continue;
                 }
 
-                // STEP 2: Set up the bus on the route
+                // Set up the bus on the route
                 busCar.waypointRoute = routeToUse;
                 busCar.RegisterCar(routeToUse);
+                Debug.Log($"Registered bus with route {routeToUse.name}");
 
-                // STEP 3: Get correct next waypoint
-                Transform nextWaypointTransform = spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute?.transform;
+                // Find next waypoint
+                Transform nextWaypointTransform = null;
 
-                if (nextWaypointTransform == null && routeToUse.waypointDataList.Count > 0)
+                // Try to get next waypoint from spawn point's waypoint
+                if (spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute != null)
                 {
-                    // Fallback to first waypoint if next isn't defined
+                    nextWaypointTransform = spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute.transform;
+                    Debug.Log("Using next waypoint from spawn point");
+                }
+                // Fallback to first waypoint if needed
+                else if (routeToUse.waypointDataList.Count > 0)
+                {
                     nextWaypointTransform = routeToUse.waypointDataList[0]._transform;
+                    Debug.Log("Using first waypoint as target");
                 }
 
                 if (nextWaypointTransform != null)
                 {
-                    // STEP 4: Make bus face next waypoint
-                    busCar.transform.LookAt(nextWaypointTransform);
+                    // Orient bus toward waypoint
+                    busObject.transform.LookAt(nextWaypointTransform);
 
-                    // STEP 5: Properly set up DriveTarget
-                    Transform driveTarget = busCar.transform.Find("DriveTarget");
+                    // Set up DriveTarget
+                    Transform driveTarget = busObject.transform.Find("DriveTarget");
                     if (driveTarget == null)
                     {
                         driveTarget = new GameObject("DriveTarget").transform;
-                        driveTarget.SetParent(busCar.transform);
+                        driveTarget.SetParent(busObject.transform);
+                        Debug.Log("Created missing DriveTarget");
                     }
 
-                    // Position drive target exactly at the next waypoint
+                    // Position drive target at next waypoint
                     driveTarget.position = nextWaypointTransform.position;
-                    Debug.Log($"Positioned drive target for bus at {driveTarget.position}");
-
-                    // STEP 6: Force reinitialize route connection
-                    busCar.ReinitializeRouteConnection();
+                    Debug.Log($"Positioned drive target at {driveTarget.position}");
                 }
 
-                // STEP 7: Initial setup succeeded
-                Debug.Log("Bus initial setup successful");
+                // Initialize route connection
+                busCar.ReinitializeRouteConnection();
+
+                // Bus setup successful
+                busSpawned = true;
             }
             catch (System.Exception ex)
             {
                 Debug.LogError($"Error during bus spawn setup: {ex.Message}");
                 if (busObject != null) Destroy(busObject);
-                continue; // Try next spawn point
+                continue;
             }
 
-            // Wait a frame to allow physics to settle - OUTSIDE of try/catch block
+            // Wait a frame to allow physics to settle
             yield return null;
 
-            // Now handle the driving part - in a separate try/catch without yields
-            bool drivingStarted = false;
-            try
+            // Start driving the bus
+            if (busCar != null)
             {
-                // STEP 8: Ensure bus is set to drive
-                busCar.StopDriving(); // First stop to reset state
-                busCar.StartDriving();
+                // First stop the car outside the try-catch
+                busCar.StopDriving();
+                yield return null; // Wait a frame - outside try-catch
 
-                // STEP 9: Update controller arrays
-                if (busCar.assignedIndex >= 0)
+                try
                 {
-                    controller.Set_IsDrivingArray(busCar.assignedIndex, true);
-                    controller.Set_CanProcess(busCar.assignedIndex, true);
+                    // Then start driving inside try-catch (no yields)
+                    busCar.StartDriving();
+                    Debug.Log("Started bus driving");
+
+                    // Explicitly update controller arrays
+                    if (busCar.assignedIndex >= 0)
+                    {
+                        controller.Set_IsDrivingArray(busCar.assignedIndex, true);
+                        controller.Set_CanProcess(busCar.assignedIndex, true);
+                        Debug.Log($"Set controller driving state for bus (index {busCar.assignedIndex})");
+                    }
                 }
-
-                drivingStarted = true;
-                busSpawned = true;
-                Debug.Log($"Successfully spawned bus (ID: {busCar.assignedIndex}) on route {routeToUse.name}");
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Error starting bus driving: {ex.Message}");
-                if (busObject != null) Destroy(busObject);
-                // Continue to next spawn point - driving failed
-            }
-
-            // Wait another frame after starting driving - OUTSIDE of try/catch
-            if (drivingStarted)
-            {
-                yield return null;
-                break; // Exit the foreach loop - we succeeded!
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"Error starting bus driving: {ex.Message}");
+                    if (busObject != null) Destroy(busObject);
+                    busSpawned = false;
+                }
             }
         }
 
-        // If we got through all spawn points without success
+        // If we couldn't spawn a bus, try again later
         if (!busSpawned)
         {
-            Debug.LogWarning("Failed to find a clear spawn point for the bus - will retry in 10 seconds");
+            Debug.LogWarning("Failed to spawn bus - will retry in 10 seconds");
             yield return new WaitForSeconds(10f);
             StartCoroutine(SpawnBusOnRoute(scenario));
+        }
+        else
+        {
+            Debug.Log("Bus successfully spawned!");
+        }
+    }
+
+    // Alternative method using SpawnTypeFromPool
+    public void SpawnBusUsingPool(Scenario scenario)
+    {
+        Debug.Log("Attempting to spawn bus using pool system");
+
+        // 1. Identify the bus route
+        AITrafficWaypointRoute routeToUse = scenario.scenarioBusRoute;
+        if (routeToUse == null)
+        {
+            routeToUse = this.busRoute;
+        }
+
+        if (routeToUse == null)
+        {
+            Debug.LogError("No bus route available for spawning!");
+            return;
+        }
+
+        // 2. Find or create a suitable spawn point
+        AITrafficSpawnPoint busSpawnPoint = null;
+        var allSpawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
+
+        foreach (var sp in allSpawnPoints)
+        {
+            if (sp != null && sp.waypoint != null &&
+                sp.waypoint.onReachWaypointSettings.parentRoute == routeToUse)
+            {
+                busSpawnPoint = sp;
+                break;
+            }
+        }
+
+        if (busSpawnPoint == null)
+        {
+            // Create a new spawn point at the first waypoint
+            if (routeToUse.waypointDataList.Count > 0)
+            {
+                GameObject spawnObj = new GameObject("BusSpawnPoint");
+                spawnObj.transform.position = routeToUse.waypointDataList[0]._transform.position;
+
+                busSpawnPoint = spawnObj.AddComponent<AITrafficSpawnPoint>();
+                busSpawnPoint.waypoint = routeToUse.waypointDataList[0]._waypoint;
+                Debug.Log("Created new bus spawn point");
+            }
+            else
+            {
+                Debug.LogError("Bus route has no waypoints!");
+                return;
+            }
+        }
+
+        // 3. Create a SpawnTypeFromPool component
+        GameObject spawnerObj = new GameObject("BusSpawner");
+        spawnerObj.transform.position = busSpawnPoint.transform.position;
+
+        SpawnTypeFromPool spawner = spawnerObj.AddComponent<SpawnTypeFromPool>();
+        spawner.type = busPrefab.vehicleType;
+        spawner.spawnPoint = busSpawnPoint;
+        spawner.spawnRate = scenario.busSpawnDelay;  // Use the scenario's delay
+        spawner.spawnCars = true;
+
+        Debug.Log($"Set up bus spawner at {busSpawnPoint.transform.position}, will spawn in approximately {scenario.busSpawnDelay} seconds");
+    }
+
+    // Add this to your UI buttons/debug functions
+    public void ForceSpawnBusImmediate()
+    {
+        Debug.Log("EMERGENCY: Force spawning bus immediately");
+
+        if (busPrefab == null)
+        {
+            Debug.LogError("Bus prefab not assigned!");
+            return;
+        }
+
+        // Try to find any bus route
+        AITrafficWaypointRoute busRoute = null;
+
+        // First check if we have explicit routes
+        if (this.busRoute != null)
+        {
+            busRoute = this.busRoute;
+        }
+        else if (currentScenarioIndex >= 0 &&
+                 currentScenarioIndex < scenarios.Length &&
+                 scenarios[currentScenarioIndex].scenarioBusRoute != null)
+        {
+            busRoute = scenarios[currentScenarioIndex].scenarioBusRoute;
+        }
+        else
+        {
+            // Try to find a route with "bus" in the name
+            var routes = FindObjectsOfType<AITrafficWaypointRoute>();
+            foreach (var route in routes)
+            {
+                if (route != null && route.name.ToLower().Contains("bus"))
+                {
+                    busRoute = route;
+                    break;
+                }
+            }
+
+            // Last resort - use any route
+            if (busRoute == null && routes.Length > 0)
+            {
+                busRoute = routes[0];
+            }
+        }
+
+        if (busRoute == null)
+        {
+            Debug.LogError("No routes found in scene for bus spawn!");
+            return;
+        }
+
+        // Get first waypoint position
+        if (busRoute.waypointDataList.Count == 0)
+        {
+            Debug.LogError("Bus route has no waypoints!");
+            return;
+        }
+
+        // Get spawn position with small Y offset
+        Vector3 spawnPos = busRoute.waypointDataList[0]._transform.position;
+        spawnPos.y += 0.5f;
+
+        // Spawn the bus
+        GameObject busObject = Instantiate(busPrefab.gameObject, spawnPos, busRoute.waypointDataList[0]._transform.rotation);
+        busObject.name = "EMERGENCY_BUS";
+
+        AITrafficCar busCar = busObject.GetComponent<AITrafficCar>();
+        if (busCar != null)
+        {
+            // Register with route
+            busCar.RegisterCar(busRoute);
+
+            // Set up drive target
+            Transform driveTarget = busObject.transform.Find("DriveTarget");
+            if (driveTarget == null)
+            {
+                driveTarget = new GameObject("DriveTarget").transform;
+                driveTarget.SetParent(busObject.transform);
+            }
+
+            // Point to next waypoint if available
+            if (busRoute.waypointDataList.Count > 1)
+            {
+                driveTarget.position = busRoute.waypointDataList[1]._transform.position;
+                busObject.transform.LookAt(busRoute.waypointDataList[1]._transform);
+            }
+
+            // Start driving
+            busCar.StartDriving();
+            Debug.Log($"Emergency bus spawned at {spawnPos} on route {busRoute.name}");
+        }
+    }
+
+    public void SpawnBusUsingSpawnType(Scenario scenario)
+    {
+        // Find or create bus-specific spawn point
+        AITrafficSpawnPoint busSpawnPoint = null;
+        AITrafficWaypointRoute routeToUse = scenario.scenarioBusRoute; // Use a different variable name
+
+        // If scenario doesn't have a route, use the class member
+        if (routeToUse == null)
+        {
+            routeToUse = this.busRoute; // Use the class member directly
+        }
+
+        if (routeToUse == null)
+        {
+            Debug.LogError("No bus route available for spawning");
+            return;
+        }
+
+        // Find first waypoint's spawn point
+        var spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
+        foreach (var sp in spawnPoints)
+        {
+            if (sp.waypoint != null &&
+                sp.waypoint.onReachWaypointSettings.parentRoute == busRoute)
+            {
+                busSpawnPoint = sp;
+                break;
+            }
+        }
+
+        if (busSpawnPoint == null && busRoute.waypointDataList.Count > 0)
+        {
+            // Create spawn point if none exists
+            GameObject spawnObj = new GameObject("BusSpawnPoint");
+            spawnObj.transform.position = busRoute.waypointDataList[0]._transform.position;
+            busSpawnPoint = spawnObj.AddComponent<AITrafficSpawnPoint>();
+            busSpawnPoint.waypoint = busRoute.waypointDataList[0]._waypoint;
+        }
+
+        if (busSpawnPoint == null)
+        {
+            Debug.LogError("Could not find or create a bus spawn point");
+            return;
+        }
+
+        // Create spawner using the SpawnTypeFromPool approach
+        GameObject spawnerObj = new GameObject("BusSpawner");
+        spawnerObj.transform.position = busSpawnPoint.transform.position;
+
+        SpawnTypeFromPool spawner = spawnerObj.AddComponent<SpawnTypeFromPool>();
+        spawner.type = busPrefab.vehicleType;  // Make sure bus has the right vehicle type
+        spawner.spawnPoint = busSpawnPoint;
+        spawner.spawnRate = 999999f;  // Spawn once only
+        spawner.spawnCars = true;
+
+        // Add a one-shot component that will trigger the spawn
+        SpawnOnce spawnOnce = spawnerObj.AddComponent<SpawnOnce>();
+        spawnOnce.delay = scenario.busSpawnDelay;
+        spawnOnce.spawner = spawner;
+
+        Debug.Log($"Set up bus spawner at {busSpawnPoint.transform.position} with delay {scenario.busSpawnDelay}");
+    }
+
+    // One-shot spawning helper class
+    private class SpawnOnce : MonoBehaviour
+    {
+        public float delay = 30f;
+        public SpawnTypeFromPool spawner;
+        private float timer;
+
+        private void Start()
+        {
+            timer = delay;
+            if (spawner != null)
+            {
+                spawner.spawnCars = false; // Disable initial spawning
+            }
+        }
+
+        private void Update()
+        {
+            timer -= Time.deltaTime;
+            if (timer <= 0f && spawner != null)
+            {
+                // Trigger one spawn
+                spawner.spawnCars = true;
+                timer = 999999f; // Prevent further spawns
+
+                Debug.Log("Triggered one-time bus spawn");
+
+                // Schedule self-destruction
+                Destroy(this, 5f);
+            }
         }
     }
 
@@ -748,11 +1021,10 @@ public class ScenarioManager : MonoBehaviour
         {
             Debug.LogError($"Error during end scenario cleanup: {ex.Message}");
         }
-        // Add to EndCurrentScenario method
-        if (busSpawnCoroutine != null)
+        // In your ScenarioManager's EndCurrentScenario method
+        if (busSpawner != null)
         {
-            StopCoroutine(busSpawnCoroutine);
-            busSpawnCoroutine = null;
+            busSpawner.Reset();
         }
 
         // Trigger the scenario ended event
@@ -1102,8 +1374,20 @@ public class ScenarioManager : MonoBehaviour
 
         // 14. Fix traffic lights in new scene
         ReconnectTrafficControllerToLightManagers();
-        ScheduleBusSpawn(scenario);
-        ForceSpawnBus();
+        // After all other initialization, trigger bus spawn if enabled
+        if (scenario.spawnBus && busSpawner != null)
+        {
+            // First update route if scenario-specific
+            if (scenario.scenarioBusRoute != null)
+            {
+                busSpawner.busRoute = scenario.scenarioBusRoute;
+            }
+
+            // Then trigger spawn with scenario delay
+            busSpawner.TriggerBusSpawn(scenario.busSpawnDelay);
+            Debug.Log($"Triggered bus spawn for scenario {scenario.scenarioName} with delay {scenario.busSpawnDelay}s");
+        }
+        //ForceSpawnBus();
 
         // 15. Position player at scenario start point
         if (scenario.playerStartPosition != null)
