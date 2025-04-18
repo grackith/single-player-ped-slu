@@ -43,7 +43,7 @@ namespace TurnTheGameOn.SimpleTrafficSystem
         private List<AITrafficWaypointRoute> allWaypointRoutesList = new List<AITrafficWaypointRoute>();
 
         // Flag to indicate if we're currently rebuilding
-        private bool isRebuilding = false;
+    
 
         // Flag to prevent duplicate detection during scenario transitions
         [HideInInspector]

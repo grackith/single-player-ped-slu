@@ -18,7 +18,7 @@ public class ResearcherUIToggle : MonoBehaviour
     private List<InputDevice> controllers = new List<InputDevice>();
 
     // Debug settings
-    [SerializeField] private bool enableDebugLogs = true;
+    //[SerializeField] private bool enableDebug.Logs = true;
 
     private void Start()
     {
@@ -42,7 +42,7 @@ public class ResearcherUIToggle : MonoBehaviour
             // Adjust scale for better visibility in VR
             transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
 
-            LogDebug("Canvas configured for VR viewing");
+            //LogDebug("Canvas configured for VR viewing");
         }
         else
         {
@@ -62,9 +62,9 @@ public class ResearcherUIToggle : MonoBehaviour
         PositionCanvasInFrontOfCamera();
 
         // Log debug info
-        if (enableDebugLogs && Time.frameCount % 300 == 0) // Only log every 300 frames to avoid spam
+        if (Time.frameCount % 300 == 0) // Only log every 300 frames to avoid spam
         {
-            LogDebug($"Canvas active: {gameObject.activeSelf}, Position: {transform.position}, Camera: {(Camera.main != null ? "Found" : "Not found")}");
+            //LogDebug($"Canvas active: {gameObject.activeSelf}, Position: {transform.position}, Camera: {(Camera.main != null ? "Found" : "Not found")}");
         }
 
         // Get controllers if not already found
@@ -91,14 +91,14 @@ public class ResearcherUIToggle : MonoBehaviour
             // Make it face the camera directly
             transform.rotation = Camera.main.transform.rotation;
 
-            LogDebug($"Positioned UI at {transform.position}");
+            //LogDebug($"Positioned UI at {transform.position}");
         }
         else
         {
             // Fallback if no camera
             transform.position = new Vector3(0, 1.6f, 2f);
             transform.rotation = Quaternion.Euler(0, 180, 0);
-            LogDebug("No camera found, using default position");
+            //LogDebug("No camera found, using default position");
         }
     }
 
@@ -198,11 +198,11 @@ public class ResearcherUIToggle : MonoBehaviour
         }
     }
 
-    private void LogDebug(string message)
-    {
-        if (enableDebugLogs)
-        {
-            Debug.Log($"[ResearcherUIToggle] {message}");
-        }
-    }
+    //private void LogDebug(string message)
+    //{
+    //    if (enableDebug.Logs)
+    //    {
+    //        Debug.Log($"[ResearcherUIToggle] {message}");
+    //    }
+    //}
 }

@@ -73,7 +73,7 @@ public class ScenarioManager : MonoBehaviour
     public AITrafficCar busPrefab; // Assign your bus prefab in the inspector
     public AITrafficWaypointRoute defaultBusRoute; // Default route if scenario doesn't specify one
     private Coroutine busSpawnCoroutine;
-    private BusSpawner busSpawner;
+    private BusSpawnerSimple BusSpawnerSimple;
     #endregion
 
     #region Private Fields
@@ -92,6 +92,7 @@ public class ScenarioManager : MonoBehaviour
     #endregion
 
     #region Unity Lifecycle Methods
+    
     private void Awake()
     {
         // Singleton pattern
@@ -165,17 +166,19 @@ public class ScenarioManager : MonoBehaviour
         // Initialize the redirected walking setup
         InitializeRedirectedWalking();
         // Find or create the bus spawner
-        busSpawner = FindObjectOfType<BusSpawner>();
-        if (busSpawner == null)
+        BusSpawnerSimple = FindObjectOfType<BusSpawnerSimple>();
+        if (BusSpawnerSimple == null)
         {
-            Debug.LogWarning("No BusSpawner found in scene, creating one");
-            GameObject spawnerObj = new GameObject("BusSpawner");
-            busSpawner = spawnerObj.AddComponent<BusSpawner>();
+            Debug.LogWarning("No BusSpawnerSimple found in scene, creating one");
+            GameObject spawnerObj = new GameObject("BusSpawnerSimple");
+            BusSpawnerSimple = spawnerObj.AddComponent<BusSpawnerSimple>();
             DontDestroyOnLoad(spawnerObj); // Keep it across scenes
 
             // Assign default values if available
-            busSpawner.busPrefab = busPrefab;
-            busSpawner.busRoute = busRoute;
+            BusSpawnerSimple.busPrefab = busPrefab;
+            BusSpawnerSimple.initialRoute = defaultBusRoute; // Main route
+            BusSpawnerSimple.busStopRoute = busRoute;
+
         }
     }
     private void EnsureManagerSceneIsLoaded()
@@ -721,7 +724,7 @@ public class ScenarioManager : MonoBehaviour
         }
 
         // 3. Create a SpawnTypeFromPool component
-        GameObject spawnerObj = new GameObject("BusSpawner");
+        GameObject spawnerObj = new GameObject("BusSpawnerSimple");
         spawnerObj.transform.position = busSpawnPoint.transform.position;
 
         SpawnTypeFromPool spawner = spawnerObj.AddComponent<SpawnTypeFromPool>();
@@ -872,7 +875,7 @@ public class ScenarioManager : MonoBehaviour
         }
 
         // Create spawner using the SpawnTypeFromPool approach
-        GameObject spawnerObj = new GameObject("BusSpawner");
+        GameObject spawnerObj = new GameObject("BusSpawnerSimple");
         spawnerObj.transform.position = busSpawnPoint.transform.position;
 
         SpawnTypeFromPool spawner = spawnerObj.AddComponent<SpawnTypeFromPool>();
@@ -1022,9 +1025,9 @@ public class ScenarioManager : MonoBehaviour
             Debug.LogError($"Error during end scenario cleanup: {ex.Message}");
         }
         // In your ScenarioManager's EndCurrentScenario method
-        if (busSpawner != null)
+        if (BusSpawnerSimple != null)
         {
-            busSpawner.Reset();
+            BusSpawnerSimple.Reset();
         }
 
         // Trigger the scenario ended event
@@ -1298,14 +1301,13 @@ public class ScenarioManager : MonoBehaviour
             AITrafficController.Instance.RebuildInternalDataStructures();
         }
     }
-    // In ScenarioManager.cs
     private IEnumerator TransitionToScenario(Scenario scenario, int index)
     {
         isTransitioning = true;
         currentScenarioIndex = index;
         Debug.Log($"Starting transition to scenario: {scenario.scenarioName}");
 
-        // 1. PREPARE - Fade out first 
+        // 1. PREPARE - Fade out screen first 
         TrafficSystemManager trafficManager = TrafficSystemManager.Instance;
         if (trafficManager != null)
         {
@@ -1314,24 +1316,8 @@ public class ScenarioManager : MonoBehaviour
 
         yield return StartCoroutine(FadeScreen(true, fadeInOutDuration));
 
-        // 2. Get AITrafficController reference
-        AITrafficController trafficController = AITrafficController.Instance;
-        if (trafficController == null)
-        {
-            Debug.LogError("No traffic controller found!");
-            yield break;
-        }
-
-        // 3. Disable traffic controller temporarily
-        trafficController.enabled = false;
-
-        // 4. Move all cars to pool (rather than destroying them)
-        Debug.Log("Moving all cars to pool");
-        trafficController.MoveAllCarsToPool();
-
-        // 5. UNLOAD PREVIOUS SCENARIO
-        if (currentlyLoadedScenario.IsValid() &&
-            currentlyLoadedScenario.name != "s.researcher")
+        // 2. UNLOAD PREVIOUS SCENARIO
+        if (currentlyLoadedScenario.IsValid() && currentlyLoadedScenario.name != "s.researcher")
         {
             Debug.Log($"Unloading previous scenario: {currentlyLoadedScenario.name}");
             AsyncOperation asyncUnload = SceneManager.UnloadSceneAsync(currentlyLoadedScenario);
@@ -1339,57 +1325,111 @@ public class ScenarioManager : MonoBehaviour
             yield return null; // Extra frame for cleanup
         }
 
-        // 6. LOAD NEW SCENARIO SCENE
+        // 3. LOAD NEW SCENARIO SCENE
         Debug.Log($"Loading new scenario scene: {scenario.sceneBuildName}");
         yield return StartCoroutine(SafeLoadSceneAsync(scenario.sceneBuildName, LoadSceneMode.Additive));
         currentlyLoadedScenario = SceneManager.GetSceneByName(scenario.sceneBuildName);
 
-        // 7. SET ACTIVE SCENE
+        // 4. SET ACTIVE SCENE
         SceneManager.SetActiveScene(currentlyLoadedScenario);
-        yield return new WaitForSeconds(0.5f); // Give scene time to fully initialize
-
-        // 8. Re-initialize the spawn points to use the ones in the new scene
+        AITrafficController trafficController = AITrafficController.Instance;
+        // These steps are important and may be missing or incorrectly implemented in your current code
+        yield return new WaitForSeconds(0.5f);
         trafficController.InitializeSpawnPoints();
-
-        // 9. Update traffic density based on scenario setting
-        trafficController.density = scenario.trafficDensity;
-        Debug.Log($"Set traffic density to {scenario.trafficDensity}");
-
-        // 10. Re-enable traffic controller
-        trafficController.enabled = true;
-
-        // 11. Setup yield triggers for intersections
+        trafficController.RegisterAllRoutesInScene();
+        ReconnectTrafficControllerToLightManagers(); // Critical step!
+        yield return new WaitForSeconds(0.2f);
         SetupIntersectionYieldTriggers();
 
-        // 12. MANUALLY SPAWN CARS FROM POOL BASED ON SCENARIO DENSITY
-        yield return StartCoroutine(SpawnCarsFromPool(trafficController, scenario.trafficDensity));
-
-        // 13. Setup pedestrian detection
-        var pedestrianDetection = FindObjectOfType<PedestrianDetection>();
-        if (pedestrianDetection == null)
+        // Force reinitialization of traffic lights
+        var lightManagers = FindObjectsOfType<AITrafficLightManager>();
+        foreach (var manager in lightManagers)
         {
-            pedestrianDetection = gameObject.AddComponent<PedestrianDetection>();
+            if (manager != null)
+            {
+                manager.ResetLightManager();
+            }
         }
-        pedestrianDetection.enablePedestrianSafety = true;
 
-        // 14. Fix traffic lights in new scene
-        ReconnectTrafficControllerToLightManagers();
-        // After all other initialization, trigger bus spawn if enabled
-        if (scenario.spawnBus && busSpawner != null)
+        // Force traffic light synchronization
+        if (AITrafficController.Instance != null)
         {
-            // First update route if scenario-specific
+            AITrafficController.Instance.SynchronizeTrafficLights();
+        }
+
+        // 5. SIMPLIFY TRAFFIC SYSTEM INITIALIZATION
+        //AITrafficController trafficController = AITrafficController.Instance;
+        if (trafficController != null)
+        {
+            Debug.Log("Initializing traffic system with simplified approach");
+
+            // 5.1 First disable the controller
+            trafficController.enabled = false;
+
+            // 5.2 Dispose all native collections and clear the pool
+            trafficController.DisposeAllNativeCollections();
+            trafficController.ResetTrafficPool();
+
+            // 5.3 Reinitialize native lists
+            trafficController.InitializeNativeLists();
+
+            // 5.4 Register all routes from the current scene
+            Debug.Log("Registering routes from current scene");
+            trafficController.RegisterAllRoutesInScene();
+
+            // 5.5 Initialize spawn points from the current scene
+            Debug.Log("Initializing spawn points from current scene");
+            trafficController.InitializeSpawnPoints();
+
+            // 5.6 Set traffic density based on scenario setting
+            trafficController.density = scenario.trafficDensity;
+            Debug.Log($"Set traffic density to {scenario.trafficDensity}");
+
+            // 5.7 Re-enable the controller
+            trafficController.enabled = true;
+
+            // 5.8 DIRECTLY spawn vehicles in one operation
+            Debug.Log($"Directly spawning {scenario.trafficDensity} vehicles");
+            yield return new WaitForSeconds(0.5f); // Wait for controller to initialize
+            trafficController.DirectlySpawnVehicles(scenario.trafficDensity);
+
+            // 5.9 Wait for vehicles to initialize
+            yield return new WaitForSeconds(1.0f);
+
+            // 5.10 Rebuild arrays to ensure consistency
+            trafficController.RebuildTransformArrays();
+        }
+
+        // 6. Setup traffic lights and intersections
+        //ReconnectTrafficControllerToLightManagers();
+        //yield return new WaitForSeconds(0.2f);
+        //SetupIntersectionYieldTriggers();
+
+        // 7. Schedule bus spawn if enabled
+        // 7. Schedule bus spawn if enabled
+        if (scenario.spawnBus && BusSpawnerSimple != null)
+        {
+            // Update route if scenario-specific
             if (scenario.scenarioBusRoute != null)
             {
-                busSpawner.busRoute = scenario.scenarioBusRoute;
+                // If scenario has a specific route, use it as the initial route
+                BusSpawnerSimple.initialRoute = scenario.scenarioBusRoute;
+            }
+            else
+            {
+                // Otherwise use the default route from ScenarioManager
+                BusSpawnerSimple.initialRoute = defaultBusRoute;
             }
 
-            // Then trigger spawn with scenario delay
-            busSpawner.TriggerBusSpawn(scenario.busSpawnDelay);
-            Debug.Log($"Triggered bus spawn for scenario {scenario.scenarioName} with delay {scenario.busSpawnDelay}s");
-        }
-        //ForceSpawnBus();
+            // Set up the routes
+            BusSpawnerSimple.SetupBusRoutes(BusSpawnerSimple.initialRoute, BusSpawnerSimple.busStopRoute);
 
-        // 15. Position player at scenario start point
+            // Trigger spawn with scenario delay
+            BusSpawnerSimple.TriggerBusSpawn(scenario.busSpawnDelay);
+            Debug.Log($"Triggered bus spawn with delay {scenario.busSpawnDelay}s");
+        }
+
+        // 8. Position player at scenario start point
         if (scenario.playerStartPosition != null)
         {
             // Find the XR Origin / Player object
@@ -1418,28 +1458,193 @@ public class ScenarioManager : MonoBehaviour
                 // Set rotation to match start position's facing direction
                 xrOrigin.transform.rotation = scenario.playerStartPosition.rotation;
 
-                Debug.Log($"Positioned player at scenario start point: {scenario.playerStartPosition.name}");
-            }
-            else
-            {
-                Debug.LogWarning("Could not find XR Origin to position at scenario start point!");
+                Debug.Log($"Positioned player at scenario start point");
             }
         }
 
-        // 16. FADE IN
+        // 9. FADE IN
         yield return new WaitForSeconds(0.5f);
         yield return StartCoroutine(FadeScreen(false, fadeInOutDuration));
-        
 
-        // Hide researcher UI during active scenario
+        // 10. Hide researcher UI during active scenario
         if (researcherUI != null)
         {
             researcherUI.SetActive(false);
         }
 
+        // 11. Trigger scenario started event
+        onScenarioStarted.Invoke();
+
         isTransitioning = false;
         Debug.Log($"Transition to scenario: {scenario.scenarioName} complete");
+
+        // 12. Final verification after a short delay
+        yield return new WaitForSeconds(2.0f);
+
+        // Check that all spawned cars are actually driving
+        var activeCars = FindObjectsOfType<AITrafficCar>()
+            .Where(c => c.gameObject.activeInHierarchy)
+            .ToArray();
+
+        Debug.Log($"Final verification: {activeCars.Length} active cars in scene");
+
+        int stoppedCars = 0;
+        //foreach (var car in activeCars)
+        //{
+        //    if (!car.isDriving)
+        //    {
+        //        stoppedCars++;
+        //        car.StartDriving(); // Force start any stopped cars
+        //    }
+        //}
+
+        if (stoppedCars > 0)
+        {
+            Debug.LogWarning($"controller is trying to restart cars!! it detects nonmoving vehicles.Found and restarted {stoppedCars} stopped cars");
+        }
     }
+    // In ScenarioManager.cs
+    //private IEnumerator TransitionToScenario(Scenario scenario, int index)
+    //{
+    //    isTransitioning = true;
+    //    currentScenarioIndex = index;
+    //    Debug.Log($"Starting transition to scenario: {scenario.scenarioName}");
+
+    //    // 1. PREPARE - Fade out first 
+    //    TrafficSystemManager trafficManager = TrafficSystemManager.Instance;
+    //    if (trafficManager != null)
+    //    {
+    //        trafficManager.preventDuplicateDetection = true;
+    //    }
+
+    //    yield return StartCoroutine(FadeScreen(true, fadeInOutDuration));
+
+    //    // 2. Get AITrafficController reference
+    //    AITrafficController trafficController = AITrafficController.Instance;
+    //    if (trafficController == null)
+    //    {
+    //        Debug.LogError("No traffic controller found!");
+    //        yield break;
+    //    }
+
+    //    // 3. Disable traffic controller temporarily
+    //    trafficController.enabled = false;
+
+    //    // 4. Move all cars to pool (rather than destroying them)
+    //    Debug.Log("Moving all cars to pool");
+    //    trafficController.MoveAllCarsToPool();
+
+    //    // 5. UNLOAD PREVIOUS SCENARIO
+    //    if (currentlyLoadedScenario.IsValid() &&
+    //        currentlyLoadedScenario.name != "s.researcher")
+    //    {
+    //        Debug.Log($"Unloading previous scenario: {currentlyLoadedScenario.name}");
+    //        AsyncOperation asyncUnload = SceneManager.UnloadSceneAsync(currentlyLoadedScenario);
+    //        while (!asyncUnload.isDone) yield return null;
+    //        yield return null; // Extra frame for cleanup
+    //    }
+
+    //    // 6. LOAD NEW SCENARIO SCENE
+    //    Debug.Log($"Loading new scenario scene: {scenario.sceneBuildName}");
+    //    yield return StartCoroutine(SafeLoadSceneAsync(scenario.sceneBuildName, LoadSceneMode.Additive));
+    //    currentlyLoadedScenario = SceneManager.GetSceneByName(scenario.sceneBuildName);
+
+    //    // 7. SET ACTIVE SCENE
+    //    SceneManager.SetActiveScene(currentlyLoadedScenario);
+    //    yield return new WaitForSeconds(0.5f); // Give scene time to fully initialize
+
+    //    // 8. Re-initialize the spawn points to use the ones in the new scene
+    //    trafficController.InitializeSpawnPoints();
+
+    //    // 9. Update traffic density based on scenario setting
+    //    trafficController.density = scenario.trafficDensity;
+    //    Debug.Log($"Set traffic density to {scenario.trafficDensity}");
+
+    //    // 10. Re-enable traffic controller
+    //    trafficController.enabled = true;
+
+    //    // 11. Setup yield triggers for intersections
+    //    SetupIntersectionYieldTriggers();
+
+    //    // 12. MANUALLY SPAWN CARS FROM POOL BASED ON SCENARIO DENSITY
+    //    yield return StartCoroutine(SpawnCarsFromPool(trafficController, scenario.trafficDensity));
+
+    //    // 13. Setup pedestrian detection
+    //    var pedestrianDetection = FindObjectOfType<PedestrianDetection>();
+    //    if (pedestrianDetection == null)
+    //    {
+    //        pedestrianDetection = gameObject.AddComponent<PedestrianDetection>();
+    //    }
+    //    pedestrianDetection.enablePedestrianSafety = true;
+
+    //    // 14. Fix traffic lights in new scene
+    //    ReconnectTrafficControllerToLightManagers();
+    //    // After all other initialization, trigger bus spawn if enabled
+    //    if (scenario.spawnBus && BusSpawnerSimple != null)
+    //    {
+    //        // First update route if scenario-specific
+    //        if (scenario.scenarioBusRoute != null)
+    //        {
+    //            BusSpawnerSimple.busRoute = scenario.scenarioBusRoute;
+    //        }
+
+    //        // Then trigger spawn with scenario delay
+    //        BusSpawnerSimple.TriggerBusSpawn(scenario.busSpawnDelay);
+    //        Debug.Log($"Triggered bus spawn for scenario {scenario.scenarioName} with delay {scenario.busSpawnDelay}s");
+    //    }
+    //    //ForceSpawnBus();
+
+    //    // 15. Position player at scenario start point
+    //    if (scenario.playerStartPosition != null)
+    //    {
+    //        // Find the XR Origin / Player object
+    //        GameObject xrOrigin = FindXROrigin();
+
+    //        if (xrOrigin != null)
+    //        {
+    //            // Calculate offset between camera and XR Origin
+    //            Vector3 cameraOffset = Vector3.zero;
+    //            if (Camera.main != null)
+    //            {
+    //                cameraOffset = Camera.main.transform.position - xrOrigin.transform.position;
+    //                // Only keep the horizontal offset
+    //                cameraOffset.y = 0;
+    //            }
+
+    //            // Position the XR Origin at the start position, accounting for camera offset
+    //            Vector3 targetPosition = scenario.playerStartPosition.position - cameraOffset;
+
+    //            // Maintain the y-position of the XR Origin (floor height)
+    //            targetPosition.y = xrOrigin.transform.position.y;
+
+    //            // Apply the position
+    //            xrOrigin.transform.position = targetPosition;
+
+    //            // Set rotation to match start position's facing direction
+    //            xrOrigin.transform.rotation = scenario.playerStartPosition.rotation;
+
+    //            Debug.Log($"Positioned player at scenario start point: {scenario.playerStartPosition.name}");
+    //        }
+    //        else
+    //        {
+    //            Debug.LogWarning("Could not find XR Origin to position at scenario start point!");
+    //        }
+    //    }
+
+    //    // 16. FADE IN
+    //    yield return new WaitForSeconds(0.5f);
+    //    yield return StartCoroutine(FadeScreen(false, fadeInOutDuration));
+
+
+    //    // Hide researcher UI during active scenario
+    //    if (researcherUI != null)
+    //    {
+    //        researcherUI.SetActive(false);
+    //    }
+
+    //    isTransitioning = false;
+    //    Debug.Log($"Transition to scenario: {scenario.scenarioName} complete");
+    //}
     // Helper method to find the XR Origin in the scene
     private GameObject FindXROrigin()
     {
@@ -2339,21 +2544,10 @@ public class ScenarioManager : MonoBehaviour
         var lightManagers = FindObjectsOfType<AITrafficLightManager>();
         Debug.Log($"Found {lightManagers.Length} traffic light managers to reconnect");
 
-        // First disable all light managers AND their visual renderers
+        // First disable all light managers
         foreach (var manager in lightManagers)
         {
             manager.enabled = false;
-
-            // NEW: Turn off light renderers
-            var lightRenderers = manager.GetComponentsInChildren<Renderer>(true);
-            foreach (var renderer in lightRenderers)
-            {
-                if (renderer.name.Contains("light", StringComparison.OrdinalIgnoreCase) ||
-                    renderer.name.Contains("Traffic_light", StringComparison.OrdinalIgnoreCase))
-                {
-                    renderer.enabled = false;
-                }
-            }
         }
 
         // Then enable only the ones in the active scene
@@ -2365,14 +2559,8 @@ public class ScenarioManager : MonoBehaviour
             if (manager.gameObject.scene == activeScene)
             {
                 manager.enabled = true;
-
-                // NEW: Re-enable light renderers for active scene
-                var lightRenderers = manager.GetComponentsInChildren<Renderer>(true);
-                foreach (var renderer in lightRenderers)
-                {
-                    renderer.enabled = true;
-                }
-
+                // Force a reset on the manager
+                manager.ResetLightManager();
                 enabledCount++;
             }
         }

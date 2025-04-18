@@ -130,12 +130,14 @@ public class PedestrianDetection : MonoBehaviour
     /// <summary>
     /// Make cars yield to the player at the specified crosswalk
     /// </summary>
+    // Modify the MakeCarsYield method in PedestrianDetection.cs
     private void MakeCarsYield(Vector3 crosswalkPosition)
     {
-        // Find cars that should yield
+        // Find cars that should yield - check if they're approaching the crosswalk
         var carsToYield = cachedTrafficCars
             .Where(car => car != null && car.isDriving &&
-                   Vector3.Distance(car.transform.position, crosswalkPosition) < carDetectionRange)
+                   Vector3.Distance(car.transform.position, crosswalkPosition) < carDetectionRange &&
+                   IsCarApproachingCrosswalk(car, crosswalkPosition))
             .ToArray();
 
         foreach (var car in carsToYield)
@@ -147,6 +149,16 @@ public class PedestrianDetection : MonoBehaviour
                 {
                     AITrafficController.Instance.Set_CanProcess(car.assignedIndex, false);
                     car.StopDriving();
+
+                    // Apply immediate braking force for safety
+                    Rigidbody rb = car.GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        rb.velocity = Vector3.zero;
+                        rb.angularVelocity = Vector3.zero;
+                        rb.drag = 100; // High drag to ensure it stops quickly
+                    }
+
                     yieldingCars[car] = true;
 
                     if (showDebug)
@@ -156,6 +168,20 @@ public class PedestrianDetection : MonoBehaviour
                 }
             }
         }
+    }
+
+    // Add this new method to check if a car is approaching the crosswalk
+    private bool IsCarApproachingCrosswalk(AITrafficCar car, Vector3 crosswalkPosition)
+    {
+        // Get direction from car to crosswalk
+        Vector3 toCrosswalk = crosswalkPosition - car.transform.position;
+
+        // Check if car is facing toward the crosswalk
+        float dotProduct = Vector3.Dot(car.transform.forward, toCrosswalk.normalized);
+
+        // Car is approaching if it's pointing toward the crosswalk (dot > 0)
+        // and is within detection range
+        return dotProduct > 0.5f; // Using 0.5 means car needs to be pointing somewhat toward the crosswalk
     }
 
     /// <summary>
@@ -171,6 +197,14 @@ public class PedestrianDetection : MonoBehaviour
         {
             if (car != null && car.assignedIndex >= 0)
             {
+                // Reset physics properties first
+                Rigidbody rb = car.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.drag = car.minDrag; // Reset to default drag
+                    rb.angularDrag = car.minAngularDrag;
+                }
+
                 AITrafficController.Instance.Set_CanProcess(car.assignedIndex, true);
                 car.StartDriving();
                 yieldingCars[car] = false;
