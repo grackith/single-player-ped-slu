@@ -2,6 +2,7 @@
 {
     using UnityEngine;
     using System.Collections.Generic;
+    using System.Collections;
 
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficwaypoint")]
     
@@ -14,6 +15,8 @@
         private bool finalWaypoint; // used for gizmos
         private bool missingNewRoutePoint; // used for gizmos
         private bool hasNewRoutePoint; // used for gizmos
+        private List<AITrafficCar> carsStoppedForLight = new List<AITrafficCar>();
+
 
         private void OnEnable()
         {
@@ -30,15 +33,49 @@
 
         void OnTriggerEnter(Collider col)
         {
+            // Standard waypoint processing
             col.transform.SendMessage("OnReachedWaypoint", onReachWaypointSettings, SendMessageOptions.DontRequireReceiver);
-            if (onReachWaypointSettings.waypointIndexnumber == onReachWaypointSettings.parentRoute.waypointDataList.Count)
+
+            // Only check for traffic lights at specific waypoints that should stop
+            // These would be waypoints just before the intersection
+            if (onReachWaypointSettings.parentRoute != null &&
+                onReachWaypointSettings.parentRoute.stopForTrafficLight &&
+                // Add some criteria to identify intersection approach waypoints
+                // For example: specific waypoint index or tag
+                (onReachWaypointSettings.waypointIndexnumber == onReachWaypointSettings.parentRoute.waypointDataList.Count - 1))
             {
-                if (onReachWaypointSettings.newRoutePoints.Length == 0)
+                AITrafficCar car = col.GetComponent<AITrafficCar>();
+                if (car != null)
                 {
-                    col.transform.root.SendMessage("StopDriving", SendMessageOptions.DontRequireReceiver);
+                    car.StopDriving();
+                    Debug.Log($"Force stopping car {car.name} for traffic light at waypoint {name}");
+
+                    // Store this car to restart it when the light turns green
+                    StartCoroutine(CheckForGreenLight(car));
                 }
             }
         }
+        private IEnumerator CheckForGreenLight(AITrafficCar car)
+        {
+            // Keep checking until car is driving or destroyed
+            while (car != null && !car.isDriving)
+            {
+                // Check if light is now green
+                if (onReachWaypointSettings.parentRoute != null &&
+                    !onReachWaypointSettings.parentRoute.stopForTrafficLight)
+                {
+                    // Light is green, restart the car
+                    car.StartDriving();
+                    Debug.Log($"Traffic light turned green: Restarting car {car.name} from waypoint {name}");
+                    yield break;
+                }
+
+                // Wait a short time before checking again
+                yield return new WaitForSeconds(0.2f);
+            }
+        }
+
+
 
         public void TriggerNextWaypoint(AITrafficCar _AITrafficCar)
         {
@@ -49,6 +86,27 @@
                 {
                     _AITrafficCar.StopDriving();
                 }
+            }
+        }
+        void Update()
+        {
+            // Check if the light has turned green
+            if (onReachWaypointSettings.parentRoute != null &&
+                !onReachWaypointSettings.parentRoute.stopForTrafficLight &&
+                carsStoppedForLight.Count > 0)
+            {
+                // Restart all cars we've stopped
+                foreach (var car in carsStoppedForLight)
+                {
+                    if (car != null && !car.isDriving)
+                    {
+                        car.StartDriving();
+                        Debug.Log($"Traffic light turned green: Restarting car {car.name} from waypoint {name}");
+                    }
+                }
+
+                // Clear our tracking list
+                carsStoppedForLight.Clear();
             }
         }
 

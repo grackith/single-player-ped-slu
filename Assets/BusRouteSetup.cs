@@ -91,5 +91,22 @@ public class BusRouteSetup : MonoBehaviour
         }
 
         Debug.Log("Routes successfully connected");
+        // CRITICAL ADDITION: Ensure traffic light state propagation
+        if (initialRoute.routeInfo != null && busStopRoute.routeInfo != null)
+        {
+            // Make sure both route info components are enabled
+            initialRoute.routeInfo.enabled = true;
+            busStopRoute.routeInfo.enabled = true;
+
+            // Synchronize traffic light awareness between routes
+            bool stopForLight = initialRoute.routeInfo.stopForTrafficLight;
+            busStopRoute.routeInfo.stopForTrafficLight = stopForLight;
+
+            Debug.Log($"Synchronized traffic light state between routes: stopForTrafficLight={stopForLight}");
+        }
+        else
+        {
+            Debug.LogError("One or both routes are missing routeInfo components!");
+        }
     }
 }

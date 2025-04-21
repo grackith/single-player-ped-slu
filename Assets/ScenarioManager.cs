@@ -16,6 +16,7 @@ using System;
 using static TurnTheGameOn.SimpleTrafficSystem.CiDy_STS_GeneratedContent;
 using static UnityEngine.XR.Interaction.Toolkit.Inputs.Haptics.HapticsUtility;
 
+
 #if UNITY_XR_MANAGEMENT
 using UnityEngine.XR.Management;
 #endif
@@ -39,6 +40,7 @@ public class Scenario
     public float busSpawnDelay = 30f;
     [Tooltip("Optional specific route for the bus in this scenario")]
     public AITrafficWaypointRoute scenarioBusRoute;
+    
 
 
 
@@ -80,6 +82,7 @@ public class ScenarioManager : MonoBehaviour
     private int currentScenarioIndex = -1;
     private bool isTransitioning = false;
     private Scene currentlyLoadedScenario;
+    private RouteConnectionPreserver routePreserver;
 
     // Singleton instance
     private static ScenarioManager _instance;
@@ -117,6 +120,14 @@ public class ScenarioManager : MonoBehaviour
             // Ensure researcher UI is positioned correctly for VR viewing
             PositionResearcherUI();
         }
+        routePreserver = GetComponent<RouteConnectionPreserver>();
+        if (routePreserver == null)
+        {
+            routePreserver = gameObject.AddComponent<RouteConnectionPreserver>();
+        }
+
+        // Save connections from editor setup
+        routePreserver.SaveAllConnections();
     }
     private void InitializeRedirectedWalking()
     {
@@ -180,6 +191,7 @@ public class ScenarioManager : MonoBehaviour
             BusSpawnerSimple.busStopRoute = busRoute;
 
         }
+
     }
     private void EnsureManagerSceneIsLoaded()
     {
@@ -247,6 +259,7 @@ public class ScenarioManager : MonoBehaviour
 
         // Launch the scenario
         StartCoroutine(TransitionToScenario(targetScenario, scenarioIndex));
+
     }
     // Add this to your ScenarioManager.cs to run during scenario transition
     public void RefreshScenarioRouteConnections()
@@ -345,6 +358,7 @@ public class ScenarioManager : MonoBehaviour
             AITrafficController.Instance.RebuildTransformArrays();
             AITrafficController.Instance.RebuildInternalDataStructures();
         }
+
     }
     private void FixRouteReferences()
     {
@@ -381,6 +395,7 @@ public class ScenarioManager : MonoBehaviour
                 }
             }
         }
+
     }
 
     /// <summary>
@@ -1081,6 +1096,7 @@ public class ScenarioManager : MonoBehaviour
 
         // Rebuild internal arrays
         controller.RebuildTransformArrays();
+
     }
 
     /// <summary>
@@ -1339,7 +1355,7 @@ public class ScenarioManager : MonoBehaviour
         trafficController.RegisterAllRoutesInScene();
         ReconnectTrafficControllerToLightManagers(); // Critical step!
         yield return new WaitForSeconds(0.2f);
-        SetupIntersectionYieldTriggers();
+        //SetupIntersectionYieldTriggers();
 
         // Force reinitialization of traffic lights
         var lightManagers = FindObjectsOfType<AITrafficLightManager>();
@@ -1354,7 +1370,7 @@ public class ScenarioManager : MonoBehaviour
         // Force traffic light synchronization
         if (AITrafficController.Instance != null)
         {
-            AITrafficController.Instance.SynchronizeTrafficLights();
+            //AITrafficController.Instance.SynchronizeTrafficLights();
         }
 
         // 5. SIMPLIFY TRAFFIC SYSTEM INITIALIZATION
@@ -1398,6 +1414,12 @@ public class ScenarioManager : MonoBehaviour
 
             // 5.10 Rebuild arrays to ensure consistency
             trafficController.RebuildTransformArrays();
+            if (routePreserver != null)
+            {
+                routePreserver.RestoreAllConnections();
+            }
+
+            yield return new WaitForSeconds(0.5f);
         }
 
         // 6. Setup traffic lights and intersections
@@ -1502,6 +1524,8 @@ public class ScenarioManager : MonoBehaviour
         {
             Debug.LogWarning($"controller is trying to restart cars!! it detects nonmoving vehicles.Found and restarted {stoppedCars} stopped cars");
         }
+        // Add to the end of your TransitionToScenario method
+        AITrafficController.Instance.DebugTrafficLightAwareness();
     }
     // In ScenarioManager.cs
     //private IEnumerator TransitionToScenario(Scenario scenario, int index)
@@ -1736,7 +1760,7 @@ public class ScenarioManager : MonoBehaviour
             var route = spawnPoint.waypoint.onReachWaypointSettings.parentRoute;
 
             // Get a car from the pool that matches the route's vehicle types
-            AITrafficCar car = controller.GetRandomCarFromPool(route);
+            AITrafficCar car = controller.SpawnCarsFromPool(route);
 
             if (car != null)
             {
@@ -1907,55 +1931,55 @@ public class ScenarioManager : MonoBehaviour
         }
     }
     // Add this to your ScenarioManager class
-    public void SetupIntersectionYieldTriggers()
-    {
-        // Find all traffic waypoints in the scene
-        var waypoints = FindObjectsOfType<AITrafficWaypoint>();
+    //public void SetupIntersectionYieldTriggers()
+    //{
+    //    // Find all traffic waypoints in the scene
+    //    var waypoints = FindObjectsOfType<AITrafficWaypoint>();
 
-        // Look for intersection waypoints (typically those with multiple connections)
-        foreach (var waypoint in waypoints)
-        {
-            if (waypoint.onReachWaypointSettings.laneChangePoints.Count > 0 ||
-                waypoint.onReachWaypointSettings.yieldTriggers.Count > 0)
-            {
-                // This is an intersection waypoint
+    //    // Look for intersection waypoints (typically those with multiple connections)
+    //    foreach (var waypoint in waypoints)
+    //    {
+    //        if (waypoint.onReachWaypointSettings.laneChangePoints.Count > 0 ||
+    //            waypoint.onReachWaypointSettings.yieldTriggers.Count > 0)
+    //        {
+    //            // This is an intersection waypoint
 
-                // Make sure yieldTriggers is initialized
-                if (waypoint.onReachWaypointSettings.yieldTriggers == null)
-                    waypoint.onReachWaypointSettings.yieldTriggers = new List<AITrafficWaypointRouteInfo>();
+    //            // Make sure yieldTriggers is initialized
+    //            if (waypoint.onReachWaypointSettings.yieldTriggers == null)
+    //                waypoint.onReachWaypointSettings.yieldTriggers = new List<AITrafficWaypointRouteInfo>();
 
-                // Create a yield trigger if one doesn't exist
-                if (waypoint.onReachWaypointSettings.yieldTriggers.Count == 0)
-                {
-                    GameObject yieldTriggerObj = new GameObject("YieldTrigger_" + waypoint.name);
-                    yieldTriggerObj.transform.position = waypoint.transform.position;
+    //            // Create a yield trigger if one doesn't exist
+    //            if (waypoint.onReachWaypointSettings.yieldTriggers.Count == 0)
+    //            {
+    //                GameObject yieldTriggerObj = new GameObject("YieldTrigger_" + waypoint.name);
+    //                yieldTriggerObj.transform.position = waypoint.transform.position;
 
-                    // Create a box collider for the trigger
-                    BoxCollider triggerCollider = yieldTriggerObj.AddComponent<BoxCollider>();
-                    triggerCollider.isTrigger = true;
-                    triggerCollider.size = new Vector3(7f, 3f, 7f); // Adjust size as needed
+    //                // Create a box collider for the trigger
+    //                BoxCollider triggerCollider = yieldTriggerObj.AddComponent<BoxCollider>();
+    //                triggerCollider.isTrigger = true;
+    //                triggerCollider.size = new Vector3(7f, 3f, 7f); // Adjust size as needed
 
-                    // Add the yield trigger component
-                    //AITrafficCarYieldTrigger yieldTrigger = yieldTriggerObj.AddComponent<AITrafficCarYieldTrigger>();
-                    //yieldTrigger.yieldForCrossTraffic = true;
-                    AITrafficWaypointRouteInfo routeInfo = yieldTriggerObj.AddComponent<AITrafficWaypointRouteInfo>();
-                    routeInfo.yieldTrigger = triggerCollider;
+    //                // Add the yield trigger component
+    //                //AITrafficCarYieldTrigger yieldTrigger = yieldTriggerObj.AddComponent<AITrafficCarYieldTrigger>();
+    //                //yieldTrigger.yieldForCrossTraffic = true;
+    //                AITrafficWaypointRouteInfo routeInfo = yieldTriggerObj.AddComponent<AITrafficWaypointRouteInfo>();
+    //                routeInfo.yieldTrigger = triggerCollider;
 
-                    // Add to the waypoint's list
-                    waypoint.onReachWaypointSettings.yieldTriggers.Add(routeInfo);
+    //                // Add to the waypoint's list
+    //                waypoint.onReachWaypointSettings.yieldTriggers.Add(routeInfo);
 
-                    Debug.Log($"Created yield trigger for waypoint {waypoint.name}");
-                }
-            }
-        }
+    //                Debug.Log($"Created yield trigger for waypoint {waypoint.name}");
+    //            }
+    //        }
+    //    }
 
-        // Make sure the controller is set to use yield triggers
-        if (AITrafficController.Instance != null)
-        {
-            AITrafficController.Instance.useYieldTriggers = true;
-            Debug.Log("Enabled yield triggers in traffic controller");
-        }
-    }
+    //    // Make sure the controller is set to use yield triggers
+    //    if (AITrafficController.Instance != null)
+    //    {
+    //        AITrafficController.Instance.useYieldTriggers = true;
+    //        Debug.Log("Enabled yield triggers in traffic controller");
+    //    }
+    //}
 
 
 
@@ -2104,7 +2128,7 @@ public class ScenarioManager : MonoBehaviour
                 {
                     car.ReinitializeRouteConnection();
                     car.StartDriving();
-                    car.ForceWaypointPathUpdate();
+                    //car.ForceWaypointPathUpdate();
                     Debug.Log($"Reset driving state for {car.name}");
 
                     // Add a short delay to allow controller to process
@@ -2544,28 +2568,21 @@ public class ScenarioManager : MonoBehaviour
         var lightManagers = FindObjectsOfType<AITrafficLightManager>();
         Debug.Log($"Found {lightManagers.Length} traffic light managers to reconnect");
 
-        // First disable all light managers
+        // Force traffic light synchronization
+        //controller.SynchronizeTrafficLights();
+        //controller.SynchronizeTrafficLightAwareness();
+
+        // Reset light managers
         foreach (var manager in lightManagers)
         {
-            manager.enabled = false;
-        }
-
-        // Then enable only the ones in the active scene
-        Scene activeScene = SceneManager.GetActiveScene();
-        int enabledCount = 0;
-
-        foreach (var manager in lightManagers)
-        {
-            if (manager.gameObject.scene == activeScene)
+            if (manager != null)
             {
-                manager.enabled = true;
-                // Force a reset on the manager
+                // Force a reset and re-enable
+                manager.enabled = false;
                 manager.ResetLightManager();
-                enabledCount++;
+                manager.enabled = true;
             }
         }
-
-        Debug.Log($"Enabled {enabledCount} traffic light managers in active scene");
     }
 
     // Helper method to force path update after a delay
@@ -2575,51 +2592,51 @@ public class ScenarioManager : MonoBehaviour
 
         if (car != null && car.gameObject.activeInHierarchy && car.waypointRoute != null)
         {
-            car.ForceWaypointPathUpdate();
+            //car.ForceWaypointPathUpdate();
             Debug.Log($"Delayed force update for {car.name}");
         }
     }
 
     // Add to ScenarioManager.cs
-    public void ForceFixAllDriveTargets()
-    {
-        Debug.Log("EMERGENCY: Fixing all drive targets");
+    //public void ForceFixAllDriveTargets()
+    //{
+    //    Debug.Log("EMERGENCY: Fixing all drive targets");
 
-        var allCars = FindObjectsOfType<AITrafficCar>();
-        int fixedCount = 0;
+    //    var allCars = FindObjectsOfType<AITrafficCar>();
+    //    int fixedCount = 0;
 
-        foreach (var car in allCars)
-        {
-            if (car == null || !car.gameObject.activeInHierarchy) continue;
+    //    foreach (var car in allCars)
+    //    {
+    //        if (car == null || !car.gameObject.activeInHierarchy) continue;
 
-            // Stop driving first
-            car.StopDriving();
+    //        // Stop driving first
+    //        car.StopDriving();
 
-            // Fix the drive target
-            if (car.FixDriveTargetPosition())
-            {
-                fixedCount++;
-            }
+    //        // Fix the drive target
+    //        if (car.FixDriveTargetPosition())
+    //        {
+    //            fixedCount++;
+    //        }
 
-            // Start driving again
-            car.StartDriving();
+    //        // Start driving again
+    //        car.StartDriving();
 
-            // Force physics update
-            Rigidbody rb = car.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.WakeUp();
-            }
-        }
+    //        // Force physics update
+    //        Rigidbody rb = car.GetComponent<Rigidbody>();
+    //        if (rb != null)
+    //        {
+    //            rb.WakeUp();
+    //        }
+    //    }
 
-        Debug.Log($"Fixed drive targets for {fixedCount} cars");
+    //    Debug.Log($"Fixed drive targets for {fixedCount} cars");
 
-        // Force controller to update
-        if (AITrafficController.Instance != null)
-        {
-            AITrafficController.Instance.RebuildTransformArrays();
-        }
-    }
+    //    // Force controller to update
+    //    if (AITrafficController.Instance != null)
+    //    {
+    //        AITrafficController.Instance.RebuildTransformArrays();
+    //    }
+    //}
 
     public void ReinitializeTrafficCars()
     {

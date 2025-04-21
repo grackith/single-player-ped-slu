@@ -106,7 +106,7 @@ public class AITrafficBusController : MonoBehaviour
         EnsureRouteAcceptsBusType(busStopRoute);
 
         // Ensure route connections are properly set up
-        EnsureRouteConnections();
+        //EnsureRouteConnections();
 
         // Start monitoring for bus progress
         StartCoroutine(MonitorBusProgress());

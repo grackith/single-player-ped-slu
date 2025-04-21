@@ -152,6 +152,12 @@
                     lightState = CycleState.Complete;
                     cycleIndex = cycleIndex != trafficLightCycles.Length - 1 ? cycleIndex + 1 : 0;
                 }
+                // Add to AITrafficLightManager.FixedUpdate() after changing light states
+                // (after the last line in the method)
+                if (AITrafficController.Instance != null)
+                {
+                    AITrafficController.Instance.CheckForTrafficLightsChangedToGreen();
+                }
             }
         }
     }
