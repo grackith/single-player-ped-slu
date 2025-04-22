@@ -196,7 +196,7 @@ public class BusSpawnerSimple : MonoBehaviour
         {
             // Buses are larger, so make sensor larger
             spawnedBus.frontSensorSize = new Vector3(2.5f, 2.0f, 0.001f);
-            spawnedBus.frontSensorLength = 12f; // Longer detection range
+            spawnedBus.frontSensorLength = 10f; // Longer detection range
         }
 
         // Make sure sensors are properly updated in controller
@@ -306,12 +306,45 @@ public class BusSpawnerSimple : MonoBehaviour
 
                 if (lastWaypoint != null && firstBusStopWaypoint != null)
                 {
-                    // Set up connection
-                    lastWaypoint.onReachWaypointSettings.newRoutePoints = new AITrafficWaypoint[1] { firstBusStopWaypoint };
+                    // CRITICAL CHANGE: Preserve existing connections
+                    List<AITrafficWaypoint> existingConnections = new List<AITrafficWaypoint>();
+
+                    // Add existing connections first
+                    if (lastWaypoint.onReachWaypointSettings.newRoutePoints != null)
+                    {
+                        existingConnections.AddRange(lastWaypoint.onReachWaypointSettings.newRoutePoints);
+                    }
+
+                    // Add the bus stop if it doesn't already exist
+                    if (!existingConnections.Contains(firstBusStopWaypoint))
+                    {
+                        existingConnections.Add(firstBusStopWaypoint);
+                    }
+
+                    // Update connections
+                    lastWaypoint.onReachWaypointSettings.newRoutePoints = existingConnections.ToArray();
                     lastWaypoint.onReachWaypointSettings.stopDriving = false;
                     lastWaypoint.onReachWaypointSettings.parentRoute = initialRoute;
 
-                    Debug.Log($"Connected routes: {initialRoute.name} → {busStopRoute.name}");
+                    // Log all connections
+                    string connectionList = "";
+                    foreach (var point in lastWaypoint.onReachWaypointSettings.newRoutePoints)
+                    {
+                        if (point != null && point.onReachWaypointSettings.parentRoute != null)
+                        {
+                            connectionList += point.onReachWaypointSettings.parentRoute.name + ", ";
+                        }
+                    }
+                    Debug.Log($"Connected routes: {initialRoute.name} has connections to: {connectionList}");
+
+                    // Set up vehicle filtering
+                    AITrafficWaypointVehicleFilter filter = lastWaypoint.GetComponent<AITrafficWaypointVehicleFilter>();
+                    if (filter == null)
+                    {
+                        filter = lastWaypoint.gameObject.AddComponent<AITrafficWaypointVehicleFilter>();
+                        filter.allowedVehicleTypes = new AITrafficVehicleType[] { AITrafficVehicleType.MicroBus };
+                        Debug.Log($"Added vehicle filter to waypoint {lastWaypoint.name}");
+                    }
 
                     // Set the last waypoint of bus stop route to stop the bus
                     int lastBusStopIndex = busStopRoute.waypointDataList.Count - 1;

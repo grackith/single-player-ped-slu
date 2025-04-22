@@ -20,8 +20,11 @@ public class BusRouteSetup : MonoBehaviour
         AddVehicleTypeToRoute(initialRoute, AITrafficVehicleType.MicroBus);
         AddVehicleTypeToRoute(busStopRoute, AITrafficVehicleType.MicroBus);
 
-        // 2. Connect the routes (make the last waypoint of initial route connect to first waypoint of bus stop)
-        ConnectRoutes();
+        // 2. Add vehicle type filter to the connection point
+        SetupVehicleFiltering();
+
+        // 3. Connect the routes WITHOUT REPLACING existing connections
+        ConnectRoutesSafely();
 
         Debug.Log("Bus routes successfully configured!");
     }
@@ -54,7 +57,38 @@ public class BusRouteSetup : MonoBehaviour
         }
     }
 
-    private void ConnectRoutes()
+    private void SetupVehicleFiltering()
+    {
+        if (initialRoute.waypointDataList.Count == 0)
+        {
+            Debug.LogError("Initial route has no waypoints!");
+            return;
+        }
+
+        // Get last waypoint of initial route (connection point)
+        int lastIndex = initialRoute.waypointDataList.Count - 1;
+        AITrafficWaypoint lastWaypoint = initialRoute.waypointDataList[lastIndex]._waypoint;
+
+        if (lastWaypoint == null)
+        {
+            Debug.LogError("Invalid waypoint!");
+            return;
+        }
+
+        // Add vehicle filter component if not already present
+        AITrafficWaypointVehicleFilter filter = lastWaypoint.GetComponent<AITrafficWaypointVehicleFilter>();
+        if (filter == null)
+        {
+            filter = lastWaypoint.gameObject.AddComponent<AITrafficWaypointVehicleFilter>();
+        }
+
+        // Set allowed vehicle type to MicroBus only
+        filter.allowedVehicleTypes = new AITrafficVehicleType[] { AITrafficVehicleType.MicroBus };
+
+        Debug.Log("Vehicle filtering set up for bus route");
+    }
+
+    private void ConnectRoutesSafely()
     {
         if (initialRoute.waypointDataList.Count == 0 || busStopRoute.waypointDataList.Count == 0)
         {
@@ -62,11 +96,11 @@ public class BusRouteSetup : MonoBehaviour
             return;
         }
 
-        // Get last waypoint of initial route
+        // 1. Get last waypoint of initial route
         int lastIndex = initialRoute.waypointDataList.Count - 1;
         AITrafficWaypoint lastWaypoint = initialRoute.waypointDataList[lastIndex]._waypoint;
 
-        // Get first waypoint of bus stop route
+        // 2. Get first waypoint of bus stop route
         AITrafficWaypoint firstBusStopWaypoint = busStopRoute.waypointDataList[0]._waypoint;
 
         if (lastWaypoint == null || firstBusStopWaypoint == null)
@@ -75,12 +109,42 @@ public class BusRouteSetup : MonoBehaviour
             return;
         }
 
-        // Set the connection
-        lastWaypoint.onReachWaypointSettings.newRoutePoints = new AITrafficWaypoint[1] { firstBusStopWaypoint };
-        lastWaypoint.onReachWaypointSettings.stopDriving = false; // Don't stop at transition
+        // 3. Save existing connections
+        System.Collections.Generic.List<AITrafficWaypoint> existingConnections = new System.Collections.Generic.List<AITrafficWaypoint>();
+
+        // Add existing connections to the list
+        if (lastWaypoint.onReachWaypointSettings.newRoutePoints != null)
+        {
+            foreach (var point in lastWaypoint.onReachWaypointSettings.newRoutePoints)
+            {
+                if (point != null && !existingConnections.Contains(point))
+                {
+                    existingConnections.Add(point);
+                }
+            }
+        }
+
+        // 4. Add new connection if it doesn't already exist
+        if (!existingConnections.Contains(firstBusStopWaypoint))
+        {
+            existingConnections.Add(firstBusStopWaypoint);
+            Debug.Log($"Added bus stop connection to waypoint {lastIndex}");
+        }
+
+        // 5. Update the route connections
+        lastWaypoint.onReachWaypointSettings.newRoutePoints = existingConnections.ToArray();
         lastWaypoint.onReachWaypointSettings.parentRoute = initialRoute;
 
-        // Make sure bus stop route's last waypoint stops the bus
+        // 6. Log all connections for verification
+        string connectionNames = "";
+        foreach (var point in lastWaypoint.onReachWaypointSettings.newRoutePoints)
+        {
+            if (point != null)
+                connectionNames += point.onReachWaypointSettings.parentRoute.name + ", ";
+        }
+        Debug.Log($"Waypoint now has {lastWaypoint.onReachWaypointSettings.newRoutePoints.Length} connections: {connectionNames}");
+
+        // 7. Make sure bus stop route's last waypoint stops the bus
         int lastBusStopIndex = busStopRoute.waypointDataList.Count - 1;
         AITrafficWaypoint lastBusStopWaypoint = busStopRoute.waypointDataList[lastBusStopIndex]._waypoint;
 
@@ -88,25 +152,19 @@ public class BusRouteSetup : MonoBehaviour
         {
             lastBusStopWaypoint.onReachWaypointSettings.stopDriving = true;
             lastBusStopWaypoint.onReachWaypointSettings.parentRoute = busStopRoute;
+            Debug.Log("Set last bus stop waypoint to stop the bus");
         }
 
-        Debug.Log("Routes successfully connected");
-        // CRITICAL ADDITION: Ensure traffic light state propagation
+        // 8. Ensure traffic light state propagation
         if (initialRoute.routeInfo != null && busStopRoute.routeInfo != null)
         {
-            // Make sure both route info components are enabled
             initialRoute.routeInfo.enabled = true;
             busStopRoute.routeInfo.enabled = true;
 
-            // Synchronize traffic light awareness between routes
             bool stopForLight = initialRoute.routeInfo.stopForTrafficLight;
             busStopRoute.routeInfo.stopForTrafficLight = stopForLight;
 
             Debug.Log($"Synchronized traffic light state between routes: stopForTrafficLight={stopForLight}");
-        }
-        else
-        {
-            Debug.LogError("One or both routes are missing routeInfo components!");
         }
     }
 }

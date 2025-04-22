@@ -1497,6 +1497,8 @@ public class ScenarioManager : MonoBehaviour
         // 11. Trigger scenario started event
         onScenarioStarted.Invoke();
 
+        // Before setting isTransitioning = false
+        SynchronizeTrafficLights();
         isTransitioning = false;
         Debug.Log($"Transition to scenario: {scenario.scenarioName} complete");
 
@@ -2557,6 +2559,102 @@ public class ScenarioManager : MonoBehaviour
 
         // Update the path once the car is fully initialized
         car.ForceWaypointPathUpdate();
+    }
+    public void SynchronizeTrafficLights()
+    {
+        Debug.Log("Synchronizing traffic light awareness for all vehicles");
+
+        // First get all traffic light managers
+        var lightManagers = FindObjectsOfType<AITrafficLightManager>();
+        Debug.Log($"Found {lightManagers.Length} traffic light managers");
+
+        // Force reset/update all light managers
+        foreach (var manager in lightManagers)
+        {
+            if (manager == null) continue;
+
+            // Disable and re-enable to force refresh
+            bool wasEnabled = manager.enabled;
+            manager.enabled = false;
+            manager.enabled = true;
+
+            // Force update all lights in this manager
+            var trafficLights = manager.GetComponentsInChildren<AITrafficLight>();
+            foreach (var light in trafficLights)
+            {
+                if (light == null) continue;
+
+                // Update routes controlled by this light
+                if (light.waypointRoute != null && light.waypointRoute.routeInfo != null)
+                {
+                    // Force enable the route info component
+                    light.waypointRoute.routeInfo.enabled = true;
+
+                    // Synchronize state based on light color
+                    bool shouldStop = false;
+
+                    // Check if red or yellow light is active
+                    if ((light.redMesh != null && light.redMesh.enabled) ||
+                        (light.yellowMesh != null && light.yellowMesh.enabled))
+                    {
+                        shouldStop = true;
+                    }
+
+                    // Update route info
+                    light.waypointRoute.StopForTrafficlight(shouldStop);
+
+                    if (shouldStop)
+                    {
+                        Debug.Log($"Route {light.waypointRoute.name} should stop for traffic light");
+                    }
+                }
+
+                // Also update additional routes if assigned
+                if (light.waypointRoutes != null)
+                {
+                    foreach (var route in light.waypointRoutes)
+                    {
+                        if (route != null && route.routeInfo != null)
+                        {
+                            // Force enable the route info component
+                            route.routeInfo.enabled = true;
+
+                            // Same logic for state synchronization
+                            bool shouldStop = false;
+                            if ((light.redMesh != null && light.redMesh.enabled) ||
+                                (light.yellowMesh != null && light.yellowMesh.enabled))
+                            {
+                                shouldStop = true;
+                            }
+
+                            route.StopForTrafficlight(shouldStop);
+
+                            if (shouldStop)
+                            {
+                                Debug.Log($"Route {route.name} should stop for traffic light");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Force update all cars with their current route info
+        var cars = FindObjectsOfType<AITrafficCar>();
+        foreach (var car in cars)
+        {
+            if (car != null && car.waypointRoute != null &&
+                car.waypointRoute.routeInfo != null && car.assignedIndex >= 0)
+            {
+                AITrafficController.Instance.Set_RouteInfo(car.assignedIndex, car.waypointRoute.routeInfo);
+
+                // If route says to stop for traffic light, force the car to be aware
+                if (car.waypointRoute.routeInfo.stopForTrafficLight)
+                {
+                    Debug.Log($"Car {car.name} should be stopping for traffic light");
+                }
+            }
+        }
     }
 
     private void ReconnectTrafficControllerToLightManagers()

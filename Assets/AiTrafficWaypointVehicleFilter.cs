@@ -1,8 +1,6 @@
 using UnityEngine;
 using TurnTheGameOn.SimpleTrafficSystem;
-using System.Collections.Generic;
 
-// Create this as a new script file
 public class AITrafficWaypointVehicleFilter : MonoBehaviour
 {
     public AITrafficVehicleType[] allowedVehicleTypes;

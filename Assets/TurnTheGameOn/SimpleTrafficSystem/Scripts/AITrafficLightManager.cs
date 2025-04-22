@@ -152,12 +152,19 @@
                     lightState = CycleState.Complete;
                     cycleIndex = cycleIndex != trafficLightCycles.Length - 1 ? cycleIndex + 1 : 0;
                 }
+                if (trafficLightCycles[cycleIndex].greenTimer <= 0.1f)
+                {
+                    Debug.LogWarning($"Very small green timer ({trafficLightCycles[cycleIndex].greenTimer}) detected for cycle {cycleIndex}. Setting to 3 seconds.");
+                    trafficLightCycles[cycleIndex].greenTimer = 3.0f;
+                }
                 // Add to AITrafficLightManager.FixedUpdate() after changing light states
                 // (after the last line in the method)
                 if (AITrafficController.Instance != null)
                 {
                     AITrafficController.Instance.CheckForTrafficLightsChangedToGreen();
                 }
+                Debug.Log($"Light cycle: {cycleIndex}, State: {lightState}, Timer: {timer}");
+
             }
         }
     }

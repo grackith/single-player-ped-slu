@@ -590,12 +590,7 @@
         }
 
         
-        public int RegisterAITrafficWaypointRoute(AITrafficWaypointRoute _route)
-        {
-            int index = allWaypointRoutesList.Count;
-            allWaypointRoutesList.Add(_route);
-            return index;
-        }
+ 
 
         public void RegisterAllRoutesInScene()
         {
@@ -612,6 +607,8 @@
                 }
             }
         }
+        // In AITrafficController.cs
+       
         public void RemoveAITrafficWaypointRoute(AITrafficWaypointRoute _route)
         {
             allWaypointRoutesList.Remove(_route);
@@ -3640,10 +3637,18 @@
                 }
             }
         }
-        
-       
 
-      
+        // In AITrafficController.cs
+        // In AITrafficController.cs
+        public int RegisterAITrafficWaypointRoute(AITrafficWaypointRoute _route)
+        {
+            int index = allWaypointRoutesList.Count;
+            allWaypointRoutesList.Add(_route);
+            Debug.Log($"Registered route {_route.name} at index {index}");
+            return index;
+        }
+
+
 
 
 

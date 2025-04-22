@@ -3,6 +3,9 @@
     using UnityEngine;
     using System.Collections.Generic;
     using System.Collections;
+    using UnityEngine;
+    using System.Collections.Generic;
+    using TurnTheGameOn.SimpleTrafficSystem;
 
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficwaypoint")]
     
@@ -30,6 +33,18 @@
                 onReachWaypointSettings.waypoint = this;
             }
         }
+
+        //void OnTriggerEnter(Collider col)
+        //{
+        //    col.transform.SendMessage("OnReachedWaypoint", onReachWaypointSettings, SendMessageOptions.DontRequireReceiver);
+        //    if (onReachWaypointSettings.waypointIndexnumber == onReachWaypointSettings.parentRoute.waypointDataList.Count)
+        //    {
+        //        if (onReachWaypointSettings.newRoutePoints.Length == 0)
+        //        {
+        //            col.transform.root.SendMessage("StopDriving", SendMessageOptions.DontRequireReceiver);
+        //        }
+        //    }
+        //}
 
         void OnTriggerEnter(Collider col)
         {
@@ -216,6 +231,8 @@
             }
             onReachWaypointSettings.newRoutePoints = newWaypointList.ToArray();
         }
+        // Add this to the AITrafficWaypoint class or create a partial class extension
+        
 
     }
 }

@@ -52,29 +52,28 @@
             routeInfo = GetComponent<AITrafficWaypointRouteInfo>();
         }
 
-        private void Start()
-        {
-            RegisterRoute();
-            if (AITrafficController.Instance.usePooling == false)
-            {
-                SpawnTrafficVehicles();
-            }
-        }
+        // In AITrafficWaypointRoute.cs
+       
         #region Traffic Control
 
+        //public void StopForTrafficlight(bool _stop)
+        //{
+        //    stopForTrafficLight = _stop;
+        //    if (routeInfo != null)
+        //    {
+        //        // CRITICAL: Ensure the component stays enabled
+        //        if (!routeInfo.enabled)
+        //        {
+        //            routeInfo.enabled = true;
+        //            Debug.Log($"Re-enabled disabled route info for {name}");
+        //        }
+        //        routeInfo.stopForTrafficLight = _stop;
+        //    }
+        //}
         public void StopForTrafficlight(bool _stop)
         {
-            stopForTrafficLight = _stop;
-            if (routeInfo != null)
-            {
-                // CRITICAL: Ensure the component stays enabled
-                if (!routeInfo.enabled)
-                {
-                    routeInfo.enabled = true;
-                    Debug.Log($"Re-enabled disabled route info for {name}");
-                }
-                routeInfo.stopForTrafficLight = _stop;
-            }
+            stopForTrafficLight = routeInfo.stopForTrafficLight = _stop;
+            routeInfo.enabled = _stop ? false : true;
         }
 
         public List<AITrafficSpawnPoint> spawnpoints = new List<AITrafficSpawnPoint>();
