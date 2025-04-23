@@ -16,6 +16,13 @@ public class BusSpawnerSimple : MonoBehaviour
     public bool spawnOnStart = false;
     public bool hasSpawned = false;
 
+    [Header("Spawn Safety")]
+    public int maxSpawnAttempts = 10;
+    public float retryDelay = 2f;
+    public float clearanceRadius = 5f; // How much space needed around spawn point
+    private int currentSpawnAttempt = 0;
+    private Coroutine spawnRetryCoroutine;
+
     private float timer;
     private AITrafficCar spawnedBus;
 
@@ -74,10 +81,38 @@ public class BusSpawnerSimple : MonoBehaviour
             return;
         }
 
-        // Create bus at the start of the route with proper offset
+        // Get spawn position at the start of the route with proper offset
         Vector3 spawnPosition = initialRoute.waypointDataList[0]._transform.position;
         spawnPosition.y += 0.5f; // Prevent ground clipping
 
+        // Check if spawn area is clear
+        if (!IsSpawnAreaClear(spawnPosition, clearanceRadius))
+        {
+            currentSpawnAttempt++;
+            if (currentSpawnAttempt < maxSpawnAttempts)
+            {
+                Debug.LogWarning($"Spawn area not clear for bus. Retrying in {retryDelay} seconds (attempt {currentSpawnAttempt}/{maxSpawnAttempts})");
+
+                // Cancel any existing retry coroutine
+                if (spawnRetryCoroutine != null)
+                    StopCoroutine(spawnRetryCoroutine);
+
+                // Start new retry coroutine
+                spawnRetryCoroutine = StartCoroutine(RetrySpawnAfterDelay(retryDelay));
+                return;
+            }
+            else
+            {
+                Debug.LogError($"Failed to spawn bus after {maxSpawnAttempts} attempts - no clear space found");
+                currentSpawnAttempt = 0; // Reset for next time
+                return;
+            }
+        }
+
+        // Reset attempt counter since we're now spawning
+        currentSpawnAttempt = 0;
+
+        // Calculate spawn rotation (use the position we already determined)
         Quaternion spawnRotation;
         if (initialRoute.waypointDataList.Count > 1)
         {
@@ -112,6 +147,7 @@ public class BusSpawnerSimple : MonoBehaviour
             driveTarget.position = initialRoute.waypointDataList[1]._transform.position;
             Debug.Log($"Positioned drive target at {driveTarget.position}");
         }
+
 
         // Important: Set vehicle type before registration
         busCar.vehicleType = busType;
@@ -162,6 +198,38 @@ public class BusSpawnerSimple : MonoBehaviour
             Debug.LogError($"Error during bus registration: {ex.Message}");
             Destroy(busObject);
         }
+    }
+
+    private bool IsSpawnAreaClear(Vector3 position, float radius)
+    {
+        // Check for any colliders in the area
+        Collider[] colliders = Physics.OverlapSphere(position, radius);
+
+        foreach (var collider in colliders)
+        {
+            // Ignore triggers
+            if (collider.isTrigger)
+                continue;
+
+            // Check if this is a vehicle (AITrafficCar or with specific layer)
+            if (collider.GetComponent<AITrafficCar>() != null ||
+                collider.CompareTag("Player"))
+            {
+                // Found a vehicle in the spawning area
+                Debug.Log($"Spawn area blocked by {collider.name}");
+                return false;
+            }
+        }
+
+        // No blocking vehicles found
+        return true;
+    }
+
+    // Add this coroutine to retry spawning after a delay
+    private IEnumerator RetrySpawnAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SpawnBus(); // Try again
     }
     private IEnumerator DelayedStatusCheckAndCollisionSetup()
     {
@@ -474,7 +542,7 @@ public class BusSpawnerSimple : MonoBehaviour
         }
     }
 
- 
+
 
     // Reset method called by ScenarioManager's EndCurrentScenario
     public void Reset()
@@ -495,6 +563,7 @@ public class BusSpawnerSimple : MonoBehaviour
 
         hasSpawned = false;
         timer = -1;
+        currentSpawnAttempt = 0; // Reset attempt counter
         Debug.Log("BusSpawnerSimple: Reset and ready for next spawn");
     }
 }

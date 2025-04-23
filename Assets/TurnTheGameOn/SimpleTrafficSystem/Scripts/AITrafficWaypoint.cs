@@ -8,7 +8,7 @@
     using TurnTheGameOn.SimpleTrafficSystem;
 
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficwaypoint")]
-    
+
     public class AITrafficWaypoint : MonoBehaviour
     {
         [Tooltip("Contains settings and references to components triggered by the attached collider's OnTriggerEnter(Collider) method.")]
@@ -180,7 +180,7 @@
                         }
                         Gizmos.color = hasNewRoutePoint && missingNewRoutePoint ? STSPrefs.noConnectionColor : hasNewRoutePoint ? STSPrefs.junctionColor : STSPrefs.pointColor;
                     }
-                    
+
                     DrawCube
                         (
                         transform.position,
@@ -203,7 +203,7 @@
         }
 
         private List<AITrafficWaypoint> newWaypointList = new List<AITrafficWaypoint>();
-        
+
 
 
         public void RemoveMissingLaneChangePoints()
@@ -232,7 +232,7 @@
             onReachWaypointSettings.newRoutePoints = newWaypointList.ToArray();
         }
         // Add this to the AITrafficWaypoint class or create a partial class extension
-        
+
 
     }
 }

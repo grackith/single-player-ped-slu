@@ -390,7 +390,7 @@ public class AITrafficBusController : MonoBehaviour
             if (Physics.Raycast(busCar.transform.position + Vector3.up, busCar.transform.forward, out hit, 10f))
             {
                 // Check tag/name for traffic light identification
-                bool isTrafficLight = hit.collider.CompareTag("TrafficLight") ||
+                bool isTrafficLight = hit.collider.CompareTag("trafficlight") ||
                                      hit.transform.name.Contains("Traffic");
 
                 if (isTrafficLight)

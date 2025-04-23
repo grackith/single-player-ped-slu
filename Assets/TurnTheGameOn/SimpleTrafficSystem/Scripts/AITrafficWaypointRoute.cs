@@ -53,27 +53,33 @@
         }
 
         // In AITrafficWaypointRoute.cs
-       
+
         #region Traffic Control
 
-        //public void StopForTrafficlight(bool _stop)
-        //{
-        //    stopForTrafficLight = _stop;
-        //    if (routeInfo != null)
-        //    {
-        //        // CRITICAL: Ensure the component stays enabled
-        //        if (!routeInfo.enabled)
-        //        {
-        //            routeInfo.enabled = true;
-        //            Debug.Log($"Re-enabled disabled route info for {name}");
-        //        }
-        //        routeInfo.stopForTrafficLight = _stop;
-        //    }
-        //}
+        // Replace the StopForTrafficlight method in AITrafficWaypointRoute.cs
         public void StopForTrafficlight(bool _stop)
         {
-            stopForTrafficLight = routeInfo.stopForTrafficLight = _stop;
-            routeInfo.enabled = _stop ? false : true;
+            stopForTrafficLight = _stop;
+
+            if (routeInfo != null)
+            {
+                // CRITICAL: Ensure the component stays enabled
+                if (!routeInfo.enabled)
+                {
+                    routeInfo.enabled = true;
+                    Debug.Log($"Re-enabled disabled route info for {name}");
+                }
+
+                // Set the flag
+                routeInfo.stopForTrafficLight = _stop;
+
+                // Log state change
+                Debug.Log($"Route {name} stopForTrafficLight set to {_stop}");
+            }
+            else
+            {
+                Debug.LogWarning($"Route {name} has no routeInfo component!");
+            }
         }
 
         public List<AITrafficSpawnPoint> spawnpoints = new List<AITrafficSpawnPoint>();

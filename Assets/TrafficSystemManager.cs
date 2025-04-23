@@ -151,9 +151,9 @@ namespace TurnTheGameOn.SimpleTrafficSystem
 
 
 
-        
 
-        
+
+
 
         // Flag to prevent duplicate detection during scenario transitions
 
@@ -169,7 +169,6 @@ namespace TurnTheGameOn.SimpleTrafficSystem
             Debug.Log($"TrafficSystemManager: Starting controlled spawn with density {density}");
 
             bool originalPoolingState = false;
-            bool originalControllerState = false;
 
             try
             {
@@ -185,79 +184,51 @@ namespace TurnTheGameOn.SimpleTrafficSystem
                     yield break;
                 }
 
-                // CRITICAL: Completely disable controller first
-                originalControllerState = trafficController.enabled;
-                trafficController.enabled = false;
-                yield return new WaitForSeconds(0.2f);
-
                 // Store original pooling state
                 originalPoolingState = trafficController.usePooling;
+
+                // CRITICAL: Temporarily disable pooling to control spawning
                 trafficController.usePooling = false;
 
-                // AGGRESSIVELY remove ALL existing cars
-                var existingCars = FindObjectsOfType<AITrafficCar>();
-                Debug.Log($"Removing {existingCars.Length} existing cars before spawning");
-                foreach (var car in existingCars)
-                {
-                    if (car != null && car.gameObject != null)
-                    {
-                        Destroy(car.gameObject);
-                    }
-                }
-
-                // Wait longer for destruction to complete
-                yield return new WaitForSeconds(0.5f);
-
-                // Reset the pool completely
-                trafficController.ResetTrafficPool();
-
-                // Fully reinitialize controller
-                trafficController.DisposeAllNativeCollections();
-                trafficController.InitializeNativeLists();
-
-                // NOW re-enable the controller
+                // Make sure controller is enabled
                 trafficController.enabled = true;
+
+                // Clear any existing pool
                 yield return new WaitForSeconds(0.3f);
 
-                // Update the desired density setting
+                // IMPORTANT: Set desired density AFTER enabling
                 trafficController.density = density;
+                Debug.Log($"Set controller density to {density}");
 
                 // Register routes and initialize spawn points
                 trafficController.RegisterAllRoutesInScene();
                 trafficController.InitializeSpawnPoints();
+
+                // Wait for completion
                 yield return new WaitForSeconds(0.3f);
 
-                // Direct spawn with specific count
-                Debug.Log($"Directly spawning exactly {density} vehicles with automatic spawning disabled");
+                // CRITICAL PART: Directly spawn with specific count
+                Debug.Log($"Directly spawning exactly {density} vehicles");
                 trafficController.DirectlySpawnVehicles(density);
 
-                // Wait longer for spawning to complete
+                // Wait for spawning to complete
                 yield return new WaitForSeconds(0.7f);
 
-                // Rebuild controller structures
+                // Force rebuild to ensure all references are valid
                 trafficController.RebuildTransformArrays();
-                trafficController.RebuildInternalDataStructures();
 
-                // IMPORTANT: Leave automatic spawning OFF for now
-                // Wait for everything to settle before re-enabling automatic spawning
-                yield return new WaitForSeconds(1.0f);
+                // Log the results
+                int activeCarCount = trafficController.carCount - trafficController.GetTrafficPool().Count;
+                Debug.Log($"Spawn completed. Active cars: {activeCarCount}, Pool size: {trafficController.GetTrafficPool().Count}");
 
-                // Finally re-enable automatic spawning if it was on before
-                if (originalPoolingState)
-                {
-                    trafficController.usePooling = true;
-                    Debug.Log("Re-enabled automatic spawning");
-                }
+                // Wait for everything to settle
+                yield return new WaitForSeconds(0.5f);
             }
             finally
             {
-                // Even if there was an error, restore controller state
+                // Restore original pooling state
                 if (trafficController != null)
                 {
-                    if (!trafficController.enabled)
-                    {
-                        trafficController.enabled = originalControllerState;
-                    }
                     trafficController.usePooling = originalPoolingState;
                 }
 
@@ -266,6 +237,7 @@ namespace TurnTheGameOn.SimpleTrafficSystem
             }
         }
         // Refine the DisableTrafficSystemCoroutine to be more thorough
+        // This should be in the TrafficSystemManager class
         public IEnumerator DisableTrafficSystemCoroutine()
         {
             if (trafficController == null)
@@ -278,41 +250,38 @@ namespace TurnTheGameOn.SimpleTrafficSystem
             // Set transition flag
             preventDuplicateDetection = true;
 
-            // Do everything that doesn't need yield inside the try-catch
             try
             {
-                // First disable all traffic lights
-                var lightManagers = FindObjectsOfType<AITrafficLightManager>();
+                // First move all cars to pool instead of disabling controller
+                if (trafficController != null)
+                {
+                    Debug.Log("Moving all cars to pool but keeping controller active");
+                    trafficController.MoveAllCarsToPool();
+
+                    // Don't disable the controller completely, just pause processing temporarily
+                    // trafficController.enabled = false;  <-- COMMENTED OUT
+                }
+
+                // Disable traffic light managers
+                var lightManagers = GameObject.FindObjectsOfType<AITrafficLightManager>();
                 foreach (var manager in lightManagers)
                 {
                     if (manager != null)
                     {
                         manager.enabled = false;
+                        Debug.Log($"Disabled traffic light manager: {manager.name}");
                     }
                 }
-
-                // Stop all cars
-                trafficController.MoveAllCarsToPool();
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"Error during early traffic system shutdown: {ex.Message}");
+                Debug.LogError($"Error during traffic system cleanup: {ex.Message}");
             }
 
-            // Now yield outside of try-catch
-            yield return new WaitForSeconds(0.3f);
+            // Allow time for cars to be moved to pool
+            yield return new WaitForSeconds(0.5f);
 
-            // Continue rest of the logic
-            try
-            {
-                trafficController.DisposeAllNativeCollections();
-                trafficController.enabled = false;
-                Debug.Log("Traffic system disabled");
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Error during final traffic system cleanup: {ex.Message}");
-            }
+            Debug.Log("Traffic system cars moved to pool, controller remains active");
         }
 
 
