@@ -20,22 +20,16 @@
 
         public void EnableRedLight()
         {
-            // Set route flag (this is needed for the system to work)
+           
             if (waypointRoute) waypointRoute.StopForTrafficlight(true);
             for (int i = 0; i < waypointRoutes.Count; i++)
             {
                 waypointRoutes[i].StopForTrafficlight(true);
             }
-
             // Update light visuals
             redMesh.enabled = true;
             yellowMesh.enabled = false;
             greenMesh.enabled = false;
-
-            // REMOVE the automatic car stopping from here
-            // We'll handle that at the waypoint level instead
-
-            Debug.Log($"Traffic light {name} changed to RED - route {(waypointRoute ? waypointRoute.name : "null")} stopForTrafficLight set to TRUE");
         }
 
         public void EnableYellowLight()
@@ -58,16 +52,10 @@
             {
                 waypointRoutes[i].StopForTrafficlight(false);
             }
-
             // Update light visuals
             redMesh.enabled = false;
             yellowMesh.enabled = false;
             greenMesh.enabled = true;
-
-            // REMOVE car restarting from here
-            // We'll handle that at the waypoint level instead
-
-            Debug.Log($"Traffic light {name} changed to GREEN - route {(waypointRoute ? waypointRoute.name : "null")} stopForTrafficLight set to FALSE");
         }
 
     }

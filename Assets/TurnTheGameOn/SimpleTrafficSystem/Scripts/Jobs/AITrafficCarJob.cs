@@ -47,6 +47,9 @@
         public NativeArray<Vector3> carTransformPreviousPositionNA;
         public NativeArray<Vector3> carTransformPositionNA;
         public NativeArray<Vector3> localTargetNA;
+        public NativeArray<bool> isTrafficLightWaypointNA;
+
+
 
         public NativeArray<Vector3> frontSensorTransformPositionNA;
         private float previousSteerAngle;
@@ -58,27 +61,19 @@
                 driveTargetTransformAccessArray.position = routePointPositionNA[index];
 
                 #region StopThreshold
-                if (stopForTrafficLightNA[index] && routeProgressNA[index] > 0 && currentRoutePointIndexNA[index] >= waypointDataListCountNA[index] - 1)
+                if (stopForTrafficLightNA[index] && isTrafficLightWaypointNA[index] && routeProgressNA[index] > 0 && currentRoutePointIndexNA[index] >= waypointDataListCountNA[index] - 1)
                 {
-                    //distanceToEndPointNA[index] = Vector3.Distance(frontSensorTransformPositionNA[index], routePointPositionNA[index]);
                     distanceToEndPointNA[index] = Vector3.Distance(frontSensorTransformPositionNA[index], finalRoutePointPositionNA[index]);
-                    //if (overrideInputNA[index])
-                    //{
                     overrideInputNA[index] = true;
                     overrideBrakePowerNA[index] = 1f;
                     overrideAccelerationPowerNA[index] = 0f;
-                    //}
                 }
-                else if (stopForTrafficLightNA[index] && routeProgressNA[index] > 0 && currentRoutePointIndexNA[index] >= waypointDataListCountNA[index] - 2 && !frontHitNA[index])
+                else if (stopForTrafficLightNA[index] && isTrafficLightWaypointNA[index] && routeProgressNA[index] > 0 && currentRoutePointIndexNA[index] >= waypointDataListCountNA[index] - 2 && !frontHitNA[index])
                 {
-                    //distanceToEndPointNA[index] = Vector3.Distance(frontSensorTransformPositionNA[index], routePointPositionNA[index]);
                     distanceToEndPointNA[index] = Vector3.Distance(frontSensorTransformPositionNA[index], finalRoutePointPositionNA[index]);
-                    //if (overrideInputNA[index])
-                    //{
                     overrideInputNA[index] = true;
                     overrideBrakePowerNA[index] = distanceToEndPointNA[index] < 3 || speedNA[index] > 10 ? 1f : 0f;
                     overrideAccelerationPowerNA[index] = distanceToEndPointNA[index] < 3 || speedNA[index] > 10 ? 0f : 0.3f;
-                    //}
                 }
                 else if (frontHitNA[index] && frontHitDistanceNA[index] < stopThreshold)
                 {

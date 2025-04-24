@@ -121,10 +121,10 @@ public class UIButtonInteractionHandler : MonoBehaviour
             {
                 scenarioManager?.LaunchAcclimatizationScenario();
             }
-            else if (gameObject.name.Contains("NoTraffic") || gameObject.name.Contains("no-traffic"))
-            {
-                scenarioManager?.LaunchNoTrafficScenario();
-            }
+            //else if (gameObject.name.Contains("NoTraffic") || gameObject.name.Contains("no-traffic"))
+            //{
+            //    scenarioManager?.LaunchNoTrafficScenario();
+            //}
             else if (gameObject.name.Contains("LightTraffic") || gameObject.name.Contains("light-traffic"))
             {
                 scenarioManager?.LaunchLightTrafficScenario();

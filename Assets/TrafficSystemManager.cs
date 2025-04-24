@@ -238,50 +238,53 @@ namespace TurnTheGameOn.SimpleTrafficSystem
         }
         // Refine the DisableTrafficSystemCoroutine to be more thorough
         // This should be in the TrafficSystemManager class
+        // Add this to TrafficSystemManager.cs
+        // Add this to ensure the traffic controller is always valid and enabled
+        public void EnsureTrafficControllerIsActive()
+        {
+            if (trafficController == null)
+            {
+                trafficController = FindObjectOfType<AITrafficController>();
+                if (trafficController == null)
+                {
+                    Debug.LogError("No AITrafficController found in scene!");
+                    return;
+                }
+            }
+
+            // Force enable the controller if it was disabled
+            if (!trafficController.enabled)
+            {
+                trafficController.enabled = true;
+                Debug.Log("Re-enabled traffic controller");
+            }
+
+            // Make sure to add this to DontDestroyOnLoad
+            if (trafficController.gameObject.scene.name != "DontDestroyOnLoad")
+            {
+                DontDestroyOnLoad(trafficController.gameObject);
+                Debug.Log("Made traffic controller persistent");
+            }
+        }
+
+        // Simplify the disable process to just move cars to pool without disabling controller
         public IEnumerator DisableTrafficSystemCoroutine()
         {
             if (trafficController == null)
             {
-                yield break;
+                EnsureTrafficControllerIsActive();
+                if (trafficController == null) yield break;
             }
 
-            Debug.Log("Disabling traffic system...");
+            Debug.Log("Moving cars to pool without disabling traffic controller");
 
-            // Set transition flag
-            preventDuplicateDetection = true;
+            // Keep controller enabled, just move cars to pool
+            trafficController.MoveAllCarsToPool();
 
-            try
-            {
-                // First move all cars to pool instead of disabling controller
-                if (trafficController != null)
-                {
-                    Debug.Log("Moving all cars to pool but keeping controller active");
-                    trafficController.MoveAllCarsToPool();
-
-                    // Don't disable the controller completely, just pause processing temporarily
-                    // trafficController.enabled = false;  <-- COMMENTED OUT
-                }
-
-                // Disable traffic light managers
-                var lightManagers = GameObject.FindObjectsOfType<AITrafficLightManager>();
-                foreach (var manager in lightManagers)
-                {
-                    if (manager != null)
-                    {
-                        manager.enabled = false;
-                        Debug.Log($"Disabled traffic light manager: {manager.name}");
-                    }
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Error during traffic system cleanup: {ex.Message}");
-            }
-
-            // Allow time for cars to be moved to pool
+            // Wait for cars to be moved to pool
             yield return new WaitForSeconds(0.5f);
 
-            Debug.Log("Traffic system cars moved to pool, controller remains active");
+            Debug.Log("Cars moved to pool, controller remains active");
         }
 
 

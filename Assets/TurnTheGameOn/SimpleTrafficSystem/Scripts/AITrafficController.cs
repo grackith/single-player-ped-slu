@@ -13,6 +13,7 @@
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficcontroller")]
     public class AITrafficController : MonoBehaviour
     {
+        private NativeList<bool> isTrafficLightWaypointNL;
         public static AITrafficController Instance;
 
         #region Public Variables and Registers
@@ -64,6 +65,7 @@
         private Color brakeOffColor;
         private float brakeIntensityFactor;
         private string emissionColorName;
+        
         // Add this field to the AITrafficController class
         private AITrafficSpawnPoint[] spawnPoints;
 
@@ -104,6 +106,7 @@
         #endregion
 
         #region Set Array Data
+        
         public void Set_IsDrivingArray(int _index, bool _value)
         {
             // First check if index is valid
@@ -430,6 +433,7 @@
                 InitializeNativeLists();
 
             }
+            isTrafficLightWaypointNL.Add(false);
             carList.Add(carAI);
             carRouteList.Add(route);
             currentWaypointList.Add(null);
@@ -483,6 +487,7 @@
                 //DisposeArrays(false);
             }
             #region allocation
+            isTrafficLightWaypointNL.Add(false);
             currentRoutePointIndexNL.Add(0);
             waypointDataListCountNL.Add(0);
             carTransformPreviousPositionNL.Add(Vector3.zero);
@@ -891,6 +896,7 @@
             DisposeAllNativeCollections();
 
             // Reinitialize all NativeLists with Allocator.Persistent
+            isTrafficLightWaypointNL = new NativeList<bool>(Allocator.Persistent);
             currentRoutePointIndexNL = new NativeList<int>(Allocator.Persistent);
             waypointDataListCountNL = new NativeList<int>(Allocator.Persistent);
             carTransformPreviousPositionNL = new NativeList<Vector3>(Allocator.Persistent);
@@ -1205,7 +1211,8 @@
 
             return true;
         }
-       
+
+
 
         /// <summary>
         /// Directly spawns vehicles using routes in the scene, bypassing the normal spawn system
@@ -1287,12 +1294,6 @@
                     centerPoint = Camera.main != null ? Camera.main.transform : transform;
                     Debug.Log("No center point assigned, using " + centerPoint.name);
                 }
-
-                //Debug.Log($"Successfully initialized with {trafficSpawnPoints.Count} spawn points");
-
-                // Rest of the method continues here...
-
-                // The rest of your existing implementation...
 
 
                 // Find and validate available spawn points
@@ -1558,7 +1559,7 @@
                 }
 
                 isInitialized = true;
-                Debug.Log("Traffic system initialization complete");
+                //Debug.Log("Traffic system initialization complete");
             }
             catch (System.Exception ex)
             {
@@ -1678,8 +1679,8 @@
 
                             // Register explicitly with the route
                             carComponent.RegisterCar(route);
-                            //carComponent.ReinitializeRouteConnection(); // Add this line
 
+                            // Ensure drive target exists and is properly positioned
                             Transform driveTarget = carComponent.transform.Find("DriveTarget");
                             if (driveTarget == null)
                             {
@@ -1697,7 +1698,7 @@
                             // Set explicit current waypoint index
                             if (carComponent.assignedIndex >= 0)
                             {
-                                // This is critical - uncomment/add this line
+                                // This is critical for proper car behavior
                                 Set_CurrentRoutePointIndexArray(carComponent.assignedIndex, waypointIndex, route.waypointDataList[waypointIndex]._waypoint);
                                 Set_RoutePointPositionArray(carComponent.assignedIndex);
 
@@ -1706,7 +1707,9 @@
                                 isActiveNL[carComponent.assignedIndex] = true;
                                 canProcessNL[carComponent.assignedIndex] = true;
                             }
-                            carComponent.ReinitializeRouteConnection(); // Add this line
+
+                            // Reinitialize route connection to ensure proper route following
+                            carComponent.ReinitializeRouteConnection();
 
                             // Now start driving
                             carComponent.StartDriving();
@@ -1715,6 +1718,13 @@
                             usedPositions.Add(spawnPos);
                             routeSpawnCount++;
                             spawnedVehicles++;
+
+                            Debug.Log($"Spawned vehicle {spawnedVehicles} on route {route.name} at waypoint {waypointIndex}");
+                        }
+                        else
+                        {
+                            Debug.LogError("Failed to get AITrafficCar component from prefab!");
+                            Destroy(vehicle);
                         }
                     }
                     catch (System.Exception ex)
@@ -1724,7 +1734,17 @@
                 }
             }
 
-            Debug.Log($"Direct spawning complete: {spawnedVehicles} vehicles spawned");
+            Debug.Log($"Direct spawning complete: {spawnedVehicles}/{forcedAmount} vehicles spawned");
+
+            // Force rebuild of transform arrays to ensure proper job system operation
+            RebuildTransformArrays();
+
+            // If we didn't spawn enough vehicles, log a warning
+            if (spawnedVehicles < forcedAmount)
+            {
+                Debug.LogWarning($"Unable to spawn all requested vehicles. Only spawned {spawnedVehicles}/{forcedAmount}.");
+                Debug.LogWarning("This may be due to insufficient routes, waypoints, or compatible vehicle types.");
+            }
         }
 
 
@@ -1732,40 +1752,40 @@
         {
             if (isInitialized)
             {
-                // First check for valid job system before attempting any job scheduling
-                if (!isJobSystemValid())
-                {
-                    // Log the issue but don't try to schedule jobs with invalid arrays
-                    Debug.LogWarning("Traffic jobs cannot be scheduled: Transform arrays are not valid");
-                    return;
-                }
-                // Validate TransformAccessArray before use
-                if (!driveTargetTAA.isCreated || driveTargetTAA.length == 0)
-                {
-                    EnsureTransformAccessArrayInitialization();
-                }
+                //// First check for valid job system before attempting any job scheduling
+                //if (!isJobSystemValid())
+                //{
+                //    // Log the issue but don't try to schedule jobs with invalid arrays
+                //    Debug.LogWarning("Traffic jobs cannot be scheduled: Transform arrays are not valid");
+                //    return;
+                //}
+                //// Validate TransformAccessArray before use
+                //if (!driveTargetTAA.isCreated || driveTargetTAA.length == 0)
+                //{
+                //    EnsureTransformAccessArrayInitialization();
+                //}
 
-                // Additional safety check
-                if (driveTargetTAA.isCreated && driveTargetTAA.length > 0)
-                {
-                    try
-                    {
-                        //jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
-                        //jobHandle.Complete();
-                    }
-                    catch (System.Exception e)
-                    {
-                        Debug.LogError($"Error scheduling job: {e.Message}");
-                        // Attempt to reinitialize if scheduling fails
-                        EnsureTransformAccessArrayInitialization();
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning("Cannot schedule job: No valid drive targets");
-                }
+                //// Additional safety check
+                //if (driveTargetTAA.isCreated && driveTargetTAA.length > 0)
+                //{
+                //    try
+                //    {
+                //        //jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
+                //        //jobHandle.Complete();
+                //    }
+                //    catch (System.Exception ex)
+                //    {
+                //        Debug.LogError($"Error scheduling job: {ex.Message}");
+                //        // Attempt to reinitialize if scheduling fails
+                //        EnsureTransformAccessArrayInitialization();
+                //    }
+                //}
+                //else
+                //{
+                //    Debug.LogWarning("Cannot schedule job: No valid drive targets");
+                //}
 
-                // Rest of your existing FixedUpdate code...
+                
                 if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
                 deltaTime = Time.deltaTime;
                 if (useYieldTriggers)
@@ -1773,8 +1793,13 @@
                     for (int i = 0; i < carCount; i++)
                     {
                         yieldForCrossTrafficNL[i] = false;
+                        isTrafficLightWaypointNL[i] = false; // Reset flag
+
                         if (currentWaypointList[i] != null)
                         {
+                            // Check if current waypoint is marked as traffic light waypoint
+                            isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
+
                             if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute != null)
                             {
                                 for (int j = 0; j < currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers.Count; j++)
@@ -1796,6 +1821,13 @@
                     {
                         yieldForCrossTrafficNL[i] = false;
                         stopForTrafficLightNL[i] = carAIWaypointRouteInfo[i].stopForTrafficLight;
+
+                        // Update traffic light waypoint flag even when not using yield triggers
+                        isTrafficLightWaypointNL[i] = false;
+                        if (currentWaypointList[i] != null)
+                        {
+                            isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
+                        }
                         //frontSensorTransformPositionNL[i] = frontTransformCached[i].position; // make a job?
                     }
                 }
@@ -1840,6 +1872,7 @@
                     yieldForCrossTrafficNA = yieldForCrossTrafficNL,
                     accelerationPowerNA = accelerationPowerNL,
                     frontSensorTransformPositionNA = frontSensorTransformPositionNL,
+                    isTrafficLightWaypointNA = isTrafficLightWaypointNL
                 };
                 jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
                 jobHandle.Complete(); // Wait for completion before using results
@@ -2198,256 +2231,44 @@
                     else spawnTimer += deltaTime;
                 }
 
-                if (STSPrefs.debugProcessTime) Debug.Log((("AI Update " + (Time.realtimeSinceStartup - startTime) * 1000f)) + "ms");
+                //if (STSPrefs.debugProcessTime) Debug.Log((("AI Update " + (Time.realtimeSinceStartup - startTime) * 1000f)) + "ms");
                 // Add to AITrafficController.FixedUpdate() method
                 // After all other car processing
                 // This code is missing from your current implementation - it should be in FixedUpdate()
                 // Run every second (at 60fps)
                 // Debug to check traffic light awareness
-                if (Time.frameCount % 300 == 0)
-                { // Log every 5 seconds at 60fps
-                    Debug.Log("===== TRAFFIC LIGHT AWARENESS CHECK =====");
-                    for (int i = 0; i < carCount; i++)
-                    {
-                        if (carList[i] != null && isDrivingNL[i])
-                        {
-                            bool shouldStop = false;
+                //if (Time.frameCount % 300 == 0)
+                //{ // Log every 5 seconds at 60fps
+                //    Debug.Log("===== TRAFFIC LIGHT AWARENESS CHECK =====");
+                //    for (int i = 0; i < carCount; i++)
+                //    {
+                //        if (carList[i] != null && isDrivingNL[i])
+                //        {
+                //            bool shouldStop = false;
 
-                            // Check route info directly
-                            if (carAIWaypointRouteInfo[i] != null)
-                            {
-                                shouldStop = carAIWaypointRouteInfo[i].stopForTrafficLight;
-                            }
+                //            // Check route info directly
+                //            if (carAIWaypointRouteInfo[i] != null)
+                //            {
+                //                shouldStop = carAIWaypointRouteInfo[i].stopForTrafficLight;
+                //            }
 
-                            // Compare with the controller's native list value
-                            Debug.Log($"Car {carList[i].name} (ID: {i}): stopForTrafficLight={stopForTrafficLightNL[i]}, routeInfo.stopForTrafficLight={shouldStop}");
+                //            // Compare with the controller's native list value
+                //            Debug.Log($"Car {carList[i].name} (ID: {i}): stopForTrafficLight={stopForTrafficLightNL[i]}, routeInfo.stopForTrafficLight={shouldStop}");
 
-                            // Force update if there's a mismatch
-                            if (shouldStop != stopForTrafficLightNL[i])
-                            {
-                                Debug.LogWarning($"Mismatch detected! Fixing stopForTrafficLight for car {i}");
-                                stopForTrafficLightNL[i] = shouldStop;
-                            }
-                        }
-                    }
-                    Debug.Log("========================================");
-                }
+                //            // Force update if there's a mismatch
+                //            if (shouldStop != stopForTrafficLightNL[i])
+                //            {
+                //                Debug.LogWarning($"Mismatch detected! Fixing stopForTrafficLight for car {i}");
+                //                stopForTrafficLightNL[i] = shouldStop;
+                //            }
+                //        }
+                //    }
+                //    Debug.Log("========================================");
+                //}
             
             }
         }
-        // This method should be added to AITrafficController.cs
-        //public void SynchronizeTrafficLights()
-        //{
-        //    Debug.Log("Synchronizing traffic light states for all vehicles");
-
-        //    // Create a dictionary mapping routes to their traffic light status
-        //    Dictionary<AITrafficWaypointRoute, bool> routeStopStatus = new Dictionary<AITrafficWaypointRoute, bool>();
-
-        //    // Find all traffic lights in the scene
-        //    var allLights = FindObjectsOfType<AITrafficLight>();
-        //    foreach (var light in allLights)
-        //    {
-        //        // Check primary route
-        //        if (light.waypointRoute != null)
-        //        {
-        //            bool isRed = light.redMesh != null && light.redMesh.enabled;
-        //            bool isYellow = light.yellowMesh != null && light.yellowMesh.enabled;
-        //            bool shouldStop = isRed || isYellow;
-
-        //            // Update the route's status
-        //            routeStopStatus[light.waypointRoute] = shouldStop;
-
-        //            // Ensure route info is updated
-        //            light.waypointRoute.StopForTrafficlight(shouldStop);
-        //        }
-
-        //        // Check additional routes
-        //        if (light.waypointRoutes != null)
-        //        {
-        //            foreach (var route in light.waypointRoutes)
-        //            {
-        //                if (route != null)
-        //                {
-        //                    bool isRed = light.redMesh != null && light.redMesh.enabled;
-        //                    bool isYellow = light.yellowMesh != null && light.yellowMesh.enabled;
-        //                    bool shouldStop = isRed || isYellow;
-
-        //                    routeStopStatus[route] = shouldStop;
-        //                    route.StopForTrafficlight(shouldStop);
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    // Update cars with the correct traffic light state
-        //    for (int i = 0; i < carCount; i++)
-        //    {
-        //        if (i >= carList.Count || carList[i] == null || !isActiveNL[i])
-        //            continue;
-
-        //        AITrafficWaypointRoute carRoute = carRouteList[i];
-        //        if (carRoute == null) continue;
-
-        //        // Check if this route has a known traffic light status
-        //        if (routeStopStatus.ContainsKey(carRoute))
-        //        {
-        //            bool shouldStop = routeStopStatus[carRoute];
-
-        //            // Update the controller's native list
-        //            stopForTrafficLightNL[i] = shouldStop;
-
-        //            // Also update the route info reference
-        //            if (carAIWaypointRouteInfo[i] != null)
-        //            {
-        //                carAIWaypointRouteInfo[i].stopForTrafficLight = shouldStop;
-        //            }
-        //            else if (carRoute.routeInfo != null)
-        //            {
-        //                carAIWaypointRouteInfo[i] = carRoute.routeInfo;
-        //            }
-        //        }
-        //    }
-        //}
-
-        // Add to AITrafficController.cs
-        //public void SynchronizeTrafficLightAwareness()
-        //{
-        //    Debug.Log("Synchronizing traffic light awareness for all cars");
-
-        //    // First get all active traffic light managers
-        //    var lightManagers = FindObjectsOfType<AITrafficLightManager>();
-
-        //    // Resynchronize route info for each car
-        //    for (int i = 0; i < carCount; i++)
-        //    {
-        //        if (i >= carList.Count || carList[i] == null || !isActiveNL[i] || !isDrivingNL[i])
-        //            continue;
-
-        //        // Get car's current route and waypoint
-        //        AITrafficWaypointRoute route = carRouteList[i];
-        //        AITrafficWaypoint currentWaypoint = currentWaypointList[i];
-
-        //        if (route == null || currentWaypoint == null)
-        //            continue;
-
-        //        // Update route info in controller and car
-        //        carAIWaypointRouteInfo[i] = route.routeInfo;
-        //        stopForTrafficLightNL[i] = route.routeInfo.stopForTrafficLight;
-
-        //        // Explicitly check if this car should be stopping for a traffic light
-        //        if (currentWaypoint != null &&
-        //            currentWaypoint.onReachWaypointSettings.nextPointInRoute != null)
-        //        {
-        //            // Update yield triggers
-        //            bool shouldYield = false;
-        //            for (int j = 0; j < currentWaypoint.onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers.Count; j++)
-        //            {
-        //                if (currentWaypoint.onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers[j].yieldForTrafficLight)
-        //                {
-        //                    shouldYield = true;
-        //                    break;
-        //                }
-        //            }
-
-        //            // Update native list with latest state
-        //            yieldForCrossTrafficNL[i] = shouldYield;
-
-        //            // Force car to recognize traffic lights
-        //            if (route.routeInfo.stopForTrafficLight || shouldYield)
-        //            {
-        //                stopForTrafficLightNL[i] = true;
-
-        //                // Log for debugging
-        //                if (carList[i] != null)
-        //                {
-        //                    Debug.Log($"Car {carList[i].name} (ID: {i}) should be stopping for traffic lights");
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    // Replace the problematic code with this modified version
-        //    foreach (var manager in lightManagers)
-        //    {
-        //        if (manager == null || !manager.enabled)
-        //            continue;
-
-        //        // Get all active traffic lights
-        //        var trafficLights = manager.GetComponentsInChildren<AITrafficLight>();
-        //        foreach (var light in trafficLights)
-        //        {
-        //            if (light == null)
-        //                continue;
-
-        //            // Check if light is red by checking the mesh renderers
-        //            bool isRed = false;
-        //            if (light.redMesh != null)
-        //            {
-        //                isRed = light.redMesh.enabled;
-        //            }
-
-        //            // Force update based on current state
-        //            // Instead of calling a non-existent method, call the appropriate
-        //            // enable method based on current state
-        //            if (isRed)
-        //            {
-        //                // Already red, make sure the routes know
-        //                light.EnableRedLight();
-        //            }
-        //            else if (light.yellowMesh != null && light.yellowMesh.enabled)
-        //            {
-        //                // Already yellow, make sure the routes know
-        //                light.EnableYellowLight();
-        //            }
-        //            else
-        //            {
-        //                // Must be green, make sure the routes know
-        //                light.EnableGreenLight();
-        //            }
-
-        //            // Log light state for debugging
-        //            // Instead of accessing a non-existent routeInfo property,
-        //            // check if the light's routes are stopped for traffic light
-        //            bool isStopped = false;
-        //            if (light.waypointRoute != null)
-        //            {
-        //                isStopped = light.waypointRoute.routeInfo.stopForTrafficLight;
-        //            }
-        //            else if (light.waypointRoutes != null && light.waypointRoutes.Count > 0 &&
-        //                    light.waypointRoutes[0] != null)
-        //            {
-        //                isStopped = light.waypointRoutes[0].routeInfo.stopForTrafficLight;
-        //            }
-
-        //            Debug.Log($"Traffic light {light.name} is {(isStopped ? "RED/YELLOW" : "GREEN")}");
-        //        }
-        //    }
-        //}
-
-        // Add this to AITrafficController class
-        public void CheckForTrafficLightsChangedToGreen()
-        {
-            // Only proceed if we have cars
-            if (carCount <= 0) return;
-
-            // Check each car
-            for (int i = 0; i < carCount; i++)
-            {
-                // Skip invalid or already driving cars
-                if (i >= carList.Count || carList[i] == null || isDrivingNL[i])
-                    continue;
-
-                // If the car was previously stopped for traffic light but it's now green
-                if (stopForTrafficLightNL[i] == false && !isDrivingNL[i])
-                {
-                    // Restart the car
-                    carList[i].StartDriving();
-                    Debug.Log($"Restarting car {carList[i].name} after traffic light turned green");
-                }
-            }
-        }
-
-
+      
         public void ForceAllCarsToMoveDirectly()
         {
             // Rebuild arrays first to ensure we have the most up-to-date car information
@@ -2636,6 +2457,8 @@
             if (frontBoxcastResults.IsCreated) frontBoxcastResults.Dispose();
             if (leftBoxcastResults.IsCreated) leftBoxcastResults.Dispose();
             if (rightBoxcastResults.IsCreated) rightBoxcastResults.Dispose();
+            if (isTrafficLightWaypointNL.IsCreated) isTrafficLightWaypointNL.Dispose();
+
 
             // Existing disposal code...
 
@@ -3076,6 +2899,7 @@
         // Add this method to AITrafficController.cs
         // In AITrafficController.cs, modify RebuildInternalDataStructures:
         // In AITrafficController.cs, add this method
+        // Add this to AITrafficController.cs
         public void RebuildInternalDataStructures()
         {
             Debug.Log("Rebuilding all internal data structures for traffic controller");
@@ -3181,24 +3005,6 @@
                         // We can't directly modify the array element, so rebuilding is safer
                         RebuildTransformArrays();
                     }
-
-                    //// CRITICAL ADDITION: If car has SynchronizeTrafficLightAwareness method, call it
-                    //try
-                    //{
-                    //    var synchronizeMethod = carList[i].GetType().GetMethod("SynchronizeTrafficLightAwareness",
-                    //        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-
-                    //    if (synchronizeMethod != null)
-                    //    {
-                    //        synchronizeMethod.Invoke(carList[i], null);
-                    //        Debug.Log($"Called SynchronizeTrafficLightAwareness on car {i} ({carList[i].name})");
-                    //    }
-                    //}
-                    //catch (System.Exception ex)
-                    //{
-                    //    // Just log and continue
-                    //    Debug.LogWarning($"Failed to call SynchronizeTrafficLightAwareness: {ex.Message}");
-                    //}
                 }
             }
 
@@ -3302,6 +3108,35 @@
             Debug.Log("========================================");
         }
 
+        // In AITrafficController class
+        public void CheckForTrafficLightsChangedToGreen()
+        {
+            // Only proceed if we have cars
+            if (carCount <= 0) return;
+
+            for (int i = 0; i < carCount; i++)
+            {
+                // Skip invalid or already driving cars
+                if (i >= carList.Count || carList[i] == null || isDrivingNL[i])
+                    continue;
+
+                // Get the current waypoint for this car
+                AITrafficWaypoint waypoint = currentWaypointList[i];
+
+                // Only restart cars that are at traffic light waypoints
+                if (waypoint != null && waypoint.isTrafficLightWaypoint)
+                {
+                    // If the car is stopped and the route's traffic light is now green
+                    if (stopForTrafficLightNL[i] == false && !isDrivingNL[i])
+                    {
+                        // Restart the car
+                        carList[i].StartDriving();
+                        Debug.Log($"Restarting car {carList[i].name} after traffic light turned green");
+                    }
+                }
+            }
+        }
+
         public void MoveCarToPool(int _index)
         {
             canChangeLanesNL[_index] = false;
@@ -3359,9 +3194,26 @@
 
         // Add this to AITrafficController
         // This should be in your AITrafficController class
+        // Add this to AITrafficController.cs
+        // In AITrafficController.cs
         public void RespawnTrafficAsInitial(int density)
         {
+            // Save existing density setting
+            int oldDensity = this.density;
+
+            // Set new density
             this.density = density;
+
+            // Move any remaining cars to pool first
+            MoveAllCarsToPool();
+
+            // Force controller to stay enabled
+            this.enabled = true;
+
+            // For debugging
+            Debug.Log($"Respawning traffic with density {density}");
+
+            // Start the spawn coroutine
             StartCoroutine(SpawnStartupTrafficCoroutine());
         }
 
@@ -3540,6 +3392,7 @@
 
 
         // Add to AITrafficController.cs
+        // Add to AITrafficController.cs
         public void ForceAllCarsToMove()
         {
             Debug.Log("Forcing all cars to move");
@@ -3575,7 +3428,6 @@
                 // Restart driving process
                 if (car.isDriving) car.StopDriving();
                 car.StartDriving();
-                //car.ForceWaypointPathUpdate();
                 Debug.Log($"Reset driving state for {car.name}");
             }
 
@@ -3624,17 +3476,6 @@
             if (validDriveTargets.Count != carCount)
             {
                 Debug.LogWarning($"Car count mismatch: {validDriveTargets.Count} valid cars found but carCount is {carCount}");
-
-                // Log details about invalid cars for debugging
-                for (int i = 0; i < carCount; i++)
-                {
-                    if (carList[i] == null)
-                        Debug.LogWarning($"Car at index {i} is null");
-                    else if (carList[i].gameObject == null)
-                        Debug.LogWarning($"Car at index {i} has null gameObject");
-                    else if (carList[i].transform.Find("DriveTarget") == null)
-                        Debug.LogWarning($"Car at index {i} has no DriveTarget child transform");
-                }
             }
         }
 

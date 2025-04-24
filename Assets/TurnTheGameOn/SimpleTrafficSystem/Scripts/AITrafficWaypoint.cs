@@ -1,25 +1,26 @@
-﻿namespace TurnTheGameOn.SimpleTrafficSystem
+﻿using UnityEngine;
+using System.Collections.Generic;
+using System.Collections;
+
+namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
-    using System.Collections.Generic;
-    using System.Collections;
-    using UnityEngine;
-    using System.Collections.Generic;
-    using TurnTheGameOn.SimpleTrafficSystem;
-
-    [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficwaypoint")]
-
     public class AITrafficWaypoint : MonoBehaviour
     {
         [Tooltip("Contains settings and references to components triggered by the attached collider's OnTriggerEnter(Collider) method.")]
         public AITrafficWaypointSettings onReachWaypointSettings;
+
+        [Tooltip("If true, this waypoint is a traffic light checkpoint")]
+        public bool isTrafficLightWaypoint = false;
+
         private BoxCollider m_collider;
         private bool firstWaypoint; // used for gizmos
         private bool finalWaypoint; // used for gizmos
         private bool missingNewRoutePoint; // used for gizmos
         private bool hasNewRoutePoint; // used for gizmos
-        private List<AITrafficCar> carsStoppedForLight = new List<AITrafficCar>();
 
+        private List<AITrafficCar> carsStoppedForLight = new List<AITrafficCar>();
+        private float lightCheckInterval = 0.2f; // Check 5 times per second
+        private bool isCheckingLight = false;
 
         private void OnEnable()
         {
@@ -34,63 +35,74 @@
             }
         }
 
-        //void OnTriggerEnter(Collider col)
-        //{
-        //    col.transform.SendMessage("OnReachedWaypoint", onReachWaypointSettings, SendMessageOptions.DontRequireReceiver);
-        //    if (onReachWaypointSettings.waypointIndexnumber == onReachWaypointSettings.parentRoute.waypointDataList.Count)
-        //    {
-        //        if (onReachWaypointSettings.newRoutePoints.Length == 0)
-        //        {
-        //            col.transform.root.SendMessage("StopDriving", SendMessageOptions.DontRequireReceiver);
-        //        }
-        //    }
-        //}
-
         void OnTriggerEnter(Collider col)
         {
             // Standard waypoint processing
             col.transform.SendMessage("OnReachedWaypoint", onReachWaypointSettings, SendMessageOptions.DontRequireReceiver);
 
-            // Only check for traffic lights at specific waypoints that should stop
-            // These would be waypoints just before the intersection
-            if (onReachWaypointSettings.parentRoute != null &&
-                onReachWaypointSettings.parentRoute.stopForTrafficLight &&
-                // Add some criteria to identify intersection approach waypoints
-                // For example: specific waypoint index or tag
-                (onReachWaypointSettings.waypointIndexnumber == onReachWaypointSettings.parentRoute.waypointDataList.Count - 1))
+            // ONLY check for traffic lights at specific waypoints marked as traffic light waypoints
+            if (isTrafficLightWaypoint &&
+                onReachWaypointSettings.parentRoute != null &&
+                onReachWaypointSettings.parentRoute.stopForTrafficLight)
             {
                 AITrafficCar car = col.GetComponent<AITrafficCar>();
                 if (car != null)
                 {
                     car.StopDriving();
-                    Debug.Log($"Force stopping car {car.name} for traffic light at waypoint {name}");
+                    //Debug.Log($"Stopping car {car.name} for traffic light at waypoint {name}");
 
-                    // Store this car to restart it when the light turns green
-                    StartCoroutine(CheckForGreenLight(car));
+                    // Add to monitored list if not already there
+                    if (!carsStoppedForLight.Contains(car))
+                    {
+                        carsStoppedForLight.Add(car);
+                    }
+
+                    // Start monitoring light if not already doing so
+                    if (!isCheckingLight)
+                    {
+                        StartCoroutine(MonitorTrafficLight());
+                    }
                 }
             }
         }
-        private IEnumerator CheckForGreenLight(AITrafficCar car)
+
+        private IEnumerator MonitorTrafficLight()
         {
-            // Keep checking until car is driving or destroyed
-            while (car != null && !car.isDriving)
+            isCheckingLight = true;
+
+            while (carsStoppedForLight.Count > 0)
             {
-                // Check if light is now green
+                // Check if light is green now
                 if (onReachWaypointSettings.parentRoute != null &&
                     !onReachWaypointSettings.parentRoute.stopForTrafficLight)
                 {
-                    // Light is green, restart the car
-                    car.StartDriving();
-                    Debug.Log($"Traffic light turned green: Restarting car {car.name} from waypoint {name}");
-                    yield break;
+                    // Light is green, restart all stopped cars
+                    Debug.Log($"Traffic light turned green at waypoint {name}, restarting {carsStoppedForLight.Count} cars");
+
+                    // Make a copy of the list to avoid modification issues during iteration
+                    List<AITrafficCar> carsToRestart = new List<AITrafficCar>(carsStoppedForLight);
+
+                    foreach (var car in carsToRestart)
+                    {
+                        if (car != null && !car.isDriving)
+                        {
+                            car.StartDriving();
+                            Debug.Log($"Restarted car {car.name}");
+                        }
+                    }
+
+                    // Clear the list
+                    carsStoppedForLight.Clear();
                 }
 
-                // Wait a short time before checking again
-                yield return new WaitForSeconds(0.2f);
+                // Clean up any null references (destroyed cars)
+                carsStoppedForLight.RemoveAll(car => car == null);
+
+                yield return new WaitForSeconds(lightCheckInterval);
             }
+
+            isCheckingLight = false;
         }
-
-
 
         public void TriggerNextWaypoint(AITrafficCar _AITrafficCar)
         {
@@ -103,27 +115,28 @@
                 }
             }
         }
-        void Update()
-        {
-            // Check if the light has turned green
-            if (onReachWaypointSettings.parentRoute != null &&
-                !onReachWaypointSettings.parentRoute.stopForTrafficLight &&
-                carsStoppedForLight.Count > 0)
-            {
-                // Restart all cars we've stopped
-                foreach (var car in carsStoppedForLight)
-                {
-                    if (car != null && !car.isDriving)
-                    {
-                        car.StartDriving();
-                        Debug.Log($"Traffic light turned green: Restarting car {car.name} from waypoint {name}");
-                    }
-                }
+        //void Update()
+        //{
+        //    // Check if the light has turned green
+        //    if (isTrafficLightWaypoint &&
+        //        onReachWaypointSettings.parentRoute != null &&
+        //        !onReachWaypointSettings.parentRoute.stopForTrafficLight &&
+        //        carsStoppedForLight.Count > 0)
+        //    {
+        //        // Restart all cars we've stopped
+        //        foreach (var car in carsStoppedForLight)
+        //        {
+        //            if (car != null && !car.isDriving)
+        //            {
+        //                car.StartDriving();
+        //                Debug.Log($"Traffic light turned green: Restarting car {car.name} from waypoint {name}");
+        //            }
+        //        }
 
-                // Clear our tracking list
-                carsStoppedForLight.Clear();
-            }
-        }
+        //        // Clear our tracking list
+        //        carsStoppedForLight.Clear();
+        //    }
+        //}
 
         private void OnDrawGizmos()
         {

@@ -29,5 +29,7 @@
         [Tooltip("Custom event that is triggered when the car reaches a waypoint.")]
         public UnityEvent OnReachWaypointEvent;
         [HideInInspector] public Vector3 position;
+        // Add to AITrafficWaypoint class
+        
     }
 }

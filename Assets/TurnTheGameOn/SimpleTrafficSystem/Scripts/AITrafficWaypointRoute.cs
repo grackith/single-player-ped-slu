@@ -70,11 +70,15 @@
                     Debug.Log($"Re-enabled disabled route info for {name}");
                 }
 
-                // Set the flag
-                routeInfo.stopForTrafficLight = _stop;
+                // Set the flag - these should match
+                stopForTrafficLight = routeInfo.stopForTrafficLight = _stop;
+
+                // CRITICAL CHANGE: DO NOT disable the component - it needs to stay active
+                // The problem is here - this is disabling the component when light is red!
+                // routeInfo.enabled = _stop ? false : true;  <-- REMOVE THIS LINE
 
                 // Log state change
-                Debug.Log($"Route {name} stopForTrafficLight set to {_stop}");
+                //Debug.Log($"Route {name} stopForTrafficLight set to {_stop}");
             }
             else
             {

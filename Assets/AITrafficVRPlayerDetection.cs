@@ -62,7 +62,7 @@ public class AITrafficVRPlayerDetection : MonoBehaviour
     void EnableProcessing()
     {
         shouldProcess = true;
-        Debug.Log("AITrafficVRPlayerDetection: Starting to process cars");
+        //Debug.Log("AITrafficVRPlayerDetection: Starting to process cars");
     }
 
     void Update()

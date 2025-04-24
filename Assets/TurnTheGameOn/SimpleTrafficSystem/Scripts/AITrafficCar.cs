@@ -25,9 +25,9 @@
         public float minAngularDrag = 0.3f;
 
         [Tooltip("Size of the front detection sensor BoxCast.")]
-        public Vector3 frontSensorSize = new Vector3(1.3f, 1f, 0.001f);
+        public Vector3 frontSensorSize = new Vector3(1f, 1f, 0.001f);
         [Tooltip("Length of the front detection sensor BoxCast.")]
-        public float frontSensorLength = 5f;
+        public float frontSensorLength = 1f;
         [Tooltip("Size of the side detection sensor BoxCasts.")]
         public Vector3 sideSensorSize = new Vector3(1.0f, 1.0f, 0.1f);
         [Tooltip("Length of the side detection sensor BoxCasts.")]
@@ -80,49 +80,7 @@
         // Add this to AITrafficCar.cs
         private bool routeControlDisabled = false;
 
-        // Add this method to AITrafficCar.cs
-        //public void DisableRouteControl()
-        //{
-        //    if (!routeControlDisabled)
-        //    {
-        //        routeControlDisabled = true;
-        //        Debug.Log($"Route control disabled for {name}");
-
-        //        // Get drive target
-        //        Transform driveTarget = transform.Find("DriveTarget");
-        //        if (driveTarget != null)
-        //        {
-        //            // Save current drive target position
-        //            Vector3 currentTargetPos = driveTarget.position;
-
-        //            // The critical part: set a flag in the controller that this car
-        //            // should ignore route waypoint progression
-        //            if (assignedIndex >= 0 && AITrafficController.Instance != null)
-        //            {
-        //                // Force car to continue in current direction
-        //                transform.LookAt(currentTargetPos);
-
-        //                // This is the key: create a forward momentum that's not tied to route
-        //                Rigidbody rb = GetComponent<Rigidbody>();
-        //                if (rb != null)
-        //                {
-        //                    rb.velocity = transform.forward * 5f;
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
-
-        //public void RegisterCar(AITrafficWaypointRoute route)
-        //{
-        //    if (brakeMaterial == null && brakeMaterialMesh != null)
-        //    {
-        //        brakeMaterial = brakeMaterialMesh.materials[brakeMaterialIndex];
-        //    }
-        //    assignedIndex = AITrafficController.Instance.RegisterCarAI(this, route);
-        //    startRoute = route;
-        //    rb = GetComponent<Rigidbody>();
-        //}
+  
 
         #region Public API Methods
         /// These methods can be used to get AITrafficCar variables and call functions
@@ -647,6 +605,22 @@
                     AITrafficController.Instance.Set_RouteProgressArray(assignedIndex, reachedWaypointIndex);
                 }
 
+                // CRITICAL ADDITION: Check if this is a traffic light waypoint
+                // Only stop for traffic lights at specific waypoints marked as traffic light waypoints
+                AITrafficWaypoint currentWaypoint = onReachWaypointSettings.waypoint;
+
+                if (currentWaypoint != null &&
+                    currentWaypoint.isTrafficLightWaypoint &&
+                    onReachWaypointSettings.parentRoute.stopForTrafficLight)
+                {
+                    // Stop for red light
+                    StopDriving();
+                    Debug.Log($"Car {name} stopped at traffic light waypoint {currentWaypoint.name}");
+
+                    // Don't process the rest of the method
+                    return;
+                }
+
                 // Calculate next waypoint index
                 int nextWaypointIndex = reachedWaypointIndex + 1;
                 bool routeChanged = false;
@@ -686,7 +660,7 @@
 
                                 if (!canTakeRoute)
                                 {
-                                    Debug.Log($"Car {name} (type {vehicleType}) skipping incompatible route {nextSettings.parentRoute.name}");
+                                    //Debug.Log($"Car {name} (type {vehicleType}) skipping incompatible route {nextSettings.parentRoute.name}");
                                     continue;
                                 }
                             }
@@ -717,7 +691,7 @@
                             nextWaypointIndex = 0;
                             currentRoute = newRoute;
                             routeChanged = true;
-                            Debug.Log($"Car {name} (type {vehicleType}): Connected to new route '{newRoute.name}'");
+                            //Debug.Log($"Car {name} (type {vehicleType}): Connected to new route '{newRoute.name}'");
                         }
                         // If no compatible routes were found but there are routes, debug it
                         else if (onReachWaypointSettings.newRoutePoints.Length > 0)
@@ -755,12 +729,12 @@
                     }
                 }
 
-                // Handle stop instruction if present
+                // Handle stop instruction if present (non-traffic light stops)
                 if (onReachWaypointSettings.stopDriving)
                 {
                     StopDriving();
 
-                    // IMPORTANT ADDITION: Also disable the car in the controller
+                    // Also disable the car in the controller
                     if (AITrafficController.Instance != null && assignedIndex >= 0)
                     {
                         AITrafficController.Instance.Set_CanProcess(assignedIndex, false);
@@ -781,7 +755,7 @@
                     else
                     {
                         // If stopTime is 0, this is a permanent stop - log it
-                        Debug.Log($" {name} reached final stop at {onReachWaypointSettings.parentRoute.name}");
+                        Debug.Log($"{name} reached final stop at {onReachWaypointSettings.parentRoute.name}");
                     }
                 }
             }
@@ -793,16 +767,6 @@
             }
         }
 
-        // Make sure you have these methods/coroutines defined elsewhere:
-        // private System.Collections.IEnumerator ResumeDrivingTimer(float delay) { ... }
-        // public void StopDriving() { ... }
-        // public void ResumeDriving() { ... }
-
-
-
-        // Placeholder methods - ensure you have these defined
-        // public void StopDriving() { /* ... set speed to 0, disable movement logic ... */ }
-        // public void ResumeDriving() { /* ... enable movement logic, potentially set target speed ... */ }
 
         /// <summary>
         /// Used by AITrafficController to instruct the AITrafficCar to change lanes.
@@ -1192,11 +1156,6 @@
 
 
 
-        // Remove or comment out the LateUpdate method that's causing interference
-
-        // Remove the StrictSequentialWaypointFollowing method as it conflicts with UpdateDriveTarget
-
-        // Add this to AITrafficCar.cs - a completely new approach to waypoint following
 
 
         // Helper method to check if a waypoint is ahead of the car
@@ -1247,77 +1206,7 @@
                 }
             }
         }
-        // Add this method to AITrafficCar
-        //public void SynchronizeTrafficLightAwareness()
-        //{
-        //    if (currentWaypointIndex < 0 || waypointRoute == null ||
-        //        waypointRoute.waypointDataList == null ||
-        //        currentWaypointIndex >= waypointRoute.waypointDataList.Count)
-        //        return;
-
-        //    // Get the current waypoint
-        //    AITrafficWaypoint currentWaypoint = waypointRoute.waypointDataList[currentWaypointIndex]._waypoint;
-        //    if (currentWaypoint == null) return;
-
-        //    // Check if this waypoint or the next one has a traffic light
-        //    bool shouldStopForLight = false;
-
-        //    // Check current route info first (this is how the traffic system tracks lights)
-        //    if (waypointRoute.routeInfo != null && waypointRoute.routeInfo.stopForTrafficLight)
-        //    {
-        //        shouldStopForLight = true;
-        //    }
-
-        //    // Check if there are yield triggers (how traffic lights connect to waypoints)
-        //    if (currentWaypoint.onReachWaypointSettings.yieldTriggers != null &&
-        //        currentWaypoint.onReachWaypointSettings.yieldTriggers.Count > 0)
-        //    {
-        //        // Look for traffic light yield triggers
-        //        foreach (var trigger in currentWaypoint.onReachWaypointSettings.yieldTriggers)
-        //        {
-        //            if (trigger != null && trigger.yieldForTrafficLight)
-        //            {
-        //                shouldStopForLight = true;
-        //                break;
-        //            }
-        //        }
-        //    }
-
-        //    // Check next waypoint if available
-        //    if (currentWaypoint.onReachWaypointSettings.nextPointInRoute != null)
-        //    {
-        //        var nextWaypoint = currentWaypoint.onReachWaypointSettings.nextPointInRoute;
-
-        //        // Check next waypoint's yield triggers
-        //        if (nextWaypoint.onReachWaypointSettings.yieldTriggers != null &&
-        //            nextWaypoint.onReachWaypointSettings.yieldTriggers.Count > 0)
-        //        {
-        //            foreach (var trigger in nextWaypoint.onReachWaypointSettings.yieldTriggers)
-        //            {
-        //                if (trigger != null && trigger.yieldForTrafficLight)
-        //                {
-        //                    shouldStopForLight = true;
-        //                    break;
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    // Update the controller with this information
-        //    if (assignedIndex >= 0 && AITrafficController.Instance != null)
-        //    {
-        //        // Make sure we use the current route info
-        //        AITrafficController.Instance.Set_RouteInfo(assignedIndex, waypointRoute.routeInfo);
-
-        //        // Force update traffic light awareness
-        //        if (shouldStopForLight && waypointRoute.routeInfo != null)
-        //        {
-        //            // This will make the car aware of traffic lights again
-        //            waypointRoute.routeInfo.stopForTrafficLight = true;
-        //        }
-        //    }
-        //}
-
+        
 
         #endregion
 
@@ -1353,6 +1242,6 @@
             StartDriving();
         }
         // Make sure you have this coroutine defined elsewhere in the class
-        
+
     }
 }
