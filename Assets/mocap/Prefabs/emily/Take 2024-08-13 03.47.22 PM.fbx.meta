@@ -5,9 +5,9 @@ ModelImporter:
   internalIDToNameTable: []
   externalObjects: {}
   materials:
-    materialImportMode: 2
+    materialImportMode: 1
     materialName: 1
-    materialSearch: 2
+    materialSearch: 0
     materialLocation: 0
   animations:
     legacyGenerateAnimations: 4
@@ -15,7 +15,7 @@ ModelImporter:
     resampleCurves: 1
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
-    motionNodeName: emily_Root
+    motionNodeName: 
     rigImportErrors: 
     rigImportWarnings: 
     animationImportErrors: 
@@ -57,18 +57,18 @@ ModelImporter:
       takeName: Take 2024-08-13 03.47.22 PM_FBX
       internalID: 1742075939649162130
       firstFrame: 1028
-      lastFrame: 3208
+      lastFrame: 1954
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
       cycleOffset: 0
       loop: 0
       hasAdditiveReferencePose: 0
-      loopTime: 0
+      loopTime: 1
       loopBlend: 0
-      loopBlendOrientation: 1
+      loopBlendOrientation: 0
       loopBlendPositionY: 1
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 0
       keepOriginalPositionXZ: 0
@@ -91,140 +91,8 @@ ModelImporter:
         floatParameter: 0
         intParameter: 0
         messageOptions: 0
-      transformMask:
-      - path: 
-        weight: 1
-      - path: emily_Root
-        weight: 1
-      - path: emily_Root/emily_Hips
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_LeftUpLeg
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_LeftUpLeg/emily_LeftLeg
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_LeftUpLeg/emily_LeftLeg/emily_LeftFoot
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_LeftUpLeg/emily_LeftLeg/emily_LeftFoot/emily_LeftToeBase
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_LeftUpLeg/emily_LeftLeg/emily_LeftFoot/emily_LeftToeBase/emily_LToeEnd
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_RightUpLeg
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_RightUpLeg/emily_RightLeg
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_RightUpLeg/emily_RightLeg/emily_RightFoot
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_RightUpLeg/emily_RightLeg/emily_RightFoot/emily_RightToeBase
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_RightUpLeg/emily_RightLeg/emily_RightFoot/emily_RightToeBase/emily_RToeEnd
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandIndex1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandIndex1/emily_LeftHandIndex2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandIndex1/emily_LeftHandIndex2/emily_LeftHandIndex3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandIndex1/emily_LeftHandIndex2/emily_LeftHandIndex3/emily_LIndex3End
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandMiddle1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandMiddle1/emily_LeftHandMiddle2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandMiddle1/emily_LeftHandMiddle2/emily_LeftHandMiddle3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandMiddle1/emily_LeftHandMiddle2/emily_LeftHandMiddle3/emily_LMiddle3End
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandPinky1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandPinky1/emily_LeftHandPinky2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandPinky1/emily_LeftHandPinky2/emily_LeftHandPinky3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandPinky1/emily_LeftHandPinky2/emily_LeftHandPinky3/emily_LPinky3End
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandRing1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandRing1/emily_LeftHandRing2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandRing1/emily_LeftHandRing2/emily_LeftHandRing3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandRing1/emily_LeftHandRing2/emily_LeftHandRing3/emily_LRing3End
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandThumb1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandThumb1/emily_LeftHandThumb2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandThumb1/emily_LeftHandThumb2/emily_LeftHandThumb3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_LeftShoulder/emily_LeftArm/emily_LeftForeArm/emily_LeftHand/emily_LeftHandThumb1/emily_LeftHandThumb2/emily_LeftHandThumb3/emily_LThumb3End
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_Neck
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_Neck/emily_Head
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_Neck/emily_Head/emily_HeadEnd
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandIndex1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandIndex1/emily_RightHandIndex2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandIndex1/emily_RightHandIndex2/emily_RightHandIndex3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandIndex1/emily_RightHandIndex2/emily_RightHandIndex3/emily_RIndex3End
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandMiddle1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandMiddle1/emily_RightHandMiddle2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandMiddle1/emily_RightHandMiddle2/emily_RightHandMiddle3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandMiddle1/emily_RightHandMiddle2/emily_RightHandMiddle3/emily_RMiddle3End
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandPinky1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandPinky1/emily_RightHandPinky2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandPinky1/emily_RightHandPinky2/emily_RightHandPinky3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandPinky1/emily_RightHandPinky2/emily_RightHandPinky3/emily_RPinky3End
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandRing1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandRing1/emily_RightHandRing2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandRing1/emily_RightHandRing2/emily_RightHandRing3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandRing1/emily_RightHandRing2/emily_RightHandRing3/emily_RRing3End
-        weight: 0
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandThumb1
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandThumb1/emily_RightHandThumb2
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandThumb1/emily_RightHandThumb2/emily_RightHandThumb3
-        weight: 1
-      - path: emily_Root/emily_Hips/emily_Spine/emily_Spine1/emily_RightShoulder/emily_RightArm/emily_RightForeArm/emily_RightHand/emily_RightHandThumb1/emily_RightHandThumb2/emily_RightHandThumb3/emily_RThumb3End
-        weight: 0
-      maskType: 0
+      transformMask: []
+      maskType: 3
       maskSource: {instanceID: 0}
       additiveReferencePoseFrame: 1986.9999
     isReadable: 0
@@ -248,7 +116,7 @@ ModelImporter:
     keepQuads: 0
     weldVertices: 1
     bakeAxisConversion: 0
-    preserveHierarchy: 0
+    preserveHierarchy: 1
     skinWeightsMode: 0
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
