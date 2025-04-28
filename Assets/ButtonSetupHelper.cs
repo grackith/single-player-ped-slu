@@ -16,9 +16,19 @@ public class ButtonSetupHelper : MonoBehaviour
     [Tooltip("Should keyboard shortcuts be automatically assigned?")]
     public bool assignKeyboardShortcuts = true;
 
+    [Tooltip("Should UI be visible in VR by default?")]
+    public bool visibleInVRByDefault = false;
+
+    [Tooltip("Canvas to hide/show")]
+    public Canvas uiCanvas;
+
     [Header("Keyboard Mapping")]
     [Tooltip("Mapping of button names to keyboard shortcuts")]
     public List<ButtonKeyMapping> keyMappings = new List<ButtonKeyMapping>();
+
+    [Header("Toggle UI Visibility")]
+    [Tooltip("Key to toggle UI visibility")]
+    public KeyCode toggleUIVisibilityKey = KeyCode.Tab;
 
     // Define a class to store button-to-key mappings
     [System.Serializable]
@@ -46,6 +56,9 @@ public class ButtonSetupHelper : MonoBehaviour
         {
             SetupButton(button.gameObject);
         }
+
+        // Set initial UI visibility based on preference
+        SetUIVisibility(visibleInVRByDefault);
 
         Debug.Log("Button setup complete!");
     }
@@ -107,6 +120,59 @@ public class ButtonSetupHelper : MonoBehaviour
         Debug.Log($"Button {buttonObject.name} set up successfully");
     }
 
+    // Set UI visibility
+    public void SetUIVisibility(bool visible)
+    {
+        if (uiCanvas != null)
+        {
+            uiCanvas.enabled = visible;
+            Debug.Log($"UI Canvas visibility set to {visible}");
+        }
+        else if (buttonContainer != null)
+        {
+            // If no canvas reference, try to use the button container
+            Canvas containerCanvas = buttonContainer.GetComponent<Canvas>();
+            if (containerCanvas != null)
+            {
+                containerCanvas.enabled = visible;
+                Debug.Log($"Button container canvas visibility set to {visible}");
+            }
+            else
+            {
+                // Last resort: toggle the active state of the container
+                buttonContainer.SetActive(visible);
+                Debug.Log($"Button container active state set to {visible}");
+            }
+        }
+    }
+
+    // Toggle UI visibility
+    public void ToggleUIVisibility()
+    {
+        bool currentState = false;
+
+        // Determine current state
+        if (uiCanvas != null)
+        {
+            currentState = uiCanvas.enabled;
+        }
+        else if (buttonContainer != null)
+        {
+            Canvas containerCanvas = buttonContainer.GetComponent<Canvas>();
+            if (containerCanvas != null)
+            {
+                currentState = containerCanvas.enabled;
+            }
+            else
+            {
+                currentState = buttonContainer.activeSelf;
+            }
+        }
+
+        // Toggle to opposite state
+        SetUIVisibility(!currentState);
+    }
+
     // You can call this from Editor with a button
     [ContextMenu("Setup All Buttons")]
     private void EditorSetupAllButtons()
@@ -117,18 +183,48 @@ public class ButtonSetupHelper : MonoBehaviour
     // Automatically set up buttons when the application starts
     private void Start()
     {
-        // If no key mappings are defined, add some default ones
+        // In ButtonSetupHelper.Start()
         if (keyMappings.Count == 0 && assignKeyboardShortcuts)
         {
-            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "Acclimitization", keyCode = KeyCode.Alpha1 });
-            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "NoTraffic", keyCode = KeyCode.Alpha2 });
-            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "LightTraffic", keyCode = KeyCode.Alpha3 });
-            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "MediumTraffic", keyCode = KeyCode.Alpha4 });
-            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "HeavyTraffic", keyCode = KeyCode.Alpha5 });
+            Debug.Log("Setting up default key mappings");
+
+            // Use regular keyboard number keys (Alpha1-5 are the top row numbers)
+            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "acclimitization", keyCode = KeyCode.Alpha1 });
+            //keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "NoTraffic", keyCode = KeyCode.Alpha2 });
+            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "light-traffic", keyCode = KeyCode.Alpha3 });
+            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "medium-traffic", keyCode = KeyCode.Alpha4 });
+            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "heavy-traffic", keyCode = KeyCode.Alpha5 });
             keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "End", keyCode = KeyCode.Escape });
+
+            // Print the mappings to debug log
+            foreach (var mapping in keyMappings)
+            {
+                Debug.Log($"Mapped key {mapping.keyCode} to button containing '{mapping.buttonNameContains}'");
+            }
         }
 
         // Auto setup all buttons
         SetupAllButtons();
+    }
+
+    // Check for toggle UI visibility key
+    private void Update()
+    {
+        if (Input.GetKeyDown(toggleUIVisibilityKey))
+        {
+            ToggleUIVisibility();
+        }
+    }
+
+    // Optional: Add a public method to show UI temporarily and hide after delay
+    public void ShowUITemporarily(float seconds)
+    {
+        SetUIVisibility(true);
+        Invoke("HideUI", seconds);
+    }
+
+    private void HideUI()
+    {
+        SetUIVisibility(false);
     }
 }

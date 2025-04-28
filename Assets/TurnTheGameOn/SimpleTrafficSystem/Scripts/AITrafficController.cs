@@ -1336,98 +1336,11 @@
                 // Only attempt to spawn if we have spawn points
                 if (availableSpawnPoints.Count > 0)
                 {
-                    for (int i = 0; i < Mathf.Min(density, availableSpawnPoints.Count); i++)
-                    {
-                        // Try each prefab type
-                        for (int j = 0; j < trafficPrefabs.Length; j++)
-                        {
-                            if (trafficPrefabs[j] == null) continue;
+                    // Create a list of spawn points to work with so we don't modify the original list
+                    List<AITrafficSpawnPoint> spawnPointsToUse = new List<AITrafficSpawnPoint>(availableSpawnPoints);
 
-                            if (availableSpawnPoints.Count == 0) break;
-
-                            // Get random spawn point safely
-                            int spawnPointIndex = UnityEngine.Random.Range(0, availableSpawnPoints.Count);
-                            if (spawnPointIndex >= availableSpawnPoints.Count) continue; // Extra safety
-
-                            // Safety check for null references
-                            if (availableSpawnPoints[spawnPointIndex] == null ||
-                                availableSpawnPoints[spawnPointIndex].transformCached == null ||
-                                availableSpawnPoints[spawnPointIndex].waypoint == null ||
-                                availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.parentRoute == null ||
-                                availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.parentRoute.vehicleTypes == null)
-                            {
-                                availableSpawnPoints.RemoveAt(spawnPointIndex);
-                                continue;
-                            }
-
-                            // Calculate spawn position
-                            spawnPosition = availableSpawnPoints[spawnPointIndex].transformCached.position + spawnOffset;
-                            var spawnRotation = availableSpawnPoints[spawnPointIndex].transformCached.rotation;
-                            var parentRoute = availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.parentRoute;
-
-                            // Validate vehicle type compatibility
-                            bool typeMatched = false;
-                            for (int k = 0; k < parentRoute.vehicleTypes.Length; k++)
-                            {
-                                if (parentRoute.vehicleTypes[k] == trafficPrefabs[j].vehicleType)
-                                {
-                                    typeMatched = true;
-                                    break;
-                                }
-                            }
-
-                            if (!typeMatched) continue;
-
-                            try
-                            {
-                                // Safety check for waypoint indices
-                                if (parentRoute.waypointDataList == null ||
-                                    parentRoute.waypointDataList.Count == 0 ||
-                                    availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber < 0 ||
-                                    availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber >= parentRoute.waypointDataList.Count ||
-                                    parentRoute.waypointDataList[availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber]._transform == null)
-                                {
-                                    continue; // Skip if waypoint data is invalid
-                                }
-
-                                // Instantiate the vehicle
-                                GameObject spawnedVehicle = Instantiate(trafficPrefabs[j].gameObject, spawnPosition, spawnRotation);
-                                AITrafficCar carComponent = spawnedVehicle.GetComponent<AITrafficCar>();
-
-                                if (carComponent != null)
-                                {
-                                    // Register car with route
-                                    carComponent.RegisterCar(parentRoute);
-
-                                    // Make it look at the next waypoint
-                                    Transform targetWaypoint = parentRoute.waypointDataList[availableSpawnPoints[spawnPointIndex].waypoint.onReachWaypointSettings.waypointIndexnumber]._transform;
-                                    spawnedVehicle.transform.LookAt(targetWaypoint);
-
-                                    successfullySpawned++;
-                                }
-                                else
-                                {
-                                    Debug.LogWarning("Could not find AITrafficCar component on spawned vehicle!");
-                                    Destroy(spawnedVehicle);
-                                }
-                            }
-                            catch (System.Exception ex)
-                            {
-                                Debug.LogError($"Error spawning vehicle: {ex.Message}");
-                            }
-
-                            // Remove the used spawn point
-                            if (spawnPointIndex < availableSpawnPoints.Count)
-                            {
-                                availableSpawnPoints.RemoveAt(spawnPointIndex);
-                            }
-
-                            if (currentAmountToSpawn > 0) currentAmountToSpawn--;
-                            if (currentAmountToSpawn <= 0) break;
-                        }
-
-                        if (currentAmountToSpawn <= 0 || availableSpawnPoints.Count == 0) break;
-                    }
+                    // Start coroutine for delayed spawning
+                    StartCoroutine(SpawnVehiclesWithDelay(spawnPointsToUse, Mathf.Min(density, spawnPointsToUse.Count)));
                 }
 
                 Debug.Log($"Successfully spawned {successfullySpawned} vehicles in the scene");
@@ -1566,6 +1479,164 @@
                 Debug.LogError($"Critical error in SpawnStartupTrafficCoroutine: {ex.Message}\n{ex.StackTrace}");
                 isInitialized = true; // Try to recover
             }
+        }
+        private IEnumerator SpawnVehiclesWithDelay(List<AITrafficSpawnPoint> spawnPoints, int maxToSpawn)
+        {
+            int spawned = 0;
+            List<Vector3> usedPositions = new List<Vector3>(); // Track used positions
+
+            // Create a filtered list of prefabs, excluding city buses
+            List<AITrafficCar> filteredPrefabs = new List<AITrafficCar>();
+            foreach (var prefab in trafficPrefabs)
+            {
+                if (prefab != null)
+                {
+                    // Skip any prefab that matches bus criteria
+                    // You can customize this check based on how your vehicle types are set up
+                    if (prefab.name.ToLower().Contains("bus") ||
+                        prefab.vehicleType.ToString().ToLower().Contains("bus"))
+                    {
+                        Debug.Log($"Excluding bus prefab from random spawning: {prefab.name}");
+                        continue;
+                    }
+
+                    filteredPrefabs.Add(prefab);
+                }
+            }
+
+            // Shuffle the filtered prefabs for variety
+            List<AITrafficCar> shuffledPrefabs = new List<AITrafficCar>(filteredPrefabs);
+            for (int i = 0; i < shuffledPrefabs.Count; i++)
+            {
+                int randomIndex = UnityEngine.Random.Range(i, shuffledPrefabs.Count);
+                AITrafficCar temp = shuffledPrefabs[i];
+                shuffledPrefabs[i] = shuffledPrefabs[randomIndex];
+                shuffledPrefabs[randomIndex] = temp;
+            }
+
+            int prefabIndex = 0; // Start with first prefab
+
+            while (spawned < maxToSpawn && spawnPoints.Count > 0)
+            {
+                // Get random spawn point
+                int spawnPointIndex = UnityEngine.Random.Range(0, spawnPoints.Count);
+                var spawnPoint = spawnPoints[spawnPointIndex];
+
+                // Remove from list immediately to prevent reuse
+                spawnPoints.RemoveAt(spawnPointIndex);
+
+                // Skip if invalid
+                if (spawnPoint == null ||
+                    spawnPoint.transformCached == null ||
+                    spawnPoint.waypoint == null ||
+                    spawnPoint.waypoint.onReachWaypointSettings.parentRoute == null)
+                {
+                    continue;
+                }
+
+                // Get route
+                var parentRoute = spawnPoint.waypoint.onReachWaypointSettings.parentRoute;
+
+                // Calculate spawn position
+                Vector3 spawnPosition = spawnPoint.transformCached.position + spawnOffset;
+
+                // IMPORTANT: Perform actual physics check for collisions
+                bool isPositionClear = true;
+                Collider[] hitColliders = Physics.OverlapSphere(spawnPosition, 5f);
+                foreach (var hitCollider in hitColliders)
+                {
+                    // If the collider belongs to a car or has a car component in its parent
+                    if (hitCollider.GetComponent<AITrafficCar>() != null ||
+                        (hitCollider.transform.parent != null && hitCollider.transform.parent.GetComponent<AITrafficCar>() != null))
+                    {
+                        Debug.Log($"Position {spawnPosition} is blocked by existing car!");
+                        isPositionClear = false;
+                        break;
+                    }
+                }
+
+                // Skip this position if it's occupied
+                if (!isPositionClear)
+                {
+                    continue;
+                }
+
+                // Try to find a compatible vehicle type
+                AITrafficCar prefabToUse = null;
+
+                // Try up to trafficPrefabs.Length different prefabs to find a compatible one
+                for (int attempt = 0; attempt < shuffledPrefabs.Count; attempt++)
+                {
+                    // Get current prefab and advance to next (with wraparound)
+                    AITrafficCar currentPrefab = shuffledPrefabs[prefabIndex];
+                    prefabIndex = (prefabIndex + 1) % shuffledPrefabs.Count;
+
+                    if (currentPrefab == null) continue;
+
+                    // Check if this prefab is compatible with the route
+                    foreach (var vehicleType in parentRoute.vehicleTypes)
+                    {
+                        if (vehicleType == currentPrefab.vehicleType)
+                        {
+                            prefabToUse = currentPrefab;
+                            break;
+                        }
+                    }
+
+                    if (prefabToUse != null) break; // Found a compatible prefab
+                }
+
+                if (prefabToUse == null) continue; // No compatible prefab
+
+                try
+                {
+                    // Ensure waypoint data is valid
+                    if (parentRoute.waypointDataList == null ||
+                        parentRoute.waypointDataList.Count == 0 ||
+                        spawnPoint.waypoint.onReachWaypointSettings.waypointIndexnumber < 0 ||
+                        spawnPoint.waypoint.onReachWaypointSettings.waypointIndexnumber >= parentRoute.waypointDataList.Count)
+                    {
+                        continue;
+                    }
+
+                    // Spawn vehicle
+                    GameObject spawnedVehicle = Instantiate(prefabToUse.gameObject, spawnPosition, spawnPoint.transformCached.rotation);
+                    AITrafficCar car = spawnedVehicle.GetComponent<AITrafficCar>();
+
+                    if (car != null)
+                    {
+                        // Register with route
+                        car.RegisterCar(parentRoute);
+
+                        // Make it look at next waypoint
+                        Transform targetWaypoint = parentRoute.waypointDataList[spawnPoint.waypoint.onReachWaypointSettings.waypointIndexnumber]._transform;
+                        if (targetWaypoint != null)
+                        {
+                            spawnedVehicle.transform.LookAt(targetWaypoint);
+                        }
+
+                        // Record position as used
+                        usedPositions.Add(spawnPosition);
+                        spawned++;
+
+                        Debug.Log($"Successfully spawned vehicle {spawned} (type: {prefabToUse.name}) at {spawnPosition}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Could not find AITrafficCar component on spawned vehicle!");
+                        Destroy(spawnedVehicle);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"Error spawning vehicle: {ex.Message}");
+                }
+
+                // Important: Wait between spawns to let physics settle
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            Debug.Log($"Finished spawning {spawned} vehicles");
         }
         public void DirectlySpawnVehicles(int forcedAmount = 1)
         {

@@ -396,6 +396,22 @@ public class MetaQuestEyeTracker : MonoBehaviour
             Debug.Log($"{entry.Key}: {entry.Value:F2}s");
         }
     }
+    // Add to MetaQuestEyeTracker.cs
+    private void LogGazeWithRDWData(GameObject gazedObj, float duration)
+    {
+        if (duration < 0.2f) return;
+
+        // Get RDW data to correlate with gaze
+        RedirectionManager redirectionManager = FindObjectOfType<RedirectionManager>();
+        if (redirectionManager != null)
+        {
+            bool inReset = redirectionManager.inReset;
+            Vector3 posReal = redirectionManager.currPosReal;
+
+            // Log combined eye tracking and RDW data
+            Debug.Log($"Gaze Event: {gazedObj.name}, Duration: {duration:F2}s, In Reset: {inReset}, Real Position: {posReal}");
+        }
+    }
 
     void OnDestroy()
     {

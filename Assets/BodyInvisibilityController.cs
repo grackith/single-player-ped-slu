@@ -7,6 +7,11 @@ public class BodyVisibilityController : MonoBehaviour
     [Range(0f, 1f)]
     public float vrAlpha = 0.0f; // Completely transparent in VR
     public float desktopAlpha = 1.0f; // Fully visible on desktop
+    [Header("VR Settings")]
+    [Tooltip("Completely disable the body in VR?")]
+    public bool disableBodyInVR = true;
+
+    
 
     void Start()
     {
@@ -25,6 +30,17 @@ public class BodyVisibilityController : MonoBehaviour
     {
         // Check if VR is active
         bool isVRActive = XRSettings.isDeviceActive;
+
+        // Option to completely disable in VR
+        if (disableBodyInVR && isVRActive)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+        else if (!gameObject.activeSelf && (!isVRActive || !disableBodyInVR))
+        {
+            gameObject.SetActive(true);
+        }
 
         // Process all renderers
         foreach (Renderer renderer in allRenderers)

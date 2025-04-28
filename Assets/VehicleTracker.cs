@@ -335,6 +335,72 @@ public class VehicleTracker : MonoBehaviour
         }
     }
 
+    // Add these methods to your VehicleTracker.cs class
+    private int CountNearbyVehicles(float proximityThreshold)
+    {
+        if (playerTransform == null) return 0;
+
+        int count = 0;
+        foreach (var vehicle in trackedVehicles)
+        {
+            if (vehicle.vehicleObject != null)
+            {
+                float distance = Vector3.Distance(vehicle.currentPosition, playerTransform.position);
+                if (distance <= proximityThreshold)
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    private float GetNearestVehicleDistance()
+    {
+        if (playerTransform == null || trackedVehicles.Count == 0) return float.MaxValue;
+
+        float minDistance = float.MaxValue;
+        foreach (var vehicle in trackedVehicles)
+        {
+            if (vehicle.vehicleObject != null)
+            {
+                float distance = Vector3.Distance(vehicle.currentPosition, playerTransform.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                }
+            }
+        }
+
+        return minDistance;
+    }
+    // Add to VehicleTracker.cs
+    public class DecisionPoint
+    {
+        public Vector3 position;
+        public float timeToDecide; // Time between stimulus and response
+        public string decision; // e.g., "crossed", "waited", "changed direction"
+        public int vehiclesNearby; // Number of vehicles within proximity
+        public float nearestVehicleDistance;
+    }
+
+    private List<DecisionPoint> decisionPoints = new List<DecisionPoint>();
+
+    // Track when a participant makes a crossing decision
+    public void RecordDecision(string decisionType)
+    {
+        if (playerTransform == null) return;
+
+        DecisionPoint dp = new DecisionPoint();
+        dp.position = playerTransform.position;
+        dp.decision = decisionType;
+        dp.vehiclesNearby = CountNearbyVehicles(proximityThreshold);
+        dp.nearestVehicleDistance = GetNearestVehicleDistance();
+
+        decisionPoints.Add(dp);
+    }
+
     // Get a snapshot of current vehicle data
     public List<VehicleData> GetVehicleData()
     {

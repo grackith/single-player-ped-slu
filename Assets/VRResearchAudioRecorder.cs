@@ -77,26 +77,62 @@ public class VRResearchAudioRecorder : MonoBehaviour
         }
     }
 
+    // Modify in VRResearchAudioRecorder.cs
     void Start()
     {
         // Initialize microphone
         InitializeMicrophone();
+
+        // Find main camera's audio source if not assigned
+        if (Camera.main != null && Camera.main.GetComponent<AudioSource>() != null)
+        {
+            AudioSource mainCameraAudio = Camera.main.GetComponent<AudioSource>();
+            // Use this for recording instead of direct microphone access
+        }
     }
 
+    // Add to VRResearchAudioRecorder.cs
     void InitializeMicrophone()
     {
-        // Check if microphone is available
+        // Check if VR headset has a microphone
         if (Microphone.devices.Length == 0)
         {
             Debug.LogError("No microphone detected. Audio recording disabled.");
             return;
         }
 
-        string selectedMic = Microphone.devices[0];
-        Debug.Log($"Using microphone: {selectedMic}");
+        // Find which device corresponds to the headset
+        string headsetMic = null;
+        foreach (string device in Microphone.devices)
+        {
+            // Look for common VR headset microphone names
+            if (device.Contains("Oculus") || device.Contains("Quest") ||
+                device.Contains("Index") || device.Contains("HMD"))
+            {
+                headsetMic = device;
+                break;
+            }
+        }
 
-        // Prepare buffer
-        sampleBuffer = new float[recordingFrequency * maxRecordingSeconds];
+        // If no headset mic found, use the first available
+        if (headsetMic == null && Microphone.devices.Length > 0)
+        {
+            headsetMic = Microphone.devices[0];
+        }
+
+        Debug.Log($"Using microphone: {headsetMic}");
+
+        // Create an audio source on this object if needed
+        AudioSource audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        // Start recording to this audio source
+        audioSource.clip = Microphone.Start(headsetMic, true, maxRecordingSeconds, recordingFrequency);
+        audioSource.loop = true; // Loop playback so we can hear what's being recorded
+        audioSource.mute = true; // Don't play it back through speakers
 
         microphoneInitialized = true;
     }

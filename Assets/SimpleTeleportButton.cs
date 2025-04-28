@@ -2,20 +2,12 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.Events;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
-using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 
 public class SimpleTeleportButton : MonoBehaviour
 {
     [SerializeField]
     public UnityEvent onButtonPressed;
 
-    [Tooltip("Reference to the TeleportationProvider component")]
-    public TeleportationProvider teleportProvider;
-
-    [Tooltip("Reference to the Transform for the menu/start position")]
-    public Transform menuPosition;
-
-    private XRSimpleInteractable interactable;
     [SerializeField]
     private ScenarioManager scenarioManager;
 
@@ -26,6 +18,8 @@ public class SimpleTeleportButton : MonoBehaviour
 
     // Track if we've set up the button
     private bool isSetup = false;
+
+    private XRSimpleInteractable interactable;
 
     void Start()
     {
@@ -77,35 +71,6 @@ public class SimpleTeleportButton : MonoBehaviour
             }
         }
 
-        // Auto-find teleport provider if not set (check all scenes)
-        if (teleportProvider == null)
-        {
-            teleportProvider = FindObjectOfType<TeleportationProvider>(true);
-            if (teleportProvider == null)
-            {
-                Debug.LogWarning("TeleportationProvider not found yet, will keep trying");
-                return;
-            }
-        }
-
-        // Find menu position if not set
-        if (menuPosition == null)
-        {
-            // Try to find a GameObject named "MenuPosition" or similar
-            GameObject menuPosObj = GameObject.Find("MenuPosition");
-            if (menuPosObj == null) menuPosObj = GameObject.Find("StartPosition");
-
-            if (menuPosObj != null)
-            {
-                menuPosition = menuPosObj.transform;
-            }
-            else
-            {
-                Debug.LogWarning("Menu position not found yet, will keep trying");
-                return;
-            }
-        }
-
         // Get mesh renderer for visual feedback
         meshRenderer = GetComponent<MeshRenderer>();
         if (meshRenderer == null)
@@ -122,7 +87,7 @@ public class SimpleTeleportButton : MonoBehaviour
 
         // Mark as set up
         isSetup = true;
-        Debug.Log("Teleport button setup complete on " + gameObject.name);
+        Debug.Log("Quit button setup complete on " + gameObject.name);
     }
 
     public void OnButtonSelected(SelectEnterEventArgs args)
@@ -136,52 +101,32 @@ public class SimpleTeleportButton : MonoBehaviour
         // End current scenario
         if (scenarioManager != null)
         {
-            scenarioManager.EndCurrentScenario();
-            Debug.Log("Button pressed - ending scenario");
+            // Try to use the ScenarioManager's QuitApplication method as mentioned
+            scenarioManager.QuitApplication();
+            Debug.Log("Button pressed - quitting application via ScenarioManager");
         }
         else
         {
-            Debug.LogWarning("ScenarioManager not found!");
+            // Fallback - quit directly if ScenarioManager isn't available
+            Debug.LogWarning("ScenarioManager not found! Quitting application directly.");
+            QuitApplication();
         }
-
-        // Teleport player using Unity's built-in teleportation system
-        TeleportToMenuPosition();
 
         // Invoke any other events
         onButtonPressed.Invoke();
     }
 
-    private void TeleportToMenuPosition()
+    private void QuitApplication()
     {
-        if (menuPosition == null)
-        {
-            Debug.LogError("Menu position not assigned!");
-            return;
-        }
+        Debug.Log("Quitting application...");
 
-        if (teleportProvider == null)
-        {
-            Debug.LogError("TeleportationProvider not found!");
-            return;
-        }
-
-        try
-        {
-            // Create teleport request avoiding any enum issues
-            TeleportRequest request = new TeleportRequest
-            {
-                destinationPosition = menuPosition.position,
-                destinationRotation = menuPosition.rotation
-            };
-
-            // Execute the teleport
-            teleportProvider.QueueTeleportRequest(request);
-            Debug.Log("Teleport request sent to return to menu position");
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError("Error during teleport: " + ex.Message);
-        }
+#if UNITY_EDITOR
+        // If in editor, stop play mode
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        // In build, quit the application
+        Application.Quit();
+#endif
     }
 
     private System.Collections.IEnumerator ButtonPressVisualFeedback()

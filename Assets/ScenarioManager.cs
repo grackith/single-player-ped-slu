@@ -76,6 +76,9 @@ public class ScenarioManager : MonoBehaviour
     public AITrafficWaypointRoute defaultBusRoute; // Default route if scenario doesn't specify one
     private Coroutine busSpawnCoroutine;
     private BusSpawnerSimple BusSpawnerSimple;
+    [Header("Redirected Walking")]
+    public GlobalConfiguration rdwGlobalConfiguration;
+    private PersistentRDW persistentRDW;
     #endregion
 
     #region Private Fields
@@ -90,12 +93,12 @@ public class ScenarioManager : MonoBehaviour
     {
         get { return _instance; }
     }
-    [Header("Redirected Walking")]
-    public RedirectionScenarioController redirectionController;
+    //[Header("Redirected Walking")]
+    //public GlobalConfiguration rdwGlobalConfiguration;
     #endregion
 
     #region Unity Lifecycle Methods
-    
+
     private void Awake()
     {
         // Singleton pattern
@@ -131,30 +134,61 @@ public class ScenarioManager : MonoBehaviour
     }
     private void InitializeRedirectedWalking()
     {
-        // Find and make the Redirected User persistent
-        GameObject redirectedUser = GameObject.Find("Redirected User");
-        if (redirectedUser != null)
+        // Find or create the OpenRDW GameObject
+        GameObject openRDW = GameObject.Find("OpenRDW");
+        if (openRDW == null)
         {
-            // Make it persistent across scene loads
-            DontDestroyOnLoad(redirectedUser);
-            Debug.Log("Made Redirected User persistent across scenes");
+            openRDW = new GameObject("OpenRDW");
 
-            // Also ensure the main components are initialized properly
-            RedirectionManager redirectionManager = redirectedUser.GetComponent<RedirectionManager>();
-            if (redirectionManager != null)
+            // Add required components
+            rdwGlobalConfiguration = openRDW.AddComponent<GlobalConfiguration>();
+            openRDW.AddComponent<RedirectionManager>();
+            persistentRDW = openRDW.AddComponent<PersistentRDW>();
+
+            // Configure the RedirectionManager
+            RedirectionManager redirectionManager = openRDW.GetComponent<RedirectionManager>();
+            if (redirectionManager != null && Camera.main != null)
             {
-                // Set head transform reference to main camera
-                if (Camera.main != null)
-                {
-                    redirectionManager.headTransform = Camera.main.transform;
-                    Debug.Log("Set RedirectionManager.headTransform to main camera");
-                }
-
-                // Set tracking area size based on your physical space
-                redirectionManager.UpdateTrackedSpaceDimensions(13.7f, 4.9f);
+                redirectionManager.headTransform = Camera.main.transform;
             }
+
+            // Make it persistent
+            DontDestroyOnLoad(openRDW);
+            Debug.Log("Created persistent OpenRDW GameObject");
+        }
+        else
+        {
+            // Get references to existing components
+            rdwGlobalConfiguration = openRDW.GetComponent<GlobalConfiguration>();
+            persistentRDW = openRDW.GetComponent<PersistentRDW>();
+        }
+
+        // Configure tracking space
+        if (rdwGlobalConfiguration != null)
+        {
+            // Set physical space dimensions (adjust to match your actual space)
+            rdwGlobalConfiguration.squareWidth = 13.7f; // Width in meters
+            rdwGlobalConfiguration.trackingSpaceChoice = (GlobalConfiguration.TrackingSpaceChoice)4; // File Path option
+            rdwGlobalConfiguration.trackingSpaceFilePath = "TrackingSpaces/custom/VRlab.txt";
+
+            // Set movement controller to HMD
+            rdwGlobalConfiguration.movementController = (GlobalConfiguration.MovementController)1; // HMD
+
+            // Enable synchronized reset
+            rdwGlobalConfiguration.synchronizedReset = true;
         }
     }
+
+    // Call this from PositionPlayerForScenario
+    private void UpdateRDWForScenario(Scenario scenario)
+    {
+        if (persistentRDW != null && scenario.playerStartPosition != null)
+        {
+            persistentRDW.UpdateRedirectionOrigin(scenario.playerStartPosition);
+            Debug.Log("Updated RDW origin for new scenario position");
+        }
+    }
+   
 
     private void Start()
     {
@@ -176,8 +210,10 @@ public class ScenarioManager : MonoBehaviour
 
         // Initialize the redirected walking setup
         InitializeRedirectedWalking();
-        // Find or create the bus spawner
+
+        // Find or create the bus spawner - ADD THIS LINE
         BusSpawnerSimple = FindObjectOfType<BusSpawnerSimple>();
+
         if (BusSpawnerSimple == null)
         {
             Debug.LogWarning("No BusSpawnerSimple found in scene, creating one");
@@ -189,9 +225,7 @@ public class ScenarioManager : MonoBehaviour
             BusSpawnerSimple.busPrefab = busPrefab;
             BusSpawnerSimple.initialRoute = defaultBusRoute; // Main route
             BusSpawnerSimple.busStopRoute = busRoute;
-
         }
-
     }
     private void EnsureManagerSceneIsLoaded()
     {
@@ -569,63 +603,72 @@ public class ScenarioManager : MonoBehaviour
 
     // Add to ScenarioManager.cs - Numpad controls
     // Add to ScenarioManager.cs Update method
+    // Modify your ScenarioManager's Update method to handle both numpad and regular keys
     private void Update()
     {
         // Only process inputs if not transitioning
         if (isTransitioning)
             return;
 
-        // NUMPAD CONTROLS for Researcher
-        // Launch scenarios
-        if (Input.GetKeyDown(KeyCode.Keypad1))
+        // Debug all key presses to help diagnose issues
+        foreach (KeyCode keyCode in System.Enum.GetValues(typeof(KeyCode)))
+        {
+            if (Input.GetKeyDown(keyCode))
+            {
+                Debug.Log($"Key pressed: {keyCode}");
+            }
+        }
+
+        // Regular number keys (alternative to numpad)
+        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
         {
             LaunchScenarioByIndex(0);
         }
-        else if (Input.GetKeyDown(KeyCode.Keypad2))
+        else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
         {
             LaunchScenarioByIndex(1);
         }
-        else if (Input.GetKeyDown(KeyCode.Keypad3))
+        else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
         {
             LaunchScenarioByIndex(2);
         }
-        else if (Input.GetKeyDown(KeyCode.Keypad4))
+        else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4))
         {
             LaunchScenarioByIndex(3);
         }
-        else if (Input.GetKeyDown(KeyCode.Keypad5))
+        else if (Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5))
         {
             LaunchScenarioByIndex(4);
         }
 
         // Emergency controls
-        else if (Input.GetKeyDown(KeyCode.Keypad0))
+        else if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0) || Input.GetKeyDown(KeyCode.Escape))
         {
             EndCurrentScenario(); // Return to researcher UI
         }
-        else if (Input.GetKeyDown(KeyCode.KeypadPeriod))
+        else if (Input.GetKeyDown(KeyCode.Period) || Input.GetKeyDown(KeyCode.KeypadPeriod))
         {
             EmergencyResetTrafficSystem(); // Force reset of traffic
         }
-        else if (Input.GetKeyDown(KeyCode.KeypadEnter))
+        else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
         {
             DebugTrafficSystem(); // Print diagnostic info
         }
 
         // Toggle visibility of researcher UI panel
-        else if (Input.GetKeyDown(KeyCode.KeypadPlus))
+        else if (Input.GetKeyDown(KeyCode.Plus) || Input.GetKeyDown(KeyCode.KeypadPlus))
         {
             ToggleResearcherUI();
         }
 
         // Quit application
-        else if (Input.GetKeyDown(KeyCode.KeypadMinus))
+        else if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
         {
             QuitApplication();
         }
 
         // Force bus spawn if needed
-        else if (Input.GetKeyDown(KeyCode.KeypadMultiply))
+        else if (Input.GetKeyDown(KeyCode.Asterisk) || Input.GetKeyDown(KeyCode.KeypadMultiply))
         {
             if (BusSpawnerSimple != null && !BusSpawnerSimple.hasSpawned)
             {
@@ -730,59 +773,59 @@ public class ScenarioManager : MonoBehaviour
 
         Debug.Log("EndCurrentScenario called");
 
-        try
-        {
-            // Clean up redirection before scene transition
-            GameObject redirectedUser = GameObject.Find("Redirected User");
-            if (redirectedUser != null)
-            {
-                // Disable redirection
-                RedirectionManager redirectionManager = redirectedUser.GetComponent<RedirectionManager>();
-                if (redirectionManager != null)
-                {
-                    try
-                    {
-                        // Remove redirector and resetter
-                        redirectionManager.RemoveRedirector();
-                        redirectionManager.RemoveResetter();
-                        Debug.Log("Disabled redirection components");
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogWarning($"Error disabling redirection components: {ex.Message}");
-                    }
-                }
+        //try
+        //{
+        //    // Clean up redirection before scene transition
+        //    GameObject redirectedUser = GameObject.Find("Redirected User");
+        //    if (redirectedUser != null)
+        //    {
+        //        // Disable redirection
+        //        RedirectionManager redirectionManager = redirectedUser.GetComponent<RedirectionManager>();
+        //        if (redirectionManager != null)
+        //        {
+        //            try
+        //            {
+        //                // Remove redirector and resetter
+        //                redirectionManager.RemoveRedirector();
+        //                redirectionManager.RemoveResetter();
+        //                Debug.Log("Disabled redirection components");
+        //            }
+        //            catch (System.Exception ex)
+        //            {
+        //                Debug.LogWarning($"Error disabling redirection components: {ex.Message}");
+        //            }
+        //        }
 
-                // Disable trail drawing if enabled
-                TrailDrawer trailDrawer = redirectedUser.GetComponent<TrailDrawer>();
-                if (trailDrawer != null)
-                {
-                    try
-                    {
-                        trailDrawer.ClearTrail("RealTrail");
-                        trailDrawer.ClearTrail("VirtualTrail");
-                        trailDrawer.enabled = false;
-                        Debug.Log("Cleared trails and disabled trail drawer");
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogWarning($"Error clearing trails: {ex.Message}");
-                    }
-                }
+        //        // Disable trail drawing if enabled
+        //        TrailDrawer trailDrawer = redirectedUser.GetComponent<TrailDrawer>();
+        //        if (trailDrawer != null)
+        //        {
+        //            try
+        //            {
+        //                trailDrawer.ClearTrail("RealTrail");
+        //                trailDrawer.ClearTrail("VirtualTrail");
+        //                trailDrawer.enabled = false;
+        //                Debug.Log("Cleared trails and disabled trail drawer");
+        //            }
+        //            catch (System.Exception ex)
+        //            {
+        //                Debug.LogWarning($"Error clearing trails: {ex.Message}");
+        //            }
+        //        }
 
-                // Find and disable any ResetIndicator UI
-                RedirectionResetIndicator resetIndicator = redirectedUser.GetComponentInChildren<RedirectionResetIndicator>(true);
-                if (resetIndicator != null && resetIndicator.resetPanel != null)
-                {
-                    resetIndicator.resetPanel.SetActive(false);
-                    Debug.Log("Disabled reset indicator UI");
-                }
-            }
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error during end scenario cleanup: {ex.Message}");
-        }
+        //        // Find and disable any ResetIndicator UI
+        //        RedirectionResetIndicator resetIndicator = redirectedUser.GetComponentInChildren<RedirectionResetIndicator>(true);
+        //        if (resetIndicator != null && resetIndicator.resetPanel != null)
+        //        {
+        //            resetIndicator.resetPanel.SetActive(false);
+        //            Debug.Log("Disabled reset indicator UI");
+        //        }
+        //    }
+        //}
+        //catch (System.Exception ex)
+        //{
+        //    Debug.LogError($"Error during end scenario cleanup: {ex.Message}");
+        //}
         // In your ScenarioManager's EndCurrentScenario method
         if (BusSpawnerSimple != null)
         {
@@ -1038,6 +1081,19 @@ public class ScenarioManager : MonoBehaviour
             Debug.Log($"Setting up bus spawn with delay: {scenario.busSpawnDelay}");
             BusSpawnerSimple.Reset();
             BusSpawnerSimple.TriggerBusSpawn(scenario.busSpawnDelay);
+        }
+        if (scenario.spawnBus && BusSpawnerSimple != null)
+        {
+            Debug.Log($"Setting up bus spawn with delay: {scenario.busSpawnDelay}");
+            BusSpawnerSimple.Reset();
+            BusSpawnerSimple.TriggerBusSpawn(scenario.busSpawnDelay);
+
+            // Update all SkyLandmarks with the new timer
+            SkyLandmark[] skyLandmarks = FindObjectsOfType<SkyLandmark>();
+            foreach (var landmark in skyLandmarks)
+            {
+                landmark.UpdateBusTimer(scenario.busSpawnDelay);
+            }
         }
 
         // 11. Position player if specified
@@ -1484,15 +1540,20 @@ public class ScenarioManager : MonoBehaviour
                     xrOrigin.transform.rotation = scenario.playerStartPosition.rotation;
 
                     Debug.Log($"Positioned player at scenario start point");
+                    UpdateRDWForScenario(scenario);
                 }
+                
             }
+            
             return true;
         }
+        
         catch (System.Exception ex)
         {
             Debug.LogError($"Error positioning player: {ex.Message}");
             return false;
         }
+        
     }
 
     // Step 8: Initialize traffic lights
@@ -2653,85 +2714,105 @@ public class ScenarioManager : MonoBehaviour
             newController.RebuildTransformArrays();
         }
         // Find the Redirected User object in the scene (should be in DontDestroyOnLoad)
-        GameObject redirectedUser = GameObject.Find("Redirected User");
-        if (redirectedUser != null)
-        {
-            Debug.Log("Found Redirected User object");
+        //GameObject redirectedUser = GameObject.Find("Redirected User");
+        //if (redirectedUser != null)
+        //{
+        //    Debug.Log("Found Redirected User object");
 
-            // Get the RedirectionManager component
-            RedirectionManager redirectionManager = redirectedUser.GetComponent<RedirectionManager>();
-            if (redirectionManager != null)
-            {
-                // Update head transform reference (the camera might have changed)
-                if (Camera.main != null)
-                {
-                    redirectionManager.headTransform = Camera.main.transform;
-                    Debug.Log("Updated RedirectionManager.headTransform to main camera");
-                }
-                else
-                {
-                    Debug.LogWarning("Main camera not found, redirection may not work properly!");
-                }
+        //    // Get the RedirectionManager component
+        //    RedirectionManager redirectionManager = redirectedUser.GetComponent<RedirectionManager>();
+        //    if (redirectionManager != null)
+        //    {
+        //        // Update head transform reference (the camera might have changed)
+        //        if (Camera.main != null)
+        //        {
+        //            redirectionManager.headTransform = Camera.main.transform;
+        //            Debug.Log("Updated RedirectionManager.headTransform to main camera");
+        //        }
+        //        else
+        //        {
+        //            Debug.LogWarning("Main camera not found, redirection may not work properly!");
+        //        }
 
-                // Set tracking area size based on your physical space (45ft x 16ft)
-                redirectionManager.UpdateTrackedSpaceDimensions(13.7f, 4.9f);
+        //        // Set tracking area size based on your physical space (45ft x 16ft)
+        //        // With something like:
+        //        if (rdwGlobalConfiguration != null)
+        //        {
+        //            // Update the tracking space dimensions in the global configuration
+        //            rdwGlobalConfiguration.squareWidth = 13.7f;
 
-                try
-                {
-                    // Instead of directly referencing the redirector and resetter types,
-                    // we'll use System.Type.GetType to find them by name
-                    System.Type s2cRedirectorType = System.Type.GetType("S2CRedirector");
-                    System.Type twoOneTurnResetterType = System.Type.GetType("TwoOneTurnResetter");
+        //            // You might need to update the tracking space after changing dimensions
+        //            // Look for methods in RedirectionManager that might refresh the tracking space:
+        //            // For example:
+        //            MovementManager movementManager = redirectedUser.GetComponent<MovementManager>();
+        //            if (movementManager != null)
+        //            {
+        //                // You might need to update the physical space in the movement manager
+        //                movementManager.physicalSpaceIndex = 0; // or whatever index is appropriate
+        //                Debug.Log("Updated tracking space dimensions to 13.7m x 4.9m");
+        //            }
+        //        }
+        //        else
+        //        {
+        //            Debug.LogError("rdwGlobalConfiguration is not assigned!");
+        //        }
 
-                    // If types aren't found, try with full namespace
-                    if (s2cRedirectorType == null)
-                        s2cRedirectorType = System.Type.GetType("Redirection.S2CRedirector");
-                    if (twoOneTurnResetterType == null)
-                        twoOneTurnResetterType = System.Type.GetType("Redirection.TwoOneTurnResetter");
+        //        try
+        //        {
+        //            // Instead of directly referencing the redirector and resetter types,
+        //            // we'll use System.Type.GetType to find them by name
+        //            System.Type s2cRedirectorType = System.Type.GetType("S2CRedirector");
+        //            System.Type twoOneTurnResetterType = System.Type.GetType("TwoOneTurnResetter");
 
-                    // If still not found, try assembly qualified name
-                    if (s2cRedirectorType == null)
-                        s2cRedirectorType = System.Type.GetType("Redirection.S2CRedirector, Assembly-CSharp");
-                    if (twoOneTurnResetterType == null)
-                        twoOneTurnResetterType = System.Type.GetType("Redirection.TwoOneTurnResetter, Assembly-CSharp");
+        //            // If types aren't found, try with full namespace
+        //            if (s2cRedirectorType == null)
+        //                s2cRedirectorType = System.Type.GetType("Redirection.S2CRedirector");
+        //            if (twoOneTurnResetterType == null)
+        //                twoOneTurnResetterType = System.Type.GetType("Redirection.TwoOneTurnResetter");
 
-                    // Configure the redirector and resetter
-                    if (s2cRedirectorType != null)
-                    {
-                        redirectionManager.UpdateRedirector(s2cRedirectorType);
-                        Debug.Log("Applied S2C redirector");
-                    }
-                    else
-                    {
-                        Debug.LogError("Could not find S2CRedirector type. Check namespace and assembly references.");
-                    }
+        //            // If still not found, try assembly qualified name
+        //            if (s2cRedirectorType == null)
+        //                s2cRedirectorType = System.Type.GetType("Redirection.S2CRedirector, Assembly-CSharp");
+        //            if (twoOneTurnResetterType == null)
+        //                twoOneTurnResetterType = System.Type.GetType("Redirection.TwoOneTurnResetter, Assembly-CSharp");
 
-                    if (twoOneTurnResetterType != null)
-                    {
-                        redirectionManager.UpdateResetter(twoOneTurnResetterType);
-                        Debug.Log("Applied TwoOneTurn resetter");
-                    }
-                    else
-                    {
-                        Debug.LogError("Could not find TwoOneTurnResetter type. Check namespace and assembly references.");
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.LogError($"Error configuring redirection components: {ex.Message}");
-                }
+        //            // Configure the redirector and resetter
+        //            if (s2cRedirectorType != null)
+        //            {
+        //                redirectionManager.UpdateRedirector(s2cRedirectorType);
+        //                Debug.Log("Applied S2C redirector");
+        //            }
+        //            else
+        //            {
+        //                Debug.LogError("Could not find S2CRedirector type. Check namespace and assembly references.");
+        //            }
 
-                Debug.Log("Configured RedirectionManager with physical space 13.7m x 4.9m");
-            }
-            else
-            {
-                Debug.LogWarning("RedirectionManager component not found on Redirected User object");
-            }
-        }
-        else
-        {
-            Debug.LogWarning("Redirected User object not found! It may have been destroyed or not created yet.");
-        }
+        //            if (twoOneTurnResetterType != null)
+        //            {
+        //                redirectionManager.UpdateResetter(twoOneTurnResetterType);
+        //                Debug.Log("Applied TwoOneTurn resetter");
+        //            }
+        //            else
+        //            {
+        //                Debug.LogError("Could not find TwoOneTurnResetter type. Check namespace and assembly references.");
+        //            }
+        //        }
+        //        catch (System.Exception ex)
+        //        {
+        //            Debug.LogError($"Error configuring redirection components: {ex.Message}");
+        //        }
+
+        //        Debug.Log("Configured RedirectionManager with physical space 13.7m x 4.9m");
+        //    }
+        //    else
+        //    {
+        //        Debug.LogWarning("RedirectionManager component not found on Redirected User object");
+        //    }
+        //}
+        //else
+        //{
+        //    Debug.LogWarning("Redirected User object not found! It may have been destroyed or not created yet.");
+        //}
     }
     // Add this to ScenarioManager.cs
 

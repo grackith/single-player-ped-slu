@@ -1,75 +1,65 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class SkyLandmark : MonoBehaviour
 {
     [Header("Landmark Settings")]
-    [Tooltip("The height of the beam pointing to the sky")]
     public float beamHeight = 50f;
-
-    [Tooltip("Base width of the landmark")]
     public float baseWidth = 2f;
-
-    [Tooltip("Color of the landmark beam")]
     public Color beamColor = new Color(0.2f, 0.8f, 1f, 0.8f);
 
-    [Tooltip("Pulse speed (set to 0 for no pulsing)")]
-    public float pulseSpeed = 1.5f;
+    [Header("Timer Settings")]
+    public bool showBusTimer = true;
+    public Color timerTextColor = Color.yellow;
+    public float timerTextSize = 4f;
+    public float timerHeight = 10f;
 
-    [Tooltip("Pulse intensity")]
-    [Range(0f, 1f)]
-    public float pulseIntensity = 0.2f;
-
-    [Tooltip("Rotation speed (set to 0 for no rotation)")]
-    public float rotationSpeed = 15f;
+    [Header("Bus Timer")]
+    [Tooltip("Directly set the bus spawn delay for this scenario")]
+    public float busSpawnDelay = 30f;
 
     [Header("Materials")]
-    [Tooltip("Assign a transparent material for the beam")]
     public Material beamMaterialTemplate;
-
-    [Tooltip("Assign a material for the base")]
     public Material baseMaterialTemplate;
 
-    // References to created objects
     private GameObject beamObject;
     private Material beamMaterial;
     private Material baseMaterial;
+    private TextMeshProUGUI timerText;
+    private GameObject timerObject;
+
+    private float busTimer = 0f;
+    private bool busTimerStarted = false;
+    private bool busHasSpawned = false;
 
     void Start()
     {
         CreateLandmark();
+
+        // Initialize timer with directly assigned value
+        busTimer = busSpawnDelay;
+        busTimerStarted = true;
+
+        // Initially set the timer text
+        UpdateTimerText();
     }
 
     void Update()
     {
-        if (pulseSpeed > 0 && beamMaterial != null)
+        // Update bus timer if active
+        if (busTimerStarted && !busHasSpawned)
         {
-            // Create a pulsing effect
-            float pulse = (Mathf.Sin(Time.time * pulseSpeed) * pulseIntensity) + (1f - pulseIntensity);
+            busTimer -= Time.deltaTime;
 
-            Color pulsedColor = beamColor;
-            pulsedColor.a = beamColor.a * pulse;
-            beamMaterial.SetColor("_Color", pulsedColor);
-
-            if (beamMaterial.HasProperty("_EmissionColor"))
+            if (busTimer <= 0)
             {
-                beamMaterial.SetColor("_EmissionColor", pulsedColor * 2f);
+                busTimer = 0;
+                busHasSpawned = true;
             }
 
-            if (baseMaterial != null)
-            {
-                if (baseMaterial.HasProperty("_EmissionColor"))
-                {
-                    baseMaterial.SetColor("_EmissionColor", pulsedColor * 2f);
-                }
-            }
-        }
-
-        if (rotationSpeed > 0 && beamObject != null)
-        {
-            // Rotate the beam around the Y-axis
-            beamObject.transform.Rotate(0, rotationSpeed * Time.deltaTime, 0);
+            UpdateTimerText();
         }
     }
 
@@ -87,6 +77,12 @@ public class SkyLandmark : MonoBehaviour
         // Create base indicator (optional)
         GameObject baseIndicator = CreateBaseIndicator();
         baseIndicator.transform.SetParent(beamObject.transform, false);
+
+        // Create timer display
+        if (showBusTimer)
+        {
+            CreateTimerDisplay();
+        }
     }
 
     GameObject CreateBeamMesh()
@@ -229,5 +225,95 @@ public class SkyLandmark : MonoBehaviour
         baseObject.GetComponent<MeshRenderer>().material = baseMaterial;
 
         return baseObject;
+    }
+    // Add to SkyLandmark.cs
+    public void UpdateBusTimer(float newDelay)
+    {
+        busSpawnDelay = newDelay;
+        busTimer = newDelay;
+        busTimerStarted = true;
+        busHasSpawned = false;
+        UpdateTimerText();
+    }
+
+    void CreateTimerDisplay()
+    {
+        // Create a parent object for the timer
+        timerObject = new GameObject("BusTimer");
+        timerObject.transform.SetParent(beamObject.transform, false);
+        timerObject.transform.localPosition = new Vector3(0, timerHeight, 0);
+
+        // Create a single TextMeshPro text at the top
+        GameObject textObj = new GameObject("TimerText");
+        textObj.transform.SetParent(timerObject.transform, false);
+        textObj.transform.localPosition = Vector3.zero;
+
+        // Create a world-space canvas for the timer
+        Canvas canvas = textObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+
+        // Add a rectangular background
+        RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+        canvasRect.sizeDelta = new Vector2(200, 100); // Width and height of the canvas
+
+        // Add a text component
+        GameObject textChild = new GameObject("Text");
+        textChild.transform.SetParent(canvasRect, false);
+
+        // Position the text in the center of the canvas
+        RectTransform textRect = textChild.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        // Add TextMeshPro component
+        TextMeshProUGUI tmp = textChild.AddComponent<TextMeshProUGUI>();
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontSize = timerTextSize;
+        tmp.color = timerTextColor;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.enableWordWrapping = true;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+
+        // Add an outline for better visibility
+        tmp.outlineWidth = 0.2f;
+        tmp.outlineColor = Color.black;
+
+        // Save a reference to our text component
+        timerText = tmp; // This now matches the variable type
+
+        // Make the canvas face forward
+        
+        // Face in different directions by changing the Y rotation value
+        //textObj.transform.rotation = Quaternion.Euler(0, 0, 0);   // Face forward (Z axis)
+        //textObj.transform.rotation = Quaternion.Euler(0, 90, 0);  // Face right (X axis)
+        //textObj.transform.rotation = Quaternion.Euler(0, 180, 0); // Face backward (negative Z axis)
+        textObj.transform.rotation = Quaternion.Euler(0, 270, 0); // Face left (negative X axis)
+
+        // Initial text update
+        UpdateTimerText();
+    }
+
+    void UpdateTimerText()
+    {
+        if (timerText != null)
+        {
+            string timeText;
+
+            if (busHasSpawned)
+            {
+                timeText = "BUS IS ARRIVING";
+            }
+            else
+            {
+                // Format the time as minutes:seconds
+                int minutes = Mathf.FloorToInt(busTimer / 60f);
+                int seconds = Mathf.FloorToInt(busTimer % 60f);
+                timeText = $"BUS TIMER\n{minutes:00}:{seconds:00}";
+            }
+
+            timerText.text = timeText;
+        }
     }
 }

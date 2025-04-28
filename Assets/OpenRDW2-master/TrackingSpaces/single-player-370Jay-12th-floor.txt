@@ -1,0 +1,20 @@
+1               // Number of users
+// Virtual Environment
+4               // Number of vertices in the virtual space polygon
+-100 -100       // Vertex 1
+100 -100        // Vertex 2
+100 100         // Vertex 3
+-100 100        // Vertex 4
+0               // Number of obstacles in virtual space
+
+// Physical Environment
+1               // Number of physical spaces
+4               // Number of vertices in physical space 1
+-13.7 -4.9      // Vertex 1
+13.7 -4.9       // Vertex 2
+13.7 4.9        // Vertex 3
+-13.7 4.9       // Vertex 4
+0               // Number of obstacles in physical space 1
+1               // Number of users in this physical space
+0 0 0           // Physical user 1 initial position (x,y) and orientation
+0 0 0           // Virtual user 1 initial position (x,y) and orientation

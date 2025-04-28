@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using TMPro;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
@@ -190,29 +191,20 @@ namespace SimpleFileBrowser
 			set { m_singleClickMode = value; }
 		}
 
-		private static FileSystemEntryFilter m_displayedEntriesFilter;
+		private FileSystemEntryFilter m_displayedEntriesFilter;
 		public static event FileSystemEntryFilter DisplayedEntriesFilter
 		{
 			add
 			{
-				m_displayedEntriesFilter -= value;
-				m_displayedEntriesFilter += value;
-
-				if( m_instance )
-				{
-					m_instance.PersistFileEntrySelection();
-					m_instance.RefreshFiles( false );
-				}
+				Instance.m_displayedEntriesFilter += value;
+				m_instance.PersistFileEntrySelection();
+				m_instance.RefreshFiles( false );
 			}
 			remove
 			{
-				m_displayedEntriesFilter -= value;
-
-				if( m_instance )
-				{
-					m_instance.PersistFileEntrySelection();
-					m_instance.RefreshFiles( false );
-				}
+				Instance.m_displayedEntriesFilter -= value;
+				m_instance.PersistFileEntrySelection();
+				m_instance.RefreshFiles( false );
 			}
 		}
 
@@ -229,6 +221,9 @@ namespace SimpleFileBrowser
 			get { return m_checkWriteAccessToDestinationDirectory; }
 			set { m_checkWriteAccessToDestinationDirectory = value; }
 		}
+
+		public static bool CanDeleteFiles = true;
+		public static bool CanRenameFiles = true;
 
 #if UNITY_EDITOR || ( !UNITY_ANDROID && !UNITY_IOS && !UNITY_WSA && !UNITY_WSA_10_0 )
 		private static float m_drivesRefreshInterval = 5f;
@@ -247,73 +242,47 @@ namespace SimpleFileBrowser
 			set { Instance.showHiddenFilesToggle.isOn = value; }
 		}
 
-		private static bool m_displayHiddenFilesToggle = true;
+		private bool m_displayHiddenFilesToggle = true;
 		public static bool DisplayHiddenFilesToggle
 		{
-			get { return m_displayHiddenFilesToggle; }
+			get { return Instance.m_displayHiddenFilesToggle; }
 			set
 			{
-				if( m_displayHiddenFilesToggle != value )
+				if( Instance.m_displayHiddenFilesToggle != value )
 				{
-					m_displayHiddenFilesToggle = value;
+					m_instance.m_displayHiddenFilesToggle = value;
 
-					if( m_instance )
+					if( !value )
+						m_instance.showHiddenFilesToggle.gameObject.SetActive( false );
+					else if( m_instance.windowTR.sizeDelta.x >= m_instance.narrowScreenWidth )
 					{
-						if( !value )
-							m_instance.showHiddenFilesToggle.gameObject.SetActive( false );
-						else if( m_instance.windowTR.sizeDelta.x >= m_instance.narrowScreenWidth )
-						{
 #if !UNITY_EDITOR && UNITY_ANDROID
-							if( !FileBrowserHelpers.ShouldUseSAF )
+						if( !FileBrowserHelpers.ShouldUseSAF )
 #endif
-							m_instance.showHiddenFilesToggle.gameObject.SetActive( true );
-						}
+						m_instance.showHiddenFilesToggle.gameObject.SetActive( true );
 					}
 				}
 			}
 		}
 
-		private static string m_allFilesFilterText = "All Files (.*)";
+		private string m_allFilesFilterText = "All Files (.*)";
 		public static string AllFilesFilterText
 		{
-			get { return m_allFilesFilterText; }
+			get { return Instance.m_allFilesFilterText; }
 			set
 			{
-				if( m_allFilesFilterText != value )
+				if( Instance.m_allFilesFilterText != value )
 				{
-					string oldValue = m_allFilesFilterText;
-					m_allFilesFilterText = value;
+					string oldValue = m_instance.m_allFilesFilterText;
+					m_instance.m_allFilesFilterText = value;
 
-					if( m_instance )
-					{
-						Filter oldAllFilesFilter = m_instance.allFilesFilter;
-						m_instance.allFilesFilter = new Filter( value );
+					Filter oldAllFilesFilter = m_instance.allFilesFilter;
+					m_instance.allFilesFilter = new Filter( value );
 
-						if( m_instance.filters.Count > 0 && m_instance.filters[0] == oldAllFilesFilter )
-							m_instance.filters[0] = m_instance.allFilesFilter;
+					if( m_instance.filters.Count > 0 && m_instance.filters[0] == oldAllFilesFilter )
+						m_instance.filters[0] = m_instance.allFilesFilter;
 
-						if( m_instance.filtersDropdown.options[0].text == oldValue )
-						{
-							m_instance.filtersDropdown.options[0].text = value;
-							m_instance.filtersDropdown.RefreshShownValue();
-						}
-					}
-				}
-			}
-		}
-
-		private static string m_foldersFilterText = "Folders";
-		public static string FoldersFilterText
-		{
-			get { return m_foldersFilterText; }
-			set
-			{
-				if( m_foldersFilterText != value )
-				{
-					string oldValue = m_foldersFilterText;
-					m_foldersFilterText = value;
-
-					if( m_instance && m_instance.filtersDropdown.options[0].text == oldValue )
+					if( m_instance.filtersDropdown.options[0].text == oldValue )
 					{
 						m_instance.filtersDropdown.options[0].text = value;
 						m_instance.filtersDropdown.RefreshShownValue();
@@ -322,26 +291,43 @@ namespace SimpleFileBrowser
 			}
 		}
 
-		private static string m_pickFolderQuickLinkText = "Browse...";
-		public static string PickFolderQuickLinkText
+		private string m_foldersFilterText = "Folders";
+		public static string FoldersFilterText
 		{
-			get { return m_pickFolderQuickLinkText; }
+			get { return Instance.m_foldersFilterText; }
 			set
 			{
-				if( m_pickFolderQuickLinkText != value )
+				if( Instance.m_foldersFilterText != value )
 				{
-					m_pickFolderQuickLinkText = value;
+					string oldValue = m_instance.m_foldersFilterText;
+					m_instance.m_foldersFilterText = value;
 
-					if( m_instance )
+					if( m_instance.filtersDropdown.options[0].text == oldValue )
 					{
-						for( int i = 0; i < m_instance.allQuickLinks.Count; i++ )
+						m_instance.filtersDropdown.options[0].text = value;
+						m_instance.filtersDropdown.RefreshShownValue();
+					}
+				}
+			}
+		}
+
+		private string m_pickFolderQuickLinkText = "Browse...";
+		public static string PickFolderQuickLinkText
+		{
+			get { return Instance.m_pickFolderQuickLinkText; }
+			set
+			{
+				if( Instance.m_pickFolderQuickLinkText != value )
+				{
+					m_instance.m_pickFolderQuickLinkText = value;
+
+					for( int i = 0; i < m_instance.allQuickLinks.Count; i++ )
+					{
+						FileBrowserQuickLink quickLink = m_instance.allQuickLinks[i];
+						if( quickLink && quickLink.TargetPath == SAF_PICK_FOLDER_QUICK_LINK_PATH )
 						{
-							FileBrowserQuickLink quickLink = m_instance.allQuickLinks[i];
-							if( quickLink && quickLink.TargetPath == SAF_PICK_FOLDER_QUICK_LINK_PATH )
-							{
-								quickLink.SetQuickLink( Skin.DriveIcon, value, SAF_PICK_FOLDER_QUICK_LINK_PATH );
-								break;
-							}
+							quickLink.SetQuickLink( Skin.DriveIcon, value, SAF_PICK_FOLDER_QUICK_LINK_PATH );
+							break;
 						}
 					}
 				}
@@ -349,7 +335,7 @@ namespace SimpleFileBrowser
 		}
 
 		private static FileBrowser m_instance = null;
-		private static FileBrowser Instance
+		public static FileBrowser Instance
 		{
 			get
 			{
@@ -388,19 +374,13 @@ namespace SimpleFileBrowser
 #pragma warning disable 0414
 		[SerializeField]
 		private QuickLink[] quickLinks;
-		private static bool quickLinksInitialized;
+		private bool quickLinksInitialized;
 #pragma warning restore 0414
 
 		private readonly HashSet<string> excludedExtensionsSet = new HashSet<string>();
 
 		[SerializeField]
 		private bool generateQuickLinksForDrives = true;
-
-		[SerializeField]
-		private bool contextMenuShowDeleteButton = true;
-
-		[SerializeField]
-		private bool contextMenuShowRenameButton = true;
 
 		[SerializeField]
 		private bool showResizeCursor = true;
@@ -440,7 +420,7 @@ namespace SimpleFileBrowser
 		private readonly List<FileBrowserQuickLink> allQuickLinks = new List<FileBrowserQuickLink>( 8 );
 
 		[SerializeField]
-		private Text titleText;
+		private TextMeshProUGUI titleText;
 
 		[SerializeField]
 		private Image titleBackground;
@@ -458,7 +438,7 @@ namespace SimpleFileBrowser
 		private Button moreOptionsButton;
 
 		[SerializeField]
-		private InputField pathInputField;
+		private TMP_InputField pathInputField;
 
 		[SerializeField]
 		private RectTransform pathInputFieldSlotTop;
@@ -467,7 +447,7 @@ namespace SimpleFileBrowser
 		private RectTransform pathInputFieldSlotBottom;
 
 		[SerializeField]
-		private InputField searchInputField;
+		private TMP_InputField searchInputField;
 
 		[SerializeField]
 		private RectTransform quickLinksContainer;
@@ -485,18 +465,15 @@ namespace SimpleFileBrowser
 		private RecycledListView listView;
 
 		[SerializeField]
-		private InputField filenameInputField;
-
-		[SerializeField]
-		private Text filenameInputFieldOverlayText;
+		private TMP_InputField filenameInputField;
 
 		[SerializeField]
 		private Image filenameImage;
 
 		[SerializeField]
-		private Dropdown filtersDropdown;
+		private TMP_Dropdown filtersDropdown;
 		private RectTransform filtersDropdownContainer;
-		private Text filterItemTemplate;
+		private TMP_Text filterItemTemplate;
 
 		[SerializeField]
 		private Toggle showHiddenFilesToggle;
@@ -505,7 +482,7 @@ namespace SimpleFileBrowser
 		private Button submitButton;
 
 		[SerializeField]
-		private Text submitButtonText;
+		private TextMeshProUGUI submitButtonText;
 
 		[SerializeField]
 		private Button cancelButton;
@@ -748,7 +725,7 @@ namespace SimpleFileBrowser
 
 				filtersDropdown.RefreshShownValue();
 
-				Text placeholder = filenameInputField.placeholder as Text;
+				TextMeshProUGUI placeholder = filenameInputField.placeholder as TextMeshProUGUI;
 				if( placeholder )
 					placeholder.gameObject.SetActive( m_pickerMode != PickMode.Folders );
 			}
@@ -803,6 +780,7 @@ namespace SimpleFileBrowser
 		public delegate void OnSuccess( string[] paths );
 		public delegate void OnCancel();
 		public delegate bool FileSystemEntryFilter( FileSystemEntry entry );
+		public delegate void PermissionCallback( Permission permission );
 #if UNITY_EDITOR || UNITY_ANDROID
 		public delegate void AndroidSAFDirectoryPickCallback( string rawUri, string name );
 #endif
@@ -856,7 +834,8 @@ namespace SimpleFileBrowser
 			cancelButton.onClick.AddListener( OnCancelButtonClicked );
 			pathInputField.onEndEdit.AddListener( OnPathChanged );
 			searchInputField.onValueChanged.AddListener( OnSearchStringChanged );
-			filenameInputField.onValidateInput += OnValidateFilenameInput;
+			filenameInputField.onSubmit.AddListener( ( value ) => OnSubmitButtonClicked() );
+			filenameInputField.onEndEdit.AddListener( ( value ) => ResetInputFieldTextPosition( filenameInputField ) );
 			filenameInputField.onValueChanged.AddListener( OnFilenameInputChanged );
 			filtersDropdown.onValueChanged.AddListener( OnFilterChanged );
 			showHiddenFilesToggle.onValueChanged.AddListener( OnShowHiddenFilesToggleChanged );
@@ -970,26 +949,6 @@ namespace SimpleFileBrowser
 			}
 #endif
 
-			// 2 Text objects are used in the filename input field:
-			// filenameInputField.textComponent: visible when editing the text, has Horizontal Overflow set to Wrap (cuts out words, ugly)
-			// filenameInputFieldOverlayText: visible when not editing the text, has Horizontal Overflow set to Overflow (doesn't cut out words)
-			if( EventSystem.current.currentSelectedGameObject == filenameInputField.gameObject )
-			{
-				if( filenameInputFieldOverlayText.enabled )
-				{
-					filenameInputFieldOverlayText.enabled = false;
-					filenameInputField.textComponent.color = m_skin.InputFieldTextColor;
-				}
-			}
-			else if( !filenameInputFieldOverlayText.enabled )
-			{
-				filenameInputFieldOverlayText.enabled = true;
-
-				Color c = m_skin.InputFieldTextColor;
-				c.a = 0f;
-				filenameInputField.textComponent.color = c;
-			}
-
 			// Refresh drive quick links
 #if UNITY_EDITOR || ( !UNITY_IOS && !UNITY_WSA && !UNITY_WSA_10_0 )
 #if !UNITY_EDITOR && UNITY_ANDROID
@@ -1043,6 +1002,7 @@ namespace SimpleFileBrowser
 		{
 			quickLinksInitialized = true;
 			drivesNextRefreshTime = Time.realtimeSinceStartup + m_drivesRefreshInterval;
+			FileBrowserQuickLink[] customQuickLinks = ( allQuickLinks.Count > 0 ) ? allQuickLinks.ToArray() : null;
 
 #if !UNITY_EDITOR && UNITY_ANDROID
 			if( FileBrowserHelpers.ShouldUseSAF )
@@ -1070,7 +1030,7 @@ namespace SimpleFileBrowser
 				AddQuickLink( m_skin.DriveIcon, "Files", Application.persistentDataPath );
 #endif
 
-#if UNITY_STANDALONE_OSX
+#if UNITY_EDITOR_OSX || ( !UNITY_EDITOR && UNITY_STANDALONE_OSX )
 				// Add a quick link for user directory on Mac OS
 				string userDirectory = Environment.GetFolderPath( Environment.SpecialFolder.MyDocuments );
 				if( !string.IsNullOrEmpty( userDirectory ) )
@@ -1083,7 +1043,7 @@ namespace SimpleFileBrowser
 			{
 				QuickLink quickLink = quickLinks[i];
 				string quickLinkPath = Environment.GetFolderPath( quickLink.target );
-#if UNITY_STANDALONE_OSX
+#if UNITY_EDITOR_OSX || ( !UNITY_EDITOR && UNITY_STANDALONE_OSX )
 				// Documents folder must be appended manually on Mac OS
 				if( quickLink.target == Environment.SpecialFolder.MyDocuments && !string.IsNullOrEmpty( quickLinkPath ) )
 					quickLinkPath = Path.Combine( quickLinkPath, "Documents" );
@@ -1094,6 +1054,19 @@ namespace SimpleFileBrowser
 
 			quickLinks = null;
 #endif
+
+			// Custom quick links should be placed at the bottom
+			if( customQuickLinks != null && allQuickLinks.Count > customQuickLinks.Length )
+			{
+				for( int i = 0; i < customQuickLinks.Length; i++ )
+				{
+					allQuickLinks.Remove( customQuickLinks[i] );
+					allQuickLinks.Add( customQuickLinks[i] );
+				}
+
+				for( int i = 0; i < allQuickLinks.Count; i++ )
+					allQuickLinks[i].TransformComponent.anchoredPosition = new Vector2( 0f, -i * m_skin.FileHeight );
+			}
 		}
 
 		private void RefreshDriveQuickLinks()
@@ -1198,7 +1171,7 @@ namespace SimpleFileBrowser
 				if( string.IsNullOrEmpty( drives[i] ) )
 					continue;
 
-#if UNITY_STANDALONE_OSX
+#if UNITY_EDITOR_OSX || ( !UNITY_EDITOR && UNITY_STANDALONE_OSX )
 				// There are a number of useless drives listed on Mac OS, filter them
 				if( drives[i] == "/" )
 				{
@@ -1284,14 +1257,6 @@ namespace SimpleFileBrowser
 			m_skin.ApplyTo( pathInputField );
 			m_skin.ApplyTo( searchInputField );
 			m_skin.ApplyTo( renameItem.InputField );
-			m_skin.ApplyTo( filenameInputFieldOverlayText, m_skin.InputFieldTextColor );
-
-			if( !EventSystem.current || EventSystem.current.currentSelectedGameObject != filenameInputField.gameObject )
-			{
-				Color c = m_skin.InputFieldTextColor;
-				c.a = 0f;
-				filenameInputField.textComponent.color = c;
-			}
 
 			for( int i = 0; i < allButtons.Length; i++ )
 				m_skin.ApplyTo( allButtons[i] );
@@ -1395,8 +1360,8 @@ namespace SimpleFileBrowser
 
 			bool selectAllButtonVisible = isMoreOptionsMenu && m_allowMultiSelection && validFileEntries.Count > 0;
 			bool deselectAllButtonVisible = isMoreOptionsMenu && selectedFileEntries.Count > 1;
-			bool deleteButtonVisible = contextMenuShowDeleteButton && selectedFileEntries.Count > 0;
-			bool renameButtonVisible = contextMenuShowRenameButton && selectedFileEntries.Count == 1;
+			bool deleteButtonVisible = CanDeleteFiles && selectedFileEntries.Count > 0;
+			bool renameButtonVisible = CanRenameFiles && selectedFileEntries.Count == 1;
 
 			if( selectAllButtonVisible && m_pickerMode == PickMode.Files )
 			{
@@ -1721,6 +1686,7 @@ namespace SimpleFileBrowser
 				return;
 
 			CurrentPath = newPath;
+			ResetInputFieldTextPosition( pathInputField );
 		}
 
 		private void OnSearchStringChanged( string newSearchString )
@@ -1985,21 +1951,16 @@ namespace SimpleFileBrowser
 		}
 #endif
 
-		private char OnValidateFilenameInput( string text, int charIndex, char addedChar )
-		{
-			if( addedChar == '\n' )
-			{
-				OnSubmitButtonClicked();
-				return '\0';
-			}
-
-			return addedChar;
-		}
-
 		private void OnFilenameInputChanged( string text )
 		{
-			filenameInputFieldOverlayText.text = text;
 			filenameImage.color = m_skin.InputFieldNormalBackgroundColor;
+		}
+
+		private void ResetInputFieldTextPosition( TMP_InputField inputField )
+		{
+			// Reset text and caret position when InputField's focus is lost
+			inputField.textComponent.rectTransform.anchoredPosition = Vector2.zero;
+			( (RectTransform) inputField.textViewport.GetChild( 0 ) ).anchoredPosition = Vector2.zero;
 		}
 		#endregion
 
@@ -2007,8 +1968,16 @@ namespace SimpleFileBrowser
 		public void Show( string initialPath, string initialFilename )
 		{
 			if( AskPermissions )
-				RequestPermission();
+			{
+				// If permission is denied, we still show the file browser but the user won't see the files protected by permission
+				RequestPermissionAsync( ( permission ) => ShowInternal( initialPath, initialFilename ) );
+			}
+			else
+				ShowInternal( initialPath, initialFilename );
+		}
 
+		private void ShowInternal( string initialPath, string initialFilename )
+		{
 			if( !quickLinksInitialized )
 				InitializeQuickLinks();
 
@@ -2133,14 +2102,14 @@ namespace SimpleFileBrowser
 		}
 
 		// Returns whether or not the FileSystemEntry passes the file browser's filters and should be displayed in the files list
-		private bool FileSystemEntryMatchesFilters( FileSystemEntry item, bool allExtensionsHaveSingleSuffix )
+		private bool FileSystemEntryMatchesFilters( in FileSystemEntry item, bool allExtensionsHaveSingleSuffix )
 		{
+			if( ( item.Attributes & ignoredFileAttributes ) != 0 )
+				return false;
+
 			if( !item.IsDirectory )
 			{
 				if( m_pickerMode == PickMode.Folders )
-					return false;
-
-				if( ( item.Attributes & ignoredFileAttributes ) != 0 )
 					return false;
 
 				string extension = item.Extension;
@@ -2159,11 +2128,6 @@ namespace SimpleFileBrowser
 				}
 
 				if( !filters[filtersDropdown.value].MatchesExtension( extension, !allExtensionsHaveSingleSuffix ) )
-					return false;
-			}
-			else
-			{
-				if( ( item.Attributes & ignoredFileAttributes ) != 0 )
 					return false;
 			}
 
@@ -2287,7 +2251,7 @@ namespace SimpleFileBrowser
 		// Prompts user to rename the selected file/folder
 		public void RenameSelectedFile()
 		{
-			if( selectedFileEntries.Count != 1 )
+			if( !CanRenameFiles || selectedFileEntries.Count != 1 )
 				return;
 
 			MultiSelectionToggleSelectionMode = false;
@@ -2348,7 +2312,7 @@ namespace SimpleFileBrowser
 		// Prompts user to delete the selected files & folders
 		public void DeleteSelectedFiles()
 		{
-			if( selectedFileEntries.Count == 0 )
+			if( !CanDeleteFiles || selectedFileEntries.Count == 0 )
 				return;
 
 			selectedFileEntries.Sort();
@@ -2542,7 +2506,7 @@ namespace SimpleFileBrowser
 			}
 		}
 
-		internal Sprite GetIconForFileEntry( FileSystemEntry fileInfo )
+		internal Sprite GetIconForFileEntry( in FileSystemEntry fileInfo )
 		{
 			return m_skin.GetIconForFileEntry( fileInfo, !AllExtensionsHaveSingleSuffix );
 		}
@@ -2954,15 +2918,6 @@ namespace SimpleFileBrowser
 			if( string.IsNullOrEmpty( path ) || !FileBrowserHelpers.DirectoryExists( path ) )
 				return false;
 
-			if( !quickLinksInitialized )
-			{
-				// Fetching the list of external drives is only possible with the READ_EXTERNAL_STORAGE permission granted on Android
-				if( AskPermissions )
-					RequestPermission();
-
-				Instance.InitializeQuickLinks();
-			}
-
 			return Instance.AddQuickLink( icon, name, path );
 		}
 
@@ -3124,42 +3079,22 @@ namespace SimpleFileBrowser
 			return false;
 		}
 
-		public static Permission CheckPermission()
+		public static bool CheckPermission()
 		{
 #if !UNITY_EDITOR && UNITY_ANDROID
-			Permission result = (Permission) FileBrowserHelpers.AJC.CallStatic<int>( "CheckPermission", FileBrowserHelpers.Context );
-			if( result == Permission.Denied && (Permission) PlayerPrefs.GetInt( "FileBrowserPermission", (int) Permission.ShouldAsk ) == Permission.ShouldAsk )
-				result = Permission.ShouldAsk;
-
-			return result;
+			return FileBrowserHelpers.AJC.CallStatic<int>( "CheckPermission", FileBrowserHelpers.Context ) == 1;
 #else
-			return Permission.Granted;
+			return true;
 #endif
 		}
 
-		public static Permission RequestPermission()
+		public static void RequestPermissionAsync( PermissionCallback callback )
 		{
 #if !UNITY_EDITOR && UNITY_ANDROID
-			object threadLock = new object();
-			lock( threadLock )
-			{
-				FBPermissionCallbackAndroid nativeCallback = new FBPermissionCallbackAndroid( threadLock );
-
-				FileBrowserHelpers.AJC.CallStatic( "RequestPermission", FileBrowserHelpers.Context, nativeCallback, PlayerPrefs.GetInt( "FileBrowserPermission", (int) Permission.ShouldAsk ) );
-
-				if( nativeCallback.Result == -1 )
-					System.Threading.Monitor.Wait( threadLock );
-
-				if( (Permission) nativeCallback.Result != Permission.ShouldAsk && PlayerPrefs.GetInt( "FileBrowserPermission", -1 ) != nativeCallback.Result )
-				{
-					PlayerPrefs.SetInt( "FileBrowserPermission", nativeCallback.Result );
-					PlayerPrefs.Save();
-				}
-
-				return (Permission) nativeCallback.Result;
-			}
+			FBPermissionCallbackAndroid nativeCallback = new( callback );
+			FileBrowserHelpers.AJC.CallStatic( "RequestPermission", FileBrowserHelpers.Context, nativeCallback );
 #else
-			return Permission.Granted;
+			callback( Permission.Granted );
 #endif
 		}
 		#endregion
