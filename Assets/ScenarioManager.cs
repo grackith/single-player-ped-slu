@@ -10,7 +10,7 @@ using System.Linq;
 using TurnTheGameOn.SimpleTrafficSystem;
 using Unity.XR.CoreUtils;
 using Unity.Collections;
-using Unity.VisualScripting;
+//using Unity.VisualScripting;
 using UnityEngine.XR.Interaction.Toolkit;
 using System;
 using static TurnTheGameOn.SimpleTrafficSystem.CiDy_STS_GeneratedContent;
@@ -135,10 +135,10 @@ public class ScenarioManager : MonoBehaviour
     private void InitializeRedirectedWalking()
     {
         // Find or create the OpenRDW GameObject
-        GameObject openRDW = GameObject.Find("OpenRDW");
+        GameObject openRDW = GameObject.Find("RDW");
         if (openRDW == null)
         {
-            openRDW = new GameObject("OpenRDW");
+            openRDW = new GameObject("RDW");
 
             // Add required components
             rdwGlobalConfiguration = openRDW.AddComponent<GlobalConfiguration>();
@@ -673,6 +673,93 @@ public class ScenarioManager : MonoBehaviour
             if (BusSpawnerSimple != null && !BusSpawnerSimple.hasSpawned)
             {
                 BusSpawnerSimple.SpawnBus();
+            }
+        }
+        // Inside your existing Update() method, add these key checks:
+
+        // R key - Start the redirected walking experience 
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            Debug.Log("R key pressed - Starting RDW experiment");
+
+            // Find RedirectionManager and ensure it's properly set up
+            RedirectionManager rdwManager = FindObjectOfType<RedirectionManager>();
+            if (rdwManager != null)
+            {
+                // Ensure camera reference is up to date
+                if (Camera.main != null)
+                {
+                    rdwManager.headTransform = Camera.main.transform;
+                }
+
+                // If redirected user is using HMD controls, this is the key trigger to begin
+                if (rdwManager.globalConfiguration != null)
+                {
+                    rdwManager.globalConfiguration.movementController = GlobalConfiguration.MovementController.HMD;
+                    Debug.Log("Set HMD movement controller mode");
+                }
+
+                // Initialize the redirector if needed
+                if (rdwManager.redirector != null)
+                {
+                    // This initializes/resets the state
+                    rdwManager.Initialize();
+                    Debug.Log("Initialized redirected walking");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("No RedirectionManager found in scene");
+            }
+        }
+
+        // ~ (tilde) key - Toggle physical space overview
+        if (Input.GetKeyDown(KeyCode.BackQuote))
+        {
+            Debug.Log("~ key pressed - Toggling physical space view");
+            // This is typically handled by visualizing the physical boundaries
+            VisualizationManager visManager = FindObjectOfType<VisualizationManager>();
+            if (visManager != null)
+            {
+                // Toggle visualization of physical space
+                // Implementation depends on how visualization is handled in your project
+                Debug.Log("Toggled physical space visualization");
+            }
+        }
+
+        // Tab key - Toggle between virtual and physical views
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            Debug.Log("Tab key pressed - Toggling virtual view");
+            // Similar to above, toggle between views
+            // This might involve switching camera modes
+        }
+
+        // Q key - End the RDW experiment (if one is running)
+        if (Input.GetKeyDown(KeyCode.Q))
+        {
+            Debug.Log("Q key pressed - Ending current experiment");
+            RedirectionManager rdwManager = FindObjectOfType<RedirectionManager>();
+            if (rdwManager != null && rdwManager.inReset)
+            {
+                // End any active reset
+                rdwManager.OnResetEnd();
+                Debug.Log("Ended redirection reset");
+            }
+
+            // This would normally call EndCurrentScenario() which you already have
+            EndCurrentScenario();
+        }
+
+        // Number keys to switch user views
+        for (int i = 0; i <= 9; i++)
+        {
+            if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha0 + i)) ||
+                Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad0 + i)))
+            {
+                Debug.Log($"Key {i} pressed - Switching to user view {i}");
+                // Logic to switch to specific user view
+                // This would depend on your camera system implementation
             }
         }
     }

@@ -51,7 +51,7 @@ public class VisualizationManager : MonoBehaviour
         redirectionManager = GetComponent<RedirectionManager>();
         movementManager = GetComponent<MovementManager>();
 
-        cameraTopReal = transform.Find("Real Top View Cam").GetComponent<Camera>();
+        //cameraTopReal = transform.Find("Real Top View Cam").GetComponent<Camera>();
         headFollower = transform.Find("Body").GetComponent<HeadFollower>();
 
         obstacleParents = new List<Transform>();

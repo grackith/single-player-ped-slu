@@ -168,14 +168,19 @@ public static class Utilities
         return files;
     }
 
+#if UNITY_EDITOR
     public static bool GetCommandDirPath(out string path)
     {
-
-#if UNITY_EDITOR
-            path = EditorUtility.OpenFolderPanel("Choose the dir of command files", "", "");
-#endif
+        path = EditorUtility.OpenFolderPanel("Choose the dir of command files", "", "");
         return path.Length > 0;
     }
+#else
+public static bool GetCommandDirPath(out string path)
+{
+    path = "";
+    return false; // Always return false in builds
+}
+#endif
 
     //choose file path in windows
     public static bool GetCommandFilePath(out string path)

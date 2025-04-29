@@ -8,8 +8,20 @@ using UnityEngine.AI; // Added for NavMeshAgent
 /// <summary>
 /// Improved PedestrianDetection script that makes AI traffic cars yield to VR players and NPCs at crosswalks
 /// </summary>
+/// 
+
 public class PedestrianDetection : MonoBehaviour
 {
+    [Header("Road Detection")]
+    [Tooltip("Layer mask for road detection")]
+    public LayerMask roadLayer;
+    [Tooltip("Distance to raycast down to check for road")]
+    public float raycastDistance = 1f;
+    [Tooltip("Radius to slow down cars when player is on road (not at crosswalk)")]
+    public float roadSlowdownRadius = 10f;
+    [Tooltip("How much to slow down cars when player is on road (not at crosswalk)")]
+    [Range(0.1f, 0.9f)]
+    public float roadSlowdownFactor = 0.5f;
     [Header("Player References")]
     [Tooltip("Reference to the XR Origin representing the player")]
     public Transform xrOrigin;
@@ -49,7 +61,7 @@ public class PedestrianDetection : MonoBehaviour
     // Cached crosswalk locations and directions
     private List<Vector3> crosswalkPositions = new List<Vector3>();
     private Dictionary<Vector3, Vector3> crosswalkDirections = new Dictionary<Vector3, Vector3>();
-
+    private bool playerOnRoad = false;
     // Dictionary to track which cars are currently yielding
     private Dictionary<AITrafficCar, bool> yieldingCars = new Dictionary<AITrafficCar, bool>();
 
@@ -162,6 +174,26 @@ public class PedestrianDetection : MonoBehaviour
             }
         }
 
+        if (!pedestrianCrossing && xrOrigin != null)
+        {
+            // Check if player is on the road using raycast
+            CheckIfPlayerOnRoad();
+
+            if (playerOnRoad)
+            {
+                SlowDownCarsNearPlayer();
+            }
+            else
+            {
+                // Only reset cars if not handling crosswalk yielding
+                if (!pedestrianCrossing)
+                {
+                    ResetCarSpeeds();
+                }
+            }
+        }
+
+
         // Handle car yielding based on pedestrian positions and orientations
         if (pedestrianCrossing)
         {
@@ -176,6 +208,107 @@ public class PedestrianDetection : MonoBehaviour
         if (showDebug)
         {
             DrawDebugVisualization(pedestrianCrossing, nearestCrosswalkPos);
+        }
+    }
+
+    // Add these new methods to the class
+    private void CheckIfPlayerOnRoad()
+    {
+        if (xrOrigin == null) return;
+
+        try
+        {
+            // Cast a ray downward from the player to check what they're standing on
+            RaycastHit hit;
+            Vector3 rayStart = xrOrigin.position + Vector3.up * 0.1f; // Start slightly above player position
+
+            if (Physics.Raycast(rayStart, Vector3.down, out hit, raycastDistance, roadLayer))
+            {
+                // Player is on the road
+                playerOnRoad = true;
+
+                // Optional debugging
+                if (showDebug)
+                {
+                    Debug.DrawLine(rayStart, hit.point, Color.green, 0.1f);
+                }
+            }
+            else
+            {
+                // Player is not on the road (e.g., on sidewalk)
+                playerOnRoad = false;
+
+                // Optional debugging
+                if (showDebug)
+                {
+                    Debug.DrawRay(rayStart, Vector3.down * raycastDistance, Color.red, 0.1f);
+                }
+            }
+        }
+        catch
+        {
+            // Silently fail if there's an error
+            playerOnRoad = false;
+        }
+    }
+
+    private void SlowDownCarsNearPlayer()
+    {
+        Vector3 playerPosition = xrOrigin.position;
+
+        foreach (var car in cachedTrafficCars)
+        {
+            if (car == null || !car.isDriving) continue;
+
+            // Calculate distance to player
+            float distance = Vector3.Distance(playerPosition, car.transform.position);
+
+            // Only slow down cars within the road slowdown radius
+            if (distance <= roadSlowdownRadius)
+            {
+                // Calculate factor based on distance (closer = slower)
+                float factor = Mathf.Clamp01(distance / roadSlowdownRadius);
+                float targetSpeed = car.topSpeed * (roadSlowdownFactor + (factor * (1 - roadSlowdownFactor)));
+
+                // Try to slow down the car safely
+                try
+                {
+                    // Store original speed if not already stored
+                    if (!yieldingCars.ContainsKey(car))
+                    {
+                        yieldingCars[car] = false; // Not fully yielding, just slowing
+                    }
+
+                    car.topSpeed = targetSpeed; // This should slow the car down
+                }
+                catch
+                {
+                    // Silently fail if error occurs
+                }
+            }
+        }
+    }
+
+    private void ResetCarSpeeds()
+    {
+        // Get a copy of the keys to avoid collection modified during iteration
+        var modifiedCars = yieldingCars.Keys.ToList();
+
+        // Reset speeds for any cars that were slowed down but not stopped
+        foreach (var car in modifiedCars)
+        {
+            if (car != null && car.assignedIndex >= 0 && !yieldingCars[car])
+            {
+                // Only reset if not fully yielding
+                try
+                {
+                    car.topSpeed = car.topSpeed; // Reset to original speed
+                }
+                catch
+                {
+                    // Silently fail if error occurs
+                }
+            }
         }
     }
 

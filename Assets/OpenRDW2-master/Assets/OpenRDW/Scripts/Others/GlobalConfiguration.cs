@@ -469,7 +469,7 @@ public class GlobalConfiguration : MonoBehaviour
         statisticsLogger = GetComponent<StatisticsLogger>();
 
         userInterfaceManager = GetComponent<UserInterfaceManager>();
-        cameraVirtualTopForAllAvatars = transform.Find("Virtual Top View Cam For All Avatars").GetComponent<Camera>();
+        //cameraVirtualTopForAllAvatars = transform.Find("Virtual Top View Cam For All Avatars").GetComponent<Camera>();
         signText = cameraVirtualTopForAllAvatars.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>();
         cameraVirtualTopForAllAvatars.transform.GetChild(0).gameObject.SetActive(true);
         virtualWorld = transform.Find("Virtual World").gameObject;

@@ -107,15 +107,26 @@ namespace Valve.VR
                     _instance = SteamVR_Settings.CreateInstance<SteamVR_Settings>();
 
 #if UNITY_EDITOR
-                    string localFolderPath = SteamVR.GetSteamVRResourcesFolderPath(true);
-                    string assetPath = System.IO.Path.Combine(localFolderPath, "SteamVR_Settings.asset");
+                    // Check if editor is updating before performing asset operations
+                    if (!UnityEditor.EditorApplication.isUpdating)
+                    {
+                        string localFolderPath = SteamVR.GetSteamVRResourcesFolderPath(true);
+                        string assetPath = System.IO.Path.Combine(localFolderPath, "SteamVR_Settings.asset");
 
-                    UnityEditor.AssetDatabase.CreateAsset(_instance, assetPath);
-                    UnityEditor.AssetDatabase.SaveAssets();
+                        UnityEditor.AssetDatabase.CreateAsset(_instance, assetPath);
+                        UnityEditor.AssetDatabase.SaveAssets();
+                    }
 #endif
                 }
 
-                SetDefaultsIfNeeded();
+#if UNITY_EDITOR
+                if (!UnityEditor.EditorApplication.isUpdating)
+                {
+                    SetDefaultsIfNeeded();
+                }
+#else
+SetDefaultsIfNeeded();
+#endif
             }
         }
 
@@ -131,6 +142,11 @@ namespace Valve.VR
 
         private static void SetDefaultsIfNeeded()
         {
+#if UNITY_EDITOR
+            // Check if editor is updating before performing asset operations
+            if (UnityEditor.EditorApplication.isUpdating)
+                return;
+#endif
             if (string.IsNullOrEmpty(_instance.editorAppKey))
             {
                 _instance.editorAppKey = SteamVR.GenerateAppKey();

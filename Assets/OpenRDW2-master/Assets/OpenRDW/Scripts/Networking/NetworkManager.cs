@@ -4,6 +4,7 @@ using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine.UI;
+using UnityEngine.XR;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -11,13 +12,16 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     [Tooltip("The maximum number of players per room. When a room is full, it can't be joined by new players, and so new room will be created")]
     [SerializeField]
-    private byte maxPlayersPerRoom;    
+    private byte maxPlayersPerRoom;
 
     private Transform simulatedPlayerHead;//simulated head
     private Transform hmdPlayerHead;//hmd head
     private Transform playerHead;//represent the head of the player
-    
+
     public int avatarId;//avatarId For this player
+
+    [Tooltip("Reference to the XR Origin transform")]
+    public Transform xrOrigin; // Add this field for OpenXR compatibility
 
     private GlobalConfiguration globalConfiguration;
     private RedirectionManager redirectionManager;
@@ -27,6 +31,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     private GameObject thisAvatarNetworkingTransform;//represent the local avatar, used for networking synchronization
     private Transform realTransform;//the physical transform of the avatar
     private Transform virtualTransform;//the virtual transform of the avatar
+
     private void Awake()
     {
         globalConfiguration = GetComponentInParent<GlobalConfiguration>();
@@ -37,10 +42,23 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             redirectedAvatars.Add(globalConfiguration.CreateNewRedirectedAvatar(redirectedAvatars.Count));
         globalConfiguration.avatarNum = redirectedAvatars.Count;
 
-
         redirectionManager = redirectedAvatars[avatarId].GetComponent<RedirectionManager>();
 
-        hmdPlayerHead = redirectionManager.transform.Find("[CameraRig]").GetComponentInChildren<Camera>(true).transform;
+        // Get the XR Camera for OpenXR compatibility
+        if (xrOrigin != null)
+        {
+            // Find the Camera component within the XR Origin (standard OpenXR setup)
+            Camera xrCamera = xrOrigin.GetComponentInChildren<Camera>();
+            if (xrCamera != null)
+            {
+                hmdPlayerHead = xrCamera.transform;
+            }
+        }
+        else
+        {
+            // Fallback to the old method if XR Origin isn't assigned
+            hmdPlayerHead = redirectionManager.transform.Find("[CameraRig]").GetComponentInChildren<Camera>(true).transform;
+        }
 
         simulatedPlayerHead = redirectionManager.GetSimulatedAvatarHead();
 
@@ -48,9 +66,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         {
             playerHead = hmdPlayerHead;
         }
-        else {
+        else
+        {
             playerHead = simulatedPlayerHead;
-        }        
+        }
     }
     // Start is called before the first frame update
     void Start()

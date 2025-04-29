@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.XR.CoreUtils;
 
 public class RedirectionManager : MonoBehaviour
 {
@@ -34,6 +35,8 @@ public class RedirectionManager : MonoBehaviour
 
     [Tooltip("Overt Redirection Controller")]
     public ResetterChoice resetterChoice;
+    [Tooltip("The XR Origin that defines the tracking space")]
+    public Transform xrOrigin;
 
     // Experiment Variables
     [HideInInspector]
@@ -576,12 +579,23 @@ public class RedirectionManager : MonoBehaviour
     }
     public Vector3 GetPosReal(Vector3 pos)
     {
-        return Utilities.GetRelativePosition(pos, trackingSpace.transform);
+        // Use XR Origin as the reference frame instead of trackingSpace
+        return xrOrigin.transform.InverseTransformPoint(pos);
     }
+    //public Vector3 GetPosReal(Vector3 pos)
+    //{
+    //    return Utilities.GetRelativePosition(pos, trackingSpace.transform);
+    //}
+
     public Vector3 GetDirReal(Vector3 dir)
     {
-        return Utilities.FlattenedDir3D(Utilities.GetRelativeDirection(dir, transform));
+        // Use XR Origin for rotation calculations
+        return xrOrigin.transform.InverseTransformDirection(dir);
     }
+    //public Vector3 GetDirReal(Vector3 dir)
+    //{
+    //    return Utilities.FlattenedDir3D(Utilities.GetRelativeDirection(dir, transform));
+    //}
 
     void CalculateStateChanges()
     {
