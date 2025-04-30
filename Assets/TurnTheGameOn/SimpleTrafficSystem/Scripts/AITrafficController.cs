@@ -1104,13 +1104,13 @@
 
             bool shouldSpawnAutomatically = false; // Force to false to prevent auto-spawning
 
-            if (usePooling && shouldSpawnAutomatically)
-            {
-                StartCoroutine(SpawnStartupTrafficCoroutine());
-                // Rest of the start method...
-            }
+            //if (usePooling && shouldSpawnAutomatically)
+            //{
+            //    StartCoroutine(SpawnStartupTrafficCoroutine());
+            //    // Rest of the start method...
+            //}
 
-            if (usePooling)
+            if (usePooling && shouldSpawnAutomatically)
             {
                 StartCoroutine(SpawnStartupTrafficCoroutine());
                 if (showPoolingWarning)
