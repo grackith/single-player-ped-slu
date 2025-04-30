@@ -211,6 +211,13 @@ public class ScenarioManager : MonoBehaviour
         // Initialize the redirected walking setup
         InitializeRedirectedWalking();
 
+        if (AITrafficController.Instance != null)
+        {
+            // Set the flag to disable initial spawning
+            AITrafficController.Instance.disableInitialSpawn = true;
+            Debug.Log("Disabled initial traffic spawning");
+        }
+
         // Find or create the bus spawner - ADD THIS LINE
         BusSpawnerSimple = FindObjectOfType<BusSpawnerSimple>();
 
@@ -2800,106 +2807,7 @@ public class ScenarioManager : MonoBehaviour
             newController.InitializeNativeLists();
             newController.RebuildTransformArrays();
         }
-        // Find the Redirected User object in the scene (should be in DontDestroyOnLoad)
-        //GameObject redirectedUser = GameObject.Find("Redirected User");
-        //if (redirectedUser != null)
-        //{
-        //    Debug.Log("Found Redirected User object");
-
-        //    // Get the RedirectionManager component
-        //    RedirectionManager redirectionManager = redirectedUser.GetComponent<RedirectionManager>();
-        //    if (redirectionManager != null)
-        //    {
-        //        // Update head transform reference (the camera might have changed)
-        //        if (Camera.main != null)
-        //        {
-        //            redirectionManager.headTransform = Camera.main.transform;
-        //            Debug.Log("Updated RedirectionManager.headTransform to main camera");
-        //        }
-        //        else
-        //        {
-        //            Debug.LogWarning("Main camera not found, redirection may not work properly!");
-        //        }
-
-        //        // Set tracking area size based on your physical space (45ft x 16ft)
-        //        // With something like:
-        //        if (rdwGlobalConfiguration != null)
-        //        {
-        //            // Update the tracking space dimensions in the global configuration
-        //            rdwGlobalConfiguration.squareWidth = 13.7f;
-
-        //            // You might need to update the tracking space after changing dimensions
-        //            // Look for methods in RedirectionManager that might refresh the tracking space:
-        //            // For example:
-        //            MovementManager movementManager = redirectedUser.GetComponent<MovementManager>();
-        //            if (movementManager != null)
-        //            {
-        //                // You might need to update the physical space in the movement manager
-        //                movementManager.physicalSpaceIndex = 0; // or whatever index is appropriate
-        //                Debug.Log("Updated tracking space dimensions to 13.7m x 4.9m");
-        //            }
-        //        }
-        //        else
-        //        {
-        //            Debug.LogError("rdwGlobalConfiguration is not assigned!");
-        //        }
-
-        //        try
-        //        {
-        //            // Instead of directly referencing the redirector and resetter types,
-        //            // we'll use System.Type.GetType to find them by name
-        //            System.Type s2cRedirectorType = System.Type.GetType("S2CRedirector");
-        //            System.Type twoOneTurnResetterType = System.Type.GetType("TwoOneTurnResetter");
-
-        //            // If types aren't found, try with full namespace
-        //            if (s2cRedirectorType == null)
-        //                s2cRedirectorType = System.Type.GetType("Redirection.S2CRedirector");
-        //            if (twoOneTurnResetterType == null)
-        //                twoOneTurnResetterType = System.Type.GetType("Redirection.TwoOneTurnResetter");
-
-        //            // If still not found, try assembly qualified name
-        //            if (s2cRedirectorType == null)
-        //                s2cRedirectorType = System.Type.GetType("Redirection.S2CRedirector, Assembly-CSharp");
-        //            if (twoOneTurnResetterType == null)
-        //                twoOneTurnResetterType = System.Type.GetType("Redirection.TwoOneTurnResetter, Assembly-CSharp");
-
-        //            // Configure the redirector and resetter
-        //            if (s2cRedirectorType != null)
-        //            {
-        //                redirectionManager.UpdateRedirector(s2cRedirectorType);
-        //                Debug.Log("Applied S2C redirector");
-        //            }
-        //            else
-        //            {
-        //                Debug.LogError("Could not find S2CRedirector type. Check namespace and assembly references.");
-        //            }
-
-        //            if (twoOneTurnResetterType != null)
-        //            {
-        //                redirectionManager.UpdateResetter(twoOneTurnResetterType);
-        //                Debug.Log("Applied TwoOneTurn resetter");
-        //            }
-        //            else
-        //            {
-        //                Debug.LogError("Could not find TwoOneTurnResetter type. Check namespace and assembly references.");
-        //            }
-        //        }
-        //        catch (System.Exception ex)
-        //        {
-        //            Debug.LogError($"Error configuring redirection components: {ex.Message}");
-        //        }
-
-        //        Debug.Log("Configured RedirectionManager with physical space 13.7m x 4.9m");
-        //    }
-        //    else
-        //    {
-        //        Debug.LogWarning("RedirectionManager component not found on Redirected User object");
-        //    }
-        //}
-        //else
-        //{
-        //    Debug.LogWarning("Redirected User object not found! It may have been destroyed or not created yet.");
-        //}
+        
     }
     // Add this to ScenarioManager.cs
 

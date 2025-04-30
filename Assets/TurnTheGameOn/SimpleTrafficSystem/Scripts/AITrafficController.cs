@@ -66,6 +66,8 @@
         private float brakeIntensityFactor;
         private string emissionColorName;
         
+
+
         // Add this field to the AITrafficController class
         private AITrafficSpawnPoint[] spawnPoints;
 
@@ -79,6 +81,8 @@
         #endregion
 
         #region Pooling
+        [Tooltip("When enabled, prevents automatic traffic spawning at startup")]
+        public bool disableInitialSpawn = true; // Default to true to prevent auto-spawning
         [Tooltip("Toggle the inspector and debug warnings about how the scene camera can impact pooling behavior.")]
         public bool showPoolingWarning = true;
         [Tooltip("Enables the processing of Pooling logic.")]
@@ -1098,12 +1102,14 @@
             // Add this line at the very beginning of Start
             InitializeSpawnPoints();
 
-            if (usePooling)
+            bool shouldSpawnAutomatically = false; // Force to false to prevent auto-spawning
+
+            if (usePooling && shouldSpawnAutomatically)
             {
                 StartCoroutine(SpawnStartupTrafficCoroutine());
                 // Rest of the start method...
             }
-        
+
             if (usePooling)
             {
                 StartCoroutine(SpawnStartupTrafficCoroutine());
