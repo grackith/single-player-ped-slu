@@ -65,14 +65,14 @@
         private Color brakeOffColor;
         private float brakeIntensityFactor;
         private string emissionColorName;
-        
+
 
 
         // Add this field to the AITrafficController class
         private AITrafficSpawnPoint[] spawnPoints;
 
         // Update the InitializeSpawnPoints method to assign to this field
-        
+
 
         [Tooltip("AI Cars will be parented to the 'Car Parent' transform, this AITrafficController will be the parent if a parent is not assigned.")]
         public bool setCarParent;
@@ -110,7 +110,7 @@
         #endregion
 
         #region Set Array Data
-        
+
         public void Set_IsDrivingArray(int _index, bool _value)
         {
             // First check if index is valid
@@ -410,7 +410,7 @@
             return null;
         }
         #endregion
-         
+
         #region Registers
         public int RegisterCarAI(AITrafficCar carAI, AITrafficWaypointRoute route)
 
@@ -598,8 +598,8 @@
             availableSpawnPoints.Clear();
         }
 
-        
- 
+
+
 
         public void RegisterAllRoutesInScene()
         {
@@ -617,7 +617,7 @@
             }
         }
         // In AITrafficController.cs
-       
+
         public void RemoveAITrafficWaypointRoute(AITrafficWaypointRoute _route)
         {
             allWaypointRoutesList.Remove(_route);
@@ -1829,40 +1829,14 @@
         {
             if (isInitialized)
             {
-                //// First check for valid job system before attempting any job scheduling
-                //if (!isJobSystemValid())
-                //{
-                //    // Log the issue but don't try to schedule jobs with invalid arrays
-                //    Debug.LogWarning("Traffic jobs cannot be scheduled: Transform arrays are not valid");
-                //    return;
-                //}
-                //// Validate TransformAccessArray before use
-                //if (!driveTargetTAA.isCreated || driveTargetTAA.length == 0)
-                //{
-                //    EnsureTransformAccessArrayInitialization();
-                //}
+                // Add these validation checks
+                if (!driveTargetTAA.isCreated || driveTargetTAA.length == 0)
+                {
+                    // Skip job scheduling this frame - arrays aren't ready
+                    return;
+                }
 
-                //// Additional safety check
-                //if (driveTargetTAA.isCreated && driveTargetTAA.length > 0)
-                //{
-                //    try
-                //    {
-                //        //jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
-                //        //jobHandle.Complete();
-                //    }
-                //    catch (System.Exception ex)
-                //    {
-                //        Debug.LogError($"Error scheduling job: {ex.Message}");
-                //        // Attempt to reinitialize if scheduling fails
-                //        EnsureTransformAccessArrayInitialization();
-                //    }
-                //}
-                //else
-                //{
-                //    Debug.LogWarning("Cannot schedule job: No valid drive targets");
-                //}
 
-                
                 if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
                 deltaTime = Time.deltaTime;
                 if (useYieldTriggers)
@@ -2342,10 +2316,10 @@
                 //    }
                 //    Debug.Log("========================================");
                 //}
-            
+
             }
         }
-      
+
         public void ForceAllCarsToMoveDirectly()
         {
             // Rebuild arrays first to ensure we have the most up-to-date car information
