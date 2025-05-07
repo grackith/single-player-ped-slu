@@ -23,7 +23,7 @@ public class BatchExperimentGenerator : MonoBehaviour
     public List<string> redirectorSet; // every redirector would be experimented
     public List<string> resetterSet; // the resetter corresponds with the redirector
 
-    public async void readFileAndGenerate()
+    public void readFileAndGenerate()
     {
         // init
         randomSeedSet = new List<int>();

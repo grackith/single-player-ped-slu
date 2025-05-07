@@ -20,7 +20,7 @@ public class MR2C_Resetter : Resetter
         return IfCollisionHappens();
     }
 
-    public override async void InitializeReset()
+    public override void InitializeReset()
     {
         if (spaceCenter == null)
         {

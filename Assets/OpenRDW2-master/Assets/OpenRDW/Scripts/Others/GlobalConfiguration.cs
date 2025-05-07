@@ -898,7 +898,7 @@ public class GlobalConfiguration : MonoBehaviour
     {
         bool touchWaypoint = false;
         bool triggerSyncReset = false;
-        bool inSyncReset = false;
+        // bool inSyncReset = false;
         for (int i = 0; i < avatarNum; i++)
         {
             RedirectionManager remanager = redirectedAvatars[i].GetComponent<RedirectionManager>();
@@ -909,7 +909,7 @@ public class GlobalConfiguration : MonoBehaviour
             }
             if (remanager.resetter != null && remanager.inReset)
             {
-                inSyncReset = true;
+                // inSyncReset = true;
             }
             else if (remanager.resetter != null && !remanager.inReset && remanager.resetter.IsResetRequired() && remanager.EndResetCountDown == 0)
             {

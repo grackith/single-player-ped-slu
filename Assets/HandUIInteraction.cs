@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.UI;
-using UnityEngine.XR.Interaction.Toolkit.Interactables;
+// using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 public class HandUIInteraction : MonoBehaviour
 {
@@ -69,7 +69,8 @@ public class HandUIInteraction : MonoBehaviour
                 interactable = button.gameObject.AddComponent<XRSimpleInteractable>();
 
                 // Connect the interactable to button click
-                interactable.selectEntered.AddListener((args) => {
+                interactable.selectEntered.AddListener((args) =>
+                {
                     button.onClick.Invoke();
                 });
             }

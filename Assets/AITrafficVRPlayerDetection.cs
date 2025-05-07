@@ -52,17 +52,28 @@ public class AITrafficVRPlayerDetection : MonoBehaviour
         }
 
         // If road layer is not set, default to layer 0 (usually "Default")
+        // In Start() method, update this section:
         if (roadLayer.value == 0)
         {
-            roadLayer = LayerMask.GetMask("Highway");
-            Debug.LogWarning("AITrafficVRPlayerDetection: Road layer not set, using Highway layer");
+            roadLayer = LayerMask.GetMask("Terrain"); // Change from "Highway" to "Terrain"
+            Debug.LogWarning("PedestrianDetection: Road layer not set, using Terrain layer");
         }
     }
 
     void EnableProcessing()
     {
         shouldProcess = true;
-        //Debug.Log("AITrafficVRPlayerDetection: Starting to process cars");
+        Debug.Log($"AITrafficVRPlayerDetection: Starting to process cars. Player transform is {(playerTransform == null ? "NULL" : "valid")}");
+
+        // Test raycast to see if it can detect the road
+        Vector3 rayStart = playerTransform.position + Vector3.up * 0.1f;
+        RaycastHit hit;
+        bool hitRoad = Physics.Raycast(rayStart, Vector3.down, out hit, raycastDistance, roadLayer);
+        Debug.Log($"Initial road detection test: {(hitRoad ? "SUCCESS" : "FAILED")}");
+        if (hitRoad)
+        {
+            Debug.Log($"Hit object: {hit.collider.gameObject.name} on layer {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
+        }
     }
 
     void Update()
@@ -94,25 +105,63 @@ public class AITrafficVRPlayerDetection : MonoBehaviour
                 // Only slow down cars if player is on the road AND within detection radius
                 if (playerOnRoad && distance <= detectionRadius)
                 {
-                    // Calculate factor based on distance (closer = slower)
-                    float factor = Mathf.Clamp01(distance / detectionRadius);
-                    float targetSpeed = car.topSpeed * (slowDownFactor + (factor * (1 - slowDownFactor)));
+                    // MODIFIED: If car is very close to player (within 2 units), stop it completely
+                    if (distance < 5.0f)
+                    {
+                        try
+                        {
+                            // Stop the car completely
+                            car.StopDriving();
 
-                    // Try to slow down the car safely
-                    try
-                    {
-                        car.SetTopSpeed(targetSpeed);
+                            // Apply immediate braking force for safety
+                            Rigidbody rb = car.GetComponent<Rigidbody>();
+                            if (rb != null)
+                            {
+                                rb.velocity = Vector3.zero;
+                                rb.drag = 100; // High drag to ensure it stops quickly
+                            }
+                        }
+                        catch
+                        {
+                            // Silently fail if error occurs
+                        }
                     }
-                    catch
+                    else
                     {
-                        // Silently fail if error occurs
+                        // Calculate factor based on distance (closer = slower)
+                        float factor = Mathf.Clamp01(distance / detectionRadius);
+                        float targetSpeed = car.topSpeed * (slowDownFactor + (factor * (1 - slowDownFactor)));
+
+                        // Try to slow down the car safely
+                        try
+                        {
+                            car.SetTopSpeed(targetSpeed);
+                        }
+                        catch
+                        {
+                            // Silently fail if error occurs
+                        }
                     }
                 }
                 else
                 {
-                    // Only try to reset if it seems to have been modified
+                    // Player is not on road or car is far away - resume normal driving
                     try
                     {
+                        // Resume driving if it was stopped
+                        if (!car.isDriving)
+                        {
+                            car.StartDriving();
+
+                            // Reset drag to normal
+                            Rigidbody rb = car.GetComponent<Rigidbody>();
+                            if (rb != null)
+                            {
+                                rb.drag = 1.0f; // Set to normal drag value
+                            }
+                        }
+
+                        // Reset to normal speed
                         car.SetTopSpeed(car.topSpeed);
                     }
                     catch

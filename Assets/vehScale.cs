@@ -15,21 +15,13 @@ public class vehScale : MonoBehaviour
         }
         if (trafficController != null)
         {
-            // Use reflection to set the internal vehicleScaleFactor field
-            System.Reflection.FieldInfo fieldInfo = typeof(AITrafficController).GetField("vehicleScaleFactor",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-
-            if (fieldInfo != null)
-            {
-                fieldInfo.SetValue(trafficController, vehicleScaleFactor);
-                Debug.Log("Successfully set vehicleScaleFactor in AITrafficController to " + vehicleScaleFactor);
-            }
-            else
-            {
-                Debug.LogWarning("Could not find vehicleScaleFactor field in AITrafficController");
-                // Fall back to manual scaling
-                ScaleAllVehicles();
-            }
+            // Skip trying to use reflection and go straight to scaling vehicles
+            ScaleAllVehicles();
+            Debug.Log("Scaled all vehicles with scale factor: " + vehicleScaleFactor);
+        }
+        else
+        {
+            Debug.LogWarning("Could not find AITrafficController in the scene!");
         }
     }
 

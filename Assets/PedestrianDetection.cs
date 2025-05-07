@@ -18,10 +18,10 @@ public class PedestrianDetection : MonoBehaviour
     [Tooltip("Distance to raycast down to check for road")]
     public float raycastDistance = 1f;
     [Tooltip("Radius to slow down cars when player is on road (not at crosswalk)")]
-    public float roadSlowdownRadius = 10f;
+    public float roadSlowdownRadius = 8f; // Reduced from 10f to 8f
     [Tooltip("How much to slow down cars when player is on road (not at crosswalk)")]
     [Range(0.1f, 0.9f)]
-    public float roadSlowdownFactor = 0.5f;
+    public float roadSlowdownFactor = 0.7f; // Increased from 0.5 to 0.7 (70% of normal speed)
     [Header("Player References")]
     [Tooltip("Reference to the XR Origin representing the player")]
     public Transform xrOrigin;
@@ -41,7 +41,7 @@ public class PedestrianDetection : MonoBehaviour
 
     [Tooltip("Range to look for cars that should yield")]
     [Range(5f, 50f)]
-    public float carDetectionRange = 15f;
+    public float carDetectionRange = 12f; // Reduced from 15f to 12f
 
     [Tooltip("Minimum angle (degrees) between pedestrian forward and crosswalk direction to consider as 'crossing'")]
     [Range(0f, 90f)]
@@ -70,6 +70,8 @@ public class PedestrianDetection : MonoBehaviour
 
     // Cached list of NPCs
     private List<Transform> cachedNPCs = new List<Transform>();
+    // Add this with your other private variables
+    private Dictionary<AITrafficCar, float> originalCarSpeeds = new Dictionary<AITrafficCar, float>();
 
     // Timer for NPC scanning
     private float npcScanTimer = 0f;
@@ -222,6 +224,7 @@ public class PedestrianDetection : MonoBehaviour
             RaycastHit hit;
             Vector3 rayStart = xrOrigin.position + Vector3.up * 0.1f; // Start slightly above player position
 
+            // Check if player is on the road (Terrain layer)
             if (Physics.Raycast(rayStart, Vector3.down, out hit, raycastDistance, roadLayer))
             {
                 // Player is on the road
@@ -235,8 +238,17 @@ public class PedestrianDetection : MonoBehaviour
             }
             else
             {
-                // Player is not on the road (e.g., on sidewalk)
-                playerOnRoad = false;
+                // Check if player is on sidewalk (Highway layer)
+                if (Physics.Raycast(rayStart, Vector3.down, out hit, raycastDistance, LayerMask.GetMask("Highway")))
+                {
+                    // Player is on sidewalk - do NOT slow down cars
+                    playerOnRoad = false;
+                }
+                else
+                {
+                    // Player is somewhere else
+                    playerOnRoad = false;
+                }
 
                 // Optional debugging
                 if (showDebug)
@@ -274,6 +286,11 @@ public class PedestrianDetection : MonoBehaviour
                 try
                 {
                     // Store original speed if not already stored
+                    if (!originalCarSpeeds.ContainsKey(car))
+                    {
+                        originalCarSpeeds[car] = car.topSpeed;
+                    }
+
                     if (!yieldingCars.ContainsKey(car))
                     {
                         yieldingCars[car] = false; // Not fully yielding, just slowing
@@ -302,7 +319,10 @@ public class PedestrianDetection : MonoBehaviour
                 // Only reset if not fully yielding
                 try
                 {
-                    car.topSpeed = car.topSpeed; // Reset to original speed
+                    if (originalCarSpeeds.ContainsKey(car))
+                    {
+                        car.topSpeed = originalCarSpeeds[car]; // Reset to original speed
+                    }
                 }
                 catch
                 {
@@ -507,11 +527,19 @@ public class PedestrianDetection : MonoBehaviour
         crosswalkPositions.Clear();
         crosswalkDirections.Clear();
 
-        // Find objects tagged as "crosswalk" (lowercase) or with names containing "crosswalk"
+        // Find objects on Highway layer
+        var highwayObjects = FindObjectsOfType<GameObject>()
+            .Where(obj => obj.layer == LayerMask.NameToLayer("Highway"))
+            .ToArray();
+
+        Debug.Log($"Found {highwayObjects.Length} objects on Highway layer");
+
+        // First try with the tag
         try
         {
-            // First try with the tag
             var taggedCrosswalks = GameObject.FindGameObjectsWithTag("crosswalk");
+            Debug.Log($"Found {taggedCrosswalks.Length} objects tagged as 'crosswalk'");
+
             foreach (var crosswalk in taggedCrosswalks)
             {
                 crosswalkPositions.Add(crosswalk.transform.position);
@@ -520,7 +548,7 @@ public class PedestrianDetection : MonoBehaviour
         }
         catch (UnityException)
         {
-            Debug.LogWarning("PedestrianDetection: 'crosswalk' tag is not defined in the Tag Manager. Only using name-based detection.");
+            Debug.LogWarning("PedestrianDetection: 'crosswalk' tag is not defined.");
         }
 
         // Always also check for objects with crosswalk in the name as backup
@@ -566,14 +594,16 @@ public class PedestrianDetection : MonoBehaviour
         }
 
         // Method 3: Cast rays to find nearby roads
-        RaycastHit hit;
-        if (Physics.Raycast(crosswalkPos + Vector3.up, Vector3.right, out hit, 10f) &&
-            hit.collider.gameObject.layer == LayerMask.NameToLayer("Road"))
+        // In DetermineCrosswalkDirection method, replace the raycast section:
+        RaycastHit hit; // Declare the hit variable first
+
+        if (Physics.Raycast(crosswalkPos + Vector3.up, Vector3.right, out hit, 10f,
+                           LayerMask.GetMask("Terrain"))) // Use Terrain layer instead
         {
             direction = Vector3.right;
         }
-        else if (Physics.Raycast(crosswalkPos + Vector3.up, Vector3.forward, out hit, 10f) &&
-                 hit.collider.gameObject.layer == LayerMask.NameToLayer("Road"))
+        else if (Physics.Raycast(crosswalkPos + Vector3.up, Vector3.forward, out hit, 10f,
+                                LayerMask.GetMask("Terrain"))) // Use Terrain layer instead
         {
             direction = Vector3.forward;
         }
@@ -643,5 +673,6 @@ public class PedestrianDetection : MonoBehaviour
         // Resume all cars when script is disabled
         ResumeCars();
         yieldingCars.Clear();
+        originalCarSpeeds.Clear();
     }
 }

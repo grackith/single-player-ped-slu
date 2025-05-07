@@ -382,7 +382,7 @@ public class TrackingSpaceGenerator
         var nowPolygon = new List<Vector2>();
         ReadStatus status = ReadStatus.AVATARNUM;
 
-        bool ifObstacle = false;//if this polygon is obstacle
+        // bool ifObstacle = false;//if this polygon is obstacle
         try
         {
             var content = File.ReadAllLines(path);
@@ -456,7 +456,7 @@ public class TrackingSpaceGenerator
                         nowPolygon = new List<Vector2>();
                         continue;
                     }
-                }  
+                }
                 else if (status == ReadStatus.AVATAR)
                 {
                     if (line.Trim().Length == 0)

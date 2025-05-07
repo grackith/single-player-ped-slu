@@ -14,7 +14,8 @@ using Unity.Collections;
 using UnityEngine.XR.Interaction.Toolkit;
 using System;
 using static TurnTheGameOn.SimpleTrafficSystem.CiDy_STS_GeneratedContent;
-using static UnityEngine.XR.Interaction.Toolkit.Inputs.Haptics.HapticsUtility;
+// using UnityEngine.XR.Interaction.Toolkit.Haptics;
+// using static UnityEngine.XR.Interaction.Toolkit.Inputs.Haptics.HapticsUtility;
 
 
 #if UNITY_XR_MANAGEMENT
@@ -40,7 +41,7 @@ public class Scenario
     public float busSpawnDelay = 30f;
     [Tooltip("Optional specific route for the bus in this scenario")]
     public AITrafficWaypointRoute scenarioBusRoute;
-    
+
 
 
 
@@ -188,7 +189,7 @@ public class ScenarioManager : MonoBehaviour
             Debug.Log("Updated RDW origin for new scenario position");
         }
     }
-   
+
 
     private void Start()
     {
@@ -1636,18 +1637,18 @@ public class ScenarioManager : MonoBehaviour
                     Debug.Log($"Positioned player at scenario start point");
                     UpdateRDWForScenario(scenario);
                 }
-                
+
             }
-            
+
             return true;
         }
-        
+
         catch (System.Exception ex)
         {
             Debug.LogError($"Error positioning player: {ex.Message}");
             return false;
         }
-        
+
     }
 
     // Step 8: Initialize traffic lights
@@ -1859,7 +1860,7 @@ public class ScenarioManager : MonoBehaviour
             }
         }
     }
-    
+
 
 
 
@@ -2635,7 +2636,7 @@ public class ScenarioManager : MonoBehaviour
     /// Check for and handle duplicate managers (EventSystem, XRInteractionManager, etc.)
     /// </summary>
     /// // Add this diagnostic method to your ScenarioManager class
-    
+
 
 
     private void CheckForDuplicateManagers()
@@ -2666,7 +2667,7 @@ public class ScenarioManager : MonoBehaviour
             }
         }
     }
-    
+
 
     /// <summary>
     /// Position the XR Origin based on the scenario, taking camera offset into account
@@ -2807,7 +2808,7 @@ public class ScenarioManager : MonoBehaviour
             newController.InitializeNativeLists();
             newController.RebuildTransformArrays();
         }
-        
+
     }
     // Add this to ScenarioManager.cs
 
@@ -2872,7 +2873,7 @@ public class ScenarioManager : MonoBehaviour
     /// <summary>
     /// Set the layer of GameObject and all children
     /// </summary>
-    
+
     #endregion
 }
 #endregion

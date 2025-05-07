@@ -1,5 +1,8 @@
 using TurnTheGameOn.SimpleTrafficSystem;
 using UnityEngine;
+using System.Collections;
+using UnityEngine.Audio; // Add this line to access AudioMixer classes
+
 
 public class AITrafficCarAudio : MonoBehaviour
 {
@@ -27,20 +30,26 @@ public class AITrafficCarAudio : MonoBehaviour
         {
             engineAudio = gameObject.AddComponent<AudioSource>();
             engineAudio.spatialBlend = 1.0f; // Full 3D sound
-            engineAudio.minDistance = 5f;
+            engineAudio.minDistance = 10f;
             engineAudio.maxDistance = 50f;
+            engineAudio.rolloffMode = AudioRolloffMode.Linear;
             engineAudio.loop = true;
             engineAudio.playOnAwake = false;
         }
 
-        // Set default clip if available and none is set
-        if (engineAudio.clip == null && idleSound != null)
+        // Connect to the Audio Mixer Group
+        AudioMixer vehicleMixer = Resources.Load<AudioMixer>("VehicleAudioMixer");
+        if (vehicleMixer != null)
         {
-            engineAudio.clip = idleSound;
-            lastClip = idleSound;
+            AudioMixerGroup[] groups = vehicleMixer.FindMatchingGroups("CarEngines");
+            if (groups.Length > 0)
+            {
+                engineAudio.outputAudioMixerGroup = groups[0];
+            }
         }
-    }
 
+        // Rest of your initialization code...
+    }
     void Update()
     {
         if (engineAudio == null || aiTrafficCar == null) return;
@@ -48,8 +57,11 @@ public class AITrafficCarAudio : MonoBehaviour
         // Get the current speed from the AITrafficCar
         float currentSpeed = aiTrafficCar.CurrentSpeed();
 
-        // Check if the car is currently driving (by checking if speed > 0 or acceleration input > 0)
+        // Check if the car is currently driving
         bool currentlyDriving = currentSpeed > 0.1f || aiTrafficCar.AccelerationInput() > 0.01f;
+
+        // Calculate normalized speed for pitch and volume
+        float normalizedSpeed = Mathf.Clamp01(currentSpeed / maxSpeed);
 
         // Handle the engine audio state
         if (currentlyDriving)
@@ -73,66 +85,25 @@ public class AITrafficCarAudio : MonoBehaviour
             }
 
             // Calculate pitch based on speed
-            float normalizedSpeed = Mathf.Clamp01(currentSpeed / maxSpeed);
             float currentPitch = Mathf.Lerp(minPitch, maxPitch, normalizedSpeed);
 
             // Apply pitch to engine sound
             engineAudio.pitch = currentPitch;
 
-            // Optional: Change sound clip based on acceleration
+            // Adjust volume based on speed
+            engineAudio.volume = Mathf.Lerp(0.5f, 1.0f, normalizedSpeed);
+
+            // Optional: Change sound clip based on acceleration with crossfade
             if (accelerationSound != null && aiTrafficCar.AccelerationInput() > 0.7f && engineAudio.clip != accelerationSound)
             {
-                // Only attempt to save playback position if we have a valid current clip
-                float playbackPosition = 0f;
-                if (engineAudio.clip != null && engineAudio.clip.length > 0)
-                {
-                    playbackPosition = Mathf.Clamp01(engineAudio.time / engineAudio.clip.length);
-                }
-
-                bool wasPlaying = engineAudio.isPlaying;
-                engineAudio.clip = accelerationSound;
-                lastClip = accelerationSound;
-
-                // Make sure we don't exceed the clip length
-                if (accelerationSound.length > 0)
-                {
-                    engineAudio.time = Mathf.Clamp(playbackPosition * accelerationSound.length, 0f, accelerationSound.length - 0.01f);
-                }
-                else
-                {
-                    engineAudio.time = 0f;
-                }
-
-                if (wasPlaying || !engineAudio.isPlaying) engineAudio.Play();
+                // Use crossfade instead of abrupt switching
+                StartCoroutine(CrossfadeToClip(accelerationSound, 0.2f));
             }
             else if (idleSound != null && aiTrafficCar.AccelerationInput() <= 0.7f && engineAudio.clip != idleSound)
             {
-                // Only attempt to save playback position if we have a valid current clip
-                float playbackPosition = 0f;
-                if (engineAudio.clip != null && engineAudio.clip.length > 0)
-                {
-                    playbackPosition = Mathf.Clamp01(engineAudio.time / engineAudio.clip.length);
-                }
-
-                bool wasPlaying = engineAudio.isPlaying;
-                engineAudio.clip = idleSound;
-                lastClip = idleSound;
-
-                // Make sure we don't exceed the clip length
-                if (idleSound.length > 0)
-                {
-                    engineAudio.time = Mathf.Clamp(playbackPosition * idleSound.length, 0f, idleSound.length - 0.01f);
-                }
-                else
-                {
-                    engineAudio.time = 0f;
-                }
-
-                if (wasPlaying || !engineAudio.isPlaying) engineAudio.Play();
+                // Use crossfade for idle sound too
+                StartCoroutine(CrossfadeToClip(idleSound, 0.2f));
             }
-
-            // Adjust volume based on speed
-            engineAudio.volume = Mathf.Lerp(0.5f, 1.0f, normalizedSpeed);
         }
         else if (isDriving)
         {
@@ -157,6 +128,7 @@ public class AITrafficCarAudio : MonoBehaviour
     }
 
     // You might want to sync with the AITrafficCar's lifecycle
+    // You might want to sync with the AITrafficCar's lifecycle
     void OnEnable()
     {
         // Start audio when car becomes active in the scene
@@ -178,5 +150,57 @@ public class AITrafficCarAudio : MonoBehaviour
             engineAudio.Stop();
         }
         isDriving = false;
+    }
+
+    private IEnumerator CrossfadeToClip(AudioClip newClip, float fadeDuration)
+    {
+        if (newClip == null) yield break;
+
+        // Create temporary audio source for crossfade
+        AudioSource tempSource = gameObject.AddComponent<AudioSource>();
+        tempSource.clip = newClip;
+        tempSource.volume = 0;
+        tempSource.pitch = engineAudio.pitch; // Match current pitch
+        tempSource.spatialBlend = engineAudio.spatialBlend;
+        tempSource.minDistance = engineAudio.minDistance;
+        tempSource.maxDistance = engineAudio.maxDistance;
+
+        // Copy the output audio mixer group
+        if (engineAudio.outputAudioMixerGroup != null)
+        {
+            tempSource.outputAudioMixerGroup = engineAudio.outputAudioMixerGroup;
+        }
+
+        tempSource.Play();
+
+        // Crossfade volume
+        float startTime = Time.time;
+        while (Time.time < startTime + fadeDuration)
+        {
+            float t = (Time.time - startTime) / fadeDuration;
+            tempSource.volume = t * engineAudio.volume;
+            engineAudio.volume = (1 - t) * engineAudio.volume;
+            yield return null;
+        }
+
+        // Switch primary audio source to new clip
+        engineAudio.Stop();
+        engineAudio.clip = newClip;
+        engineAudio.volume = tempSource.volume;
+
+        // Don't copy time position, start from beginning
+        // engineAudio.time = tempSource.time; // This was causing the issue
+
+        // Make sure we have a valid clip before playing
+        if (engineAudio.clip != null)
+        {
+            engineAudio.Play();
+        }
+
+        // Clean up temp source
+        Destroy(tempSource);
+
+        // Update last clip reference
+        lastClip = newClip;
     }
 }

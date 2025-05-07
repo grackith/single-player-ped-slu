@@ -10,10 +10,10 @@
 // Physical Environment
 1               // Number of physical spaces
 4               // Number of vertices in physical space 1
--13.7 -4.9      // Vertex 1
-13.7 -4.9       // Vertex 2
-13.7 4.9        // Vertex 3
--13.7 4.9       // Vertex 4
+-2.25 -6.25     // Vertex 1 (half-width = 2.25, half-length = 6.25)
+2.25 -6.25      // Vertex 2
+2.25 6.25       // Vertex 3
+-2.25 6.25      // Vertex 4
 0               // Number of obstacles in physical space 1
 1               // Number of users in this physical space
 0 0 0           // Physical user 1 initial position (x,y) and orientation

@@ -26,7 +26,7 @@ public class VRResearchAudioRecorder : MonoBehaviour
     [Header("References")]
     public ScenarioManager scenarioManager;
     public VRResearchDataCollector dataCollector;
-    
+
     // Recording state
     private bool isRecording = false;
     private string participantID = "P001";
@@ -38,7 +38,7 @@ public class VRResearchAudioRecorder : MonoBehaviour
 
     // Microphone handling
     private bool microphoneInitialized = false;
-    private int lastSamplePosition = 0;
+    // private int lastSamplePosition = 0;
     private float[] sampleBuffer;
 
     void Awake()
@@ -149,7 +149,7 @@ public class VRResearchAudioRecorder : MonoBehaviour
         scenarioRecording = Microphone.Start(selectedMic, false, maxRecordingSeconds, recordingFrequency);
 
         // Reset sample position tracking
-        lastSamplePosition = 0;
+        // lastSamplePosition = 0;
 
         isRecording = true;
         Debug.Log($"Started audio recording for scenario {currentScenarioIndex + 1}: {currentScenarioName}");
@@ -310,116 +310,116 @@ public class VRResearchAudioRecorder : MonoBehaviour
     }
 
 
-// Add a marker to the current recording
+    // Add a marker to the current recording
     public void AddMarker(string markerType)
-{
-    if (!isRecording || !microphoneInitialized) return;
-
-    // Get current position in the recording
-    string selectedMic = Microphone.devices[0];
-    int currentPosition = Microphone.GetPosition(selectedMic);
-
-    // Calculate timestamp
-    float timestamp = (float)currentPosition / recordingFrequency;
-
-    // Log the marker
-    string markerFile = Path.Combine(saveFolderPath,
-        $"scenario_{currentScenarioIndex + 1}_{currentScenarioName}_markers.csv");
-
-    // Create header if the file doesn't exist
-    if (!File.Exists(markerFile))
     {
-        File.WriteAllText(markerFile, "Timestamp,MarkerType,Notes\n");
+        if (!isRecording || !microphoneInitialized) return;
+
+        // Get current position in the recording
+        string selectedMic = Microphone.devices[0];
+        int currentPosition = Microphone.GetPosition(selectedMic);
+
+        // Calculate timestamp
+        float timestamp = (float)currentPosition / recordingFrequency;
+
+        // Log the marker
+        string markerFile = Path.Combine(saveFolderPath,
+            $"scenario_{currentScenarioIndex + 1}_{currentScenarioName}_markers.csv");
+
+        // Create header if the file doesn't exist
+        if (!File.Exists(markerFile))
+        {
+            File.WriteAllText(markerFile, "Timestamp,MarkerType,Notes\n");
+        }
+
+        // Add marker entry
+        string markerEntry = $"{timestamp:F2},{markerType},\n";
+        File.AppendAllText(markerFile, markerEntry);
+
+        Debug.Log($"Added marker '{markerType}' at {timestamp:F2}s");
     }
 
-    // Add marker entry
-    string markerEntry = $"{timestamp:F2},{markerType},\n";
-    File.AppendAllText(markerFile, markerEntry);
-
-    Debug.Log($"Added marker '{markerType}' at {timestamp:F2}s");
-}
-
-// Event handlers for ScenarioManager events
+    // Event handlers for ScenarioManager events
     public void OnScenarioStarted()
-{
-    Debug.Log("Scenario started - Initializing audio recording");
-
-    // Find current scenario index and name
-    if (scenarioManager != null)
     {
-        string currentSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        Debug.Log("Scenario started - Initializing audio recording");
 
-        for (int i = 0; i < scenarioManager.scenarios.Length; i++)
+        // Find current scenario index and name
+        if (scenarioManager != null)
         {
-            if (scenarioManager.scenarios[i].sceneBuildName == currentSceneName)
+            string currentSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
+            for (int i = 0; i < scenarioManager.scenarios.Length; i++)
             {
-                currentScenarioIndex = i;
-                currentScenarioName = scenarioManager.scenarios[i].scenarioName;
-                Debug.Log($"Current scenario set to {i} ({currentScenarioName})");
-                break;
+                if (scenarioManager.scenarios[i].sceneBuildName == currentSceneName)
+                {
+                    currentScenarioIndex = i;
+                    currentScenarioName = scenarioManager.scenarios[i].scenarioName;
+                    Debug.Log($"Current scenario set to {i} ({currentScenarioName})");
+                    break;
+                }
             }
+        }
+
+        // Start recording if continuous recording is enabled
+        if (recordContinuously)
+        {
+            StartScenarioRecording();
         }
     }
 
-    // Start recording if continuous recording is enabled
-    if (recordContinuously)
-    {
-        StartScenarioRecording();
-    }
-}
-
     public void OnScenarioEnded()
-{
-    Debug.Log("Scenario ended - Finalizing audio recording");
-
-    // Stop and save the current recording
-    if (isRecording)
     {
-        StopScenarioRecording();
+        Debug.Log("Scenario ended - Finalizing audio recording");
+
+        // Stop and save the current recording
+        if (isRecording)
+        {
+            StopScenarioRecording();
+        }
     }
-}
 
     void Update()
-{
-    // Handle marker hotkey
-    if (enableVoiceMarkers && Input.GetKeyDown(markerHotkey))
     {
-        AddMarker("KeyMarker");
+        // Handle marker hotkey
+        if (enableVoiceMarkers && Input.GetKeyDown(markerHotkey))
+        {
+            AddMarker("KeyMarker");
+        }
     }
-}
 
-// Manual recording control methods (can be called by UI buttons)
+    // Manual recording control methods (can be called by UI buttons)
     public void StartRecording()
-{
-    if (!enableManualRecording || isRecording) return;
-    StartScenarioRecording();
-}
+    {
+        if (!enableManualRecording || isRecording) return;
+        StartScenarioRecording();
+    }
 
     public void StopRecording()
-{
-    if (!isRecording) return;
-    StopScenarioRecording();
-}
-
-    public void AddCustomMarker(string markerType)
-{
-    if (!isRecording) return;
-    AddMarker(markerType);
-}
-
-    void OnDestroy()
-{
-    // Stop any ongoing recording
-    if (isRecording)
     {
+        if (!isRecording) return;
         StopScenarioRecording();
     }
 
-    // Unsubscribe from events
-    if (scenarioManager != null)
+    public void AddCustomMarker(string markerType)
     {
-        scenarioManager.onScenarioStarted.RemoveListener(OnScenarioStarted);
-        scenarioManager.onScenarioEnded.RemoveListener(OnScenarioEnded);
+        if (!isRecording) return;
+        AddMarker(markerType);
     }
-}
+
+    void OnDestroy()
+    {
+        // Stop any ongoing recording
+        if (isRecording)
+        {
+            StopScenarioRecording();
+        }
+
+        // Unsubscribe from events
+        if (scenarioManager != null)
+        {
+            scenarioManager.onScenarioStarted.RemoveListener(OnScenarioStarted);
+            scenarioManager.onScenarioEnded.RemoveListener(OnScenarioEnded);
+        }
+    }
 }
