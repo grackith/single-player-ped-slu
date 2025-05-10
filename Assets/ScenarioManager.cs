@@ -131,7 +131,7 @@ public class ScenarioManager : MonoBehaviour
         }
 
         // Save connections from editor setup
-        routePreserver.SaveAllConnections();
+        //routePreserver.SaveAllConnections();
     }
     private void InitializeRedirectedWalking()
     {

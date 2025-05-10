@@ -107,6 +107,8 @@
         public float actizeZone = 225;
         [Tooltip("Cars can spawn anywhere in this zone, even if spawn point is visible by the camera. Cars outside of this zone will be despawned.")]
         public float spawnZone = 350;
+        
+
         #endregion
 
         #region Set Array Data
@@ -412,6 +414,164 @@
         #endregion
 
         #region Registers
+
+        //public int RegisterCarAI(AITrafficCar carAI, AITrafficWaypointRoute route)
+        //{
+        //    carList.Add(carAI);
+        //    carRouteList.Add(route);
+        //    currentWaypointList.Add(null);
+        //    changeLaneCooldownTimer.Add(0);
+        //    changeLaneTriggerTimer.Add(0);
+        //    frontDirectionList.Add(Vector3.zero);
+        //    frontRotationList.Add(Quaternion.identity);
+        //    frontTransformCached.Add(carAI.frontSensorTransform);
+        //    frontHitTransform.Add(null);
+        //    frontPreviousHitTransform.Add(null);
+        //    leftOriginList.Add(Vector3.zero);
+        //    leftDirectionList.Add(Vector3.zero);
+        //    leftRotationList.Add(Quaternion.identity);
+        //    leftTransformCached.Add(carAI.leftSensorTransform);
+        //    leftHitTransform.Add(null);
+        //    leftPreviousHitTransform.Add(null);
+        //    rightOriginList.Add(Vector3.zero);
+        //    rightDirectionList.Add(Vector3.zero);
+        //    rightRotationList.Add(Quaternion.identity);
+        //    rightTransformCached.Add(carAI.rightSensorTransform);
+        //    rightHitTransform.Add(null);
+        //    rightPreviousHitTransform.Add(null);
+        //    carAIWaypointRouteInfo.Add(null);
+        //    if (carAI.brakeMaterial == null)
+        //    {
+        //        brakeMaterial.Add(unassignedBrakeMaterial);
+        //    }
+        //    else
+        //    {
+        //        brakeMaterial.Add(carAI.brakeMaterial);
+        //        carAI.brakeMaterial.EnableKeyword("_EMISSION");
+        //    }
+        //    frontRightWheelColliderList.Add(carAI._wheels[0].collider);
+        //    frontLefttWheelColliderList.Add(carAI._wheels[1].collider);
+        //    backRighttWheelColliderList.Add(carAI._wheels[2].collider);
+        //    backLeftWheelColliderList.Add(carAI._wheels[3].collider);
+        //    Rigidbody rigidbody = carAI.GetComponent<Rigidbody>();
+        //    rigidbodyList.Add(rigidbody);
+        //    headLight.Add(carAI.headLight);
+        //    Transform driveTarget = new GameObject("DriveTarget").transform;
+        //    driveTarget.SetParent(carAI.transform);
+        //    TransformAccessArray temp_driveTargetTAA = new TransformAccessArray(carCount);
+        //    for (int i = 0; i < carCount; i++)
+        //    {
+        //        temp_driveTargetTAA.Add(driveTargetTAA[i]);
+        //    }
+        //    temp_driveTargetTAA.Add(driveTarget);
+        //    carCount = carList.Count;
+        //    if (carCount >= 2)
+        //    {
+        //        DisposeArrays(false);
+        //    }
+
+        //    #region allocation
+        //    currentRoutePointIndexNL.Add(0);
+        //    waypointDataListCountNL.Add(0);
+        //    carTransformPreviousPositionNL.Add(Vector3.zero);
+        //    carTransformPositionNL.Add(Vector3.zero);
+        //    finalRoutePointPositionNL.Add(float3.zero);
+        //    routePointPositionNL.Add(float3.zero);
+        //    forceChangeLanesNL.Add(false);
+        //    isChangingLanesNL.Add(false);
+        //    canChangeLanesNL.Add(true);
+        //    isDrivingNL.Add(true);
+        //    isActiveNL.Add(true);
+        //    speedNL.Add(0);
+        //    routeProgressNL.Add(0);
+        //    targetSpeedNL.Add(0);
+        //    accelNL.Add(0);
+        //    speedLimitNL.Add(0);
+        //    targetAngleNL.Add(0);
+        //    dragNL.Add(0);
+        //    angularDragNL.Add(0);
+        //    overrideDragNL.Add(false);
+        //    localTargetNL.Add(Vector3.zero);
+        //    steerAngleNL.Add(0);
+        //    motorTorqueNL.Add(0);
+        //    accelerationInputNL.Add(0);
+        //    brakeTorqueNL.Add(0);
+        //    moveHandBrakeNL.Add(0);
+        //    overrideInputNL.Add(false);
+        //    distanceToEndPointNL.Add(999);
+        //    overrideAccelerationPowerNL.Add(0);
+        //    overrideBrakePowerNL.Add(0);
+        //    isBrakingNL.Add(false);
+        //    FRwheelPositionNL.Add(float3.zero);
+        //    FRwheelRotationNL.Add(Quaternion.identity);
+        //    FLwheelPositionNL.Add(float3.zero);
+        //    FLwheelRotationNL.Add(Quaternion.identity);
+        //    BRwheelPositionNL.Add(float3.zero);
+        //    BRwheelRotationNL.Add(Quaternion.identity);
+        //    BLwheelPositionNL.Add(float3.zero);
+        //    BLwheelRotationNL.Add(Quaternion.identity);
+        //    frontSensorLengthNL.Add(carAI.frontSensorLength);
+        //    frontSensorSizeNL.Add(carAI.frontSensorSize);
+        //    sideSensorLengthNL.Add(carAI.sideSensorLength);
+        //    sideSensorSizeNL.Add(carAI.sideSensorSize);
+        //    frontSensorTransformPositionNL.Add(carAI.frontSensorTransform.position);
+        //    previousFrameSpeedNL.Add(0f);
+        //    brakeTimeNL.Add(0f);
+        //    topSpeedNL.Add(carAI.topSpeed);
+        //    minDragNL.Add(carAI.minDrag);
+        //    minAngularDragNL.Add(carAI.minAngularDrag);
+        //    frontHitDistanceNL.Add(carAI.frontSensorLength);
+        //    leftHitDistanceNL.Add(carAI.sideSensorLength);
+        //    rightHitDistanceNL.Add(carAI.sideSensorLength);
+        //    frontHitNL.Add(false);
+        //    leftHitNL.Add(false);
+        //    rightHitNL.Add(false);
+        //    stopForTrafficLightNL.Add(false);
+        //    yieldForCrossTrafficNL.Add(false);
+        //    routeIsActiveNL.Add(false);
+        //    isVisibleNL.Add(false);
+        //    isDisabledNL.Add(false);
+        //    withinLimitNL.Add(false);
+        //    distanceToPlayerNL.Add(0);
+        //    accelerationPowerNL.Add(carAI.accelerationPower);
+        //    isEnabledNL.Add(false);
+        //    outOfBoundsNL.Add(false);
+        //    lightIsActiveNL.Add(false);
+        //    canProcessNL.Add(true);
+
+        //    // CRITICAL ADDITION: Add a value for each car in traffic light waypoint list
+        //    isTrafficLightWaypointNL.Add(false);
+
+        //    driveTargetTAA = new TransformAccessArray(carCount);
+        //    carTAA = new TransformAccessArray(carCount);
+        //    frontRightWheelTAA = new TransformAccessArray(carCount);
+        //    frontLeftWheelTAA = new TransformAccessArray(carCount);
+        //    backRightWheelTAA = new TransformAccessArray(carCount);
+        //    backLeftWheelTAA = new TransformAccessArray(carCount);
+        //    frontBoxcastCommands = new NativeArray<BoxcastCommand>(carCount, Allocator.Persistent);
+        //    leftBoxcastCommands = new NativeArray<BoxcastCommand>(carCount, Allocator.Persistent);
+        //    rightBoxcastCommands = new NativeArray<BoxcastCommand>(carCount, Allocator.Persistent);
+        //    frontBoxcastResults = new NativeArray<RaycastHit>(carCount, Allocator.Persistent);
+        //    leftBoxcastResults = new NativeArray<RaycastHit>(carCount, Allocator.Persistent);
+        //    rightBoxcastResults = new NativeArray<RaycastHit>(carCount, Allocator.Persistent);
+        //    #endregion
+
+        //    waypointDataListCountNL[carCount - 1] = carRouteList[carCount - 1].waypointDataList.Count;
+        //    carAIWaypointRouteInfo[carCount - 1] = carRouteList[carCount - 1].routeInfo;
+
+        //    for (int i = 0; i < carCount; i++)
+        //    {
+        //        driveTargetTAA.Add(temp_driveTargetTAA[i]);
+        //        carTAA.Add(carList[i].transform);
+        //        frontRightWheelTAA.Add(carList[i]._wheels[0].meshTransform);
+        //        frontLeftWheelTAA.Add(carList[i]._wheels[1].meshTransform);
+        //        backRightWheelTAA.Add(carList[i]._wheels[2].meshTransform);
+        //        backLeftWheelTAA.Add(carList[i]._wheels[3].meshTransform);
+        //    }
+
+        //    temp_driveTargetTAA.Dispose();
+        //    return carCount - 1;
+        //}
         public int RegisterCarAI(AITrafficCar carAI, AITrafficWaypointRoute route)
 
         {
@@ -868,6 +1028,8 @@
                 return;
             }
 
+            //InitializeNativeLists();
+
             // Original duplicate detection code
             if (Instance == null)
             {
@@ -879,6 +1041,7 @@
                 Debug.LogWarning("Multiple AITrafficController Instances found in scene, this is not allowed. Destroying this duplicate AITrafficController.");
                 Destroy(this);
             }
+           
         }
 
         private int _density = 200;
@@ -1823,6 +1986,138 @@
                 Debug.LogWarning("This may be due to insufficient routes, waypoints, or compatible vehicle types.");
             }
         }
+        //private void FixedUpdate()
+        //{
+        //    if (isInitialized)
+        //    {
+        //        if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
+        //        deltaTime = Time.deltaTime;
+
+        //        if (useYieldTriggers)
+        //        {
+        //            for (int i = 0; i < carCount; i++)
+        //            {
+        //                yieldForCrossTrafficNL[i] = false;
+        //                isTrafficLightWaypointNL[i] = false; // Reset flag
+
+        //                if (currentWaypointList[i] != null)
+        //                {
+        //                    // Check if current waypoint is marked as traffic light waypoint
+        //                    isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
+
+        //                    if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute != null)
+        //                    {
+        //                        for (int j = 0; j < currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers.Count; j++)
+        //                        {
+        //                            if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers[j].yieldForTrafficLight == true)
+        //                            {
+        //                                yieldForCrossTrafficNL[i] = true;
+        //                                break;
+        //                            }
+        //                        }
+        //                    }
+        //                }
+
+        //                stopForTrafficLightNL[i] = carAIWaypointRouteInfo[i].stopForTrafficLight;
+        //            }
+        //        }
+        //        else
+        //        {
+        //            for (int i = 0; i < carCount; i++)
+        //            {
+        //                yieldForCrossTrafficNL[i] = false;
+        //                stopForTrafficLightNL[i] = carAIWaypointRouteInfo[i].stopForTrafficLight;
+
+        //                // Update traffic light waypoint flag even when not using yield triggers
+        //                isTrafficLightWaypointNL[i] = false;
+        //                if (currentWaypointList[i] != null)
+        //                {
+        //                    isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
+        //                }
+        //            }
+        //        }
+
+        //        // Setup and schedule the job
+        //        carAITrafficJob = new AITrafficCarJob
+        //        {
+        //            frontSensorLengthNA = frontSensorLengthNL,
+        //            currentRoutePointIndexNA = currentRoutePointIndexNL,
+        //            waypointDataListCountNA = waypointDataListCountNL,
+        //            carTransformPreviousPositionNA = carTransformPreviousPositionNL,
+        //            carTransformPositionNA = carTransformPositionNL,
+        //            finalRoutePointPositionNA = finalRoutePointPositionNL,
+        //            routePointPositionNA = routePointPositionNL,
+        //            isDrivingNA = isDrivingNL,
+        //            isActiveNA = isActiveNL,
+        //            canProcessNA = canProcessNL,
+        //            speedNA = speedNL,
+        //            deltaTime = deltaTime,
+        //            routeProgressNA = routeProgressNL,
+        //            topSpeedNA = topSpeedNL,
+        //            targetSpeedNA = targetSpeedNL,
+        //            speedLimitNA = speedLimitNL,
+        //            accelNA = accelNL,
+        //            localTargetNA = localTargetNL,
+        //            targetAngleNA = targetAngleNL,
+        //            steerAngleNA = steerAngleNL,
+        //            motorTorqueNA = motorTorqueNL,
+        //            accelerationInputNA = accelerationInputNL,
+        //            brakeTorqueNA = brakeTorqueNL,
+        //            moveHandBrakeNA = moveHandBrakeNL,
+        //            maxSteerAngle = maxSteerAngle,
+        //            overrideInputNA = overrideInputNL,
+        //            distanceToEndPointNA = distanceToEndPointNL,
+        //            overrideAccelerationPowerNA = overrideAccelerationPowerNL,
+        //            overrideBrakePowerNA = overrideBrakePowerNL,
+        //            isBrakingNA = isBrakingNL,
+        //            speedMultiplier = speedMultiplier,
+        //            steerSensitivity = steerSensitivity,
+        //            stopThreshold = stopThreshold,
+        //            frontHitDistanceNA = frontHitDistanceNL,
+        //            frontHitNA = frontHitNL,
+        //            stopForTrafficLightNA = stopForTrafficLightNL,
+        //            yieldForCrossTrafficNA = yieldForCrossTrafficNL,
+        //            accelerationPowerNA = accelerationPowerNL,
+        //            frontSensorTransformPositionNA = frontSensorTransformPositionNL,
+        //            isTrafficLightWaypointNA = isTrafficLightWaypointNL
+        //        };
+
+        //        jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
+        //        jobHandle.Complete();
+
+        //        // Rest of FixedUpdate method continues...
+
+        //        // Debug to check traffic light awareness
+        //        if (Time.frameCount % 300 == 0)
+        //        { // Log every 5 seconds at 60fps
+        //            Debug.Log("===== TRAFFIC LIGHT AWARENESS CHECK =====");
+        //            for (int i = 0; i < carCount; i++)
+        //            {
+        //                if (carList[i] != null && isDrivingNL[i])
+        //                {
+        //                    bool shouldStop = false;
+
+        //                    // Check route info directly
+        //                    if (carAIWaypointRouteInfo[i] != null)
+        //                    {
+        //                        shouldStop = carAIWaypointRouteInfo[i].stopForTrafficLight;
+        //                    }
+
+        //                    // Compare with the controller's native list value
+        //                    Debug.Log($"Car {carList[i].name} (ID: {i}): stopForTrafficLight={stopForTrafficLightNL[i]}, routeInfo.stopForTrafficLight={shouldStop}");
+
+        //                    // Force update if there's a mismatch
+        //                    if (shouldStop != stopForTrafficLightNL[i])
+        //                    {
+        //                        Debug.LogWarning($"Mismatch detected! Fixing stopForTrafficLight for car {i}");
+        //                        stopForTrafficLightNL[i] = shouldStop;
+        //                    }
+        //                }
+        //            }
+        //            Debug.Log("========================================");
+        //        }
+        //    }
+        //}
 
 
         private void FixedUpdate()
@@ -2533,96 +2828,186 @@
 
             //Debug.Log("All Native Collections Disposed and Lists Cleared");
         }
+
         void DisposeArrays(bool _isQuit)
         {
             if (_isQuit)
             {
-                // Same NativeList disposals as before, but with IsCreated checks
-                if (currentRoutePointIndexNL.IsCreated) currentRoutePointIndexNL.Dispose();
-                if (waypointDataListCountNL.IsCreated) waypointDataListCountNL.Dispose();
-                if (carTransformPreviousPositionNL.IsCreated) carTransformPreviousPositionNL.Dispose();
-                if (carTransformPositionNL.IsCreated) carTransformPositionNL.Dispose();
-                if (finalRoutePointPositionNL.IsCreated) finalRoutePointPositionNL.Dispose();
-                if (routePointPositionNL.IsCreated) routePointPositionNL.Dispose();
-                if (forceChangeLanesNL.IsCreated) forceChangeLanesNL.Dispose();
-                if (isChangingLanesNL.IsCreated) isChangingLanesNL.Dispose();
-                if (canChangeLanesNL.IsCreated) canChangeLanesNL.Dispose();
-                if (isDrivingNL.IsCreated) isDrivingNL.Dispose();
-                if (isActiveNL.IsCreated) isActiveNL.Dispose();
-                if (speedNL.IsCreated) speedNL.Dispose();
-                if (routeProgressNL.IsCreated) routeProgressNL.Dispose();
-                if (targetSpeedNL.IsCreated) targetSpeedNL.Dispose();
-                if (accelNL.IsCreated) accelNL.Dispose();
-                if (speedLimitNL.IsCreated) speedLimitNL.Dispose();
-                if (targetAngleNL.IsCreated) targetAngleNL.Dispose();
-                if (dragNL.IsCreated) dragNL.Dispose();
-                if (angularDragNL.IsCreated) angularDragNL.Dispose();
-                if (overrideDragNL.IsCreated) overrideDragNL.Dispose();
-                if (localTargetNL.IsCreated) localTargetNL.Dispose();
-                if (steerAngleNL.IsCreated) steerAngleNL.Dispose();
-                if (motorTorqueNL.IsCreated) motorTorqueNL.Dispose();
-                if (accelerationInputNL.IsCreated) accelerationInputNL.Dispose();
-                if (brakeTorqueNL.IsCreated) brakeTorqueNL.Dispose();
-                if (moveHandBrakeNL.IsCreated) moveHandBrakeNL.Dispose();
-                if (overrideInputNL.IsCreated) overrideInputNL.Dispose();
-                if (distanceToEndPointNL.IsCreated) distanceToEndPointNL.Dispose();
-                if (overrideAccelerationPowerNL.IsCreated) overrideAccelerationPowerNL.Dispose();
-                if (overrideBrakePowerNL.IsCreated) overrideBrakePowerNL.Dispose();
-                if (isBrakingNL.IsCreated) isBrakingNL.Dispose();
-                if (FRwheelPositionNL.IsCreated) FRwheelPositionNL.Dispose();
-                if (FRwheelRotationNL.IsCreated) FRwheelRotationNL.Dispose();
-                if (FLwheelPositionNL.IsCreated) FLwheelPositionNL.Dispose();
-                if (FLwheelRotationNL.IsCreated) FLwheelRotationNL.Dispose();
-                if (BRwheelPositionNL.IsCreated) BRwheelPositionNL.Dispose();
-                if (BRwheelRotationNL.IsCreated) BRwheelRotationNL.Dispose();
-                if (BLwheelPositionNL.IsCreated) BLwheelPositionNL.Dispose();
-                if (BLwheelRotationNL.IsCreated) BLwheelRotationNL.Dispose();
-                if (previousFrameSpeedNL.IsCreated) previousFrameSpeedNL.Dispose();
-                if (brakeTimeNL.IsCreated) brakeTimeNL.Dispose();
-                if (topSpeedNL.IsCreated) topSpeedNL.Dispose();
-                if (frontSensorTransformPositionNL.IsCreated) frontSensorTransformPositionNL.Dispose();
-                if (frontSensorLengthNL.IsCreated) frontSensorLengthNL.Dispose();
-                if (frontSensorSizeNL.IsCreated) frontSensorSizeNL.Dispose();
-                if (sideSensorLengthNL.IsCreated) sideSensorLengthNL.Dispose();
-                if (sideSensorSizeNL.IsCreated) sideSensorSizeNL.Dispose();
-                if (minDragNL.IsCreated) minDragNL.Dispose();
-                if (minAngularDragNL.IsCreated) minAngularDragNL.Dispose();
-                if (frontHitDistanceNL.IsCreated) frontHitDistanceNL.Dispose();
-                if (leftHitDistanceNL.IsCreated) leftHitDistanceNL.Dispose();
-                if (rightHitDistanceNL.IsCreated) rightHitDistanceNL.Dispose();
-                if (frontHitNL.IsCreated) frontHitNL.Dispose();
-                if (leftHitNL.IsCreated) leftHitNL.Dispose();
-                if (rightHitNL.IsCreated) rightHitNL.Dispose();
-                if (stopForTrafficLightNL.IsCreated) stopForTrafficLightNL.Dispose();
-                if (yieldForCrossTrafficNL.IsCreated) yieldForCrossTrafficNL.Dispose();
-                if (routeIsActiveNL.IsCreated) routeIsActiveNL.Dispose();
-                if (isVisibleNL.IsCreated) isVisibleNL.Dispose();
-                if (isDisabledNL.IsCreated) isDisabledNL.Dispose();
-                if (withinLimitNL.IsCreated) withinLimitNL.Dispose();
-                if (distanceToPlayerNL.IsCreated) distanceToPlayerNL.Dispose();
-                if (accelerationPowerNL.IsCreated) accelerationPowerNL.Dispose();
-                if (isEnabledNL.IsCreated) isEnabledNL.Dispose();
-                if (outOfBoundsNL.IsCreated) outOfBoundsNL.Dispose();
-                if (lightIsActiveNL.IsCreated) lightIsActiveNL.Dispose();
-                if (canProcessNL.IsCreated) canProcessNL.Dispose();
+                currentRoutePointIndexNL.Dispose();
+                waypointDataListCountNL.Dispose();
+                carTransformPreviousPositionNL.Dispose();
+                carTransformPositionNL.Dispose();
+                finalRoutePointPositionNL.Dispose();
+                routePointPositionNL.Dispose();
+                forceChangeLanesNL.Dispose();
+                isChangingLanesNL.Dispose();
+                canChangeLanesNL.Dispose();
+                isDrivingNL.Dispose();
+                isActiveNL.Dispose();
+                speedNL.Dispose();
+                routeProgressNL.Dispose();
+                targetSpeedNL.Dispose();
+                accelNL.Dispose();
+                speedLimitNL.Dispose();
+                targetAngleNL.Dispose();
+                dragNL.Dispose();
+                angularDragNL.Dispose();
+                overrideDragNL.Dispose();
+                localTargetNL.Dispose();
+                steerAngleNL.Dispose();
+                motorTorqueNL.Dispose();
+                accelerationInputNL.Dispose();
+                brakeTorqueNL.Dispose();
+                moveHandBrakeNL.Dispose();
+                overrideInputNL.Dispose();
+                distanceToEndPointNL.Dispose();
+                overrideAccelerationPowerNL.Dispose();
+                overrideBrakePowerNL.Dispose();
+                isBrakingNL.Dispose();
+                FRwheelPositionNL.Dispose();
+                FRwheelRotationNL.Dispose();
+                FLwheelPositionNL.Dispose();
+                FLwheelRotationNL.Dispose();
+                BRwheelPositionNL.Dispose();
+                BRwheelRotationNL.Dispose();
+                BLwheelPositionNL.Dispose();
+                BLwheelRotationNL.Dispose();
+                previousFrameSpeedNL.Dispose();
+                brakeTimeNL.Dispose();
+                topSpeedNL.Dispose();
+                frontSensorTransformPositionNL.Dispose();
+                frontSensorLengthNL.Dispose();
+                frontSensorSizeNL.Dispose();
+                sideSensorLengthNL.Dispose();
+                sideSensorSizeNL.Dispose();
+                minDragNL.Dispose();
+                minAngularDragNL.Dispose();
+                frontHitDistanceNL.Dispose();
+                leftHitDistanceNL.Dispose();
+                rightHitDistanceNL.Dispose();
+                frontHitNL.Dispose();
+                leftHitNL.Dispose();
+                rightHitNL.Dispose();
+                stopForTrafficLightNL.Dispose();
+                yieldForCrossTrafficNL.Dispose();
+                routeIsActiveNL.Dispose();
+                isVisibleNL.Dispose();
+                isDisabledNL.Dispose();
+                withinLimitNL.Dispose();
+                distanceToPlayerNL.Dispose();
+                accelerationPowerNL.Dispose();
+                isEnabledNL.Dispose();
+                outOfBoundsNL.Dispose();
+                lightIsActiveNL.Dispose();
+                canProcessNL.Dispose();
+
+                // CRITICAL ADDITION: Dispose the traffic light waypoint list
+                if (isTrafficLightWaypointNL.IsCreated) isTrafficLightWaypointNL.Dispose();
             }
 
-            // Keep the existing TAA array and native array disposal code
-            if (driveTargetTAA.isCreated) driveTargetTAA.Dispose();
-            if (carTAA.isCreated) carTAA.Dispose();
-            if (frontRightWheelTAA.isCreated) frontRightWheelTAA.Dispose();
-            if (frontLeftWheelTAA.isCreated) frontLeftWheelTAA.Dispose();
-            if (backRightWheelTAA.isCreated) backRightWheelTAA.Dispose();
-            if (backLeftWheelTAA.isCreated) backLeftWheelTAA.Dispose();
-
-            if (frontBoxcastCommands.IsCreated) frontBoxcastCommands.Dispose();
-            if (leftBoxcastCommands.IsCreated) leftBoxcastCommands.Dispose();
-            if (rightBoxcastCommands.IsCreated) rightBoxcastCommands.Dispose();
-            if (frontBoxcastResults.IsCreated) frontBoxcastResults.Dispose();
-            if (leftBoxcastResults.IsCreated) leftBoxcastResults.Dispose();
-            if (rightBoxcastResults.IsCreated) rightBoxcastResults.Dispose();
-            DisposeAllNativeCollections();
+            driveTargetTAA.Dispose();
+            carTAA.Dispose();
+            frontRightWheelTAA.Dispose();
+            frontLeftWheelTAA.Dispose();
+            backRightWheelTAA.Dispose();
+            backLeftWheelTAA.Dispose();
+            frontBoxcastCommands.Dispose();
+            leftBoxcastCommands.Dispose();
+            rightBoxcastCommands.Dispose();
+            frontBoxcastResults.Dispose();
+            leftBoxcastResults.Dispose();
+            rightBoxcastResults.Dispose();
         }
+        //void DisposeArrays(bool _isQuit)
+        //{
+        //    if (_isQuit)
+        //    {
+        //        // Same NativeList disposals as before, but with IsCreated checks
+        //        if (currentRoutePointIndexNL.IsCreated) currentRoutePointIndexNL.Dispose();
+        //        if (waypointDataListCountNL.IsCreated) waypointDataListCountNL.Dispose();
+        //        if (carTransformPreviousPositionNL.IsCreated) carTransformPreviousPositionNL.Dispose();
+        //        if (carTransformPositionNL.IsCreated) carTransformPositionNL.Dispose();
+        //        if (finalRoutePointPositionNL.IsCreated) finalRoutePointPositionNL.Dispose();
+        //        if (routePointPositionNL.IsCreated) routePointPositionNL.Dispose();
+        //        if (forceChangeLanesNL.IsCreated) forceChangeLanesNL.Dispose();
+        //        if (isChangingLanesNL.IsCreated) isChangingLanesNL.Dispose();
+        //        if (canChangeLanesNL.IsCreated) canChangeLanesNL.Dispose();
+        //        if (isDrivingNL.IsCreated) isDrivingNL.Dispose();
+        //        if (isActiveNL.IsCreated) isActiveNL.Dispose();
+        //        if (speedNL.IsCreated) speedNL.Dispose();
+        //        if (routeProgressNL.IsCreated) routeProgressNL.Dispose();
+        //        if (targetSpeedNL.IsCreated) targetSpeedNL.Dispose();
+        //        if (accelNL.IsCreated) accelNL.Dispose();
+        //        if (speedLimitNL.IsCreated) speedLimitNL.Dispose();
+        //        if (targetAngleNL.IsCreated) targetAngleNL.Dispose();
+        //        if (dragNL.IsCreated) dragNL.Dispose();
+        //        if (angularDragNL.IsCreated) angularDragNL.Dispose();
+        //        if (overrideDragNL.IsCreated) overrideDragNL.Dispose();
+        //        if (localTargetNL.IsCreated) localTargetNL.Dispose();
+        //        if (steerAngleNL.IsCreated) steerAngleNL.Dispose();
+        //        if (motorTorqueNL.IsCreated) motorTorqueNL.Dispose();
+        //        if (accelerationInputNL.IsCreated) accelerationInputNL.Dispose();
+        //        if (brakeTorqueNL.IsCreated) brakeTorqueNL.Dispose();
+        //        if (moveHandBrakeNL.IsCreated) moveHandBrakeNL.Dispose();
+        //        if (overrideInputNL.IsCreated) overrideInputNL.Dispose();
+        //        if (distanceToEndPointNL.IsCreated) distanceToEndPointNL.Dispose();
+        //        if (overrideAccelerationPowerNL.IsCreated) overrideAccelerationPowerNL.Dispose();
+        //        if (overrideBrakePowerNL.IsCreated) overrideBrakePowerNL.Dispose();
+        //        if (isBrakingNL.IsCreated) isBrakingNL.Dispose();
+        //        if (FRwheelPositionNL.IsCreated) FRwheelPositionNL.Dispose();
+        //        if (FRwheelRotationNL.IsCreated) FRwheelRotationNL.Dispose();
+        //        if (FLwheelPositionNL.IsCreated) FLwheelPositionNL.Dispose();
+        //        if (FLwheelRotationNL.IsCreated) FLwheelRotationNL.Dispose();
+        //        if (BRwheelPositionNL.IsCreated) BRwheelPositionNL.Dispose();
+        //        if (BRwheelRotationNL.IsCreated) BRwheelRotationNL.Dispose();
+        //        if (BLwheelPositionNL.IsCreated) BLwheelPositionNL.Dispose();
+        //        if (BLwheelRotationNL.IsCreated) BLwheelRotationNL.Dispose();
+        //        if (previousFrameSpeedNL.IsCreated) previousFrameSpeedNL.Dispose();
+        //        if (brakeTimeNL.IsCreated) brakeTimeNL.Dispose();
+        //        if (topSpeedNL.IsCreated) topSpeedNL.Dispose();
+        //        if (frontSensorTransformPositionNL.IsCreated) frontSensorTransformPositionNL.Dispose();
+        //        if (frontSensorLengthNL.IsCreated) frontSensorLengthNL.Dispose();
+        //        if (frontSensorSizeNL.IsCreated) frontSensorSizeNL.Dispose();
+        //        if (sideSensorLengthNL.IsCreated) sideSensorLengthNL.Dispose();
+        //        if (sideSensorSizeNL.IsCreated) sideSensorSizeNL.Dispose();
+        //        if (minDragNL.IsCreated) minDragNL.Dispose();
+        //        if (minAngularDragNL.IsCreated) minAngularDragNL.Dispose();
+        //        if (frontHitDistanceNL.IsCreated) frontHitDistanceNL.Dispose();
+        //        if (leftHitDistanceNL.IsCreated) leftHitDistanceNL.Dispose();
+        //        if (rightHitDistanceNL.IsCreated) rightHitDistanceNL.Dispose();
+        //        if (frontHitNL.IsCreated) frontHitNL.Dispose();
+        //        if (leftHitNL.IsCreated) leftHitNL.Dispose();
+        //        if (rightHitNL.IsCreated) rightHitNL.Dispose();
+        //        if (stopForTrafficLightNL.IsCreated) stopForTrafficLightNL.Dispose();
+        //        if (yieldForCrossTrafficNL.IsCreated) yieldForCrossTrafficNL.Dispose();
+        //        if (routeIsActiveNL.IsCreated) routeIsActiveNL.Dispose();
+        //        if (isVisibleNL.IsCreated) isVisibleNL.Dispose();
+        //        if (isDisabledNL.IsCreated) isDisabledNL.Dispose();
+        //        if (withinLimitNL.IsCreated) withinLimitNL.Dispose();
+        //        if (distanceToPlayerNL.IsCreated) distanceToPlayerNL.Dispose();
+        //        if (accelerationPowerNL.IsCreated) accelerationPowerNL.Dispose();
+        //        if (isEnabledNL.IsCreated) isEnabledNL.Dispose();
+        //        if (outOfBoundsNL.IsCreated) outOfBoundsNL.Dispose();
+        //        if (lightIsActiveNL.IsCreated) lightIsActiveNL.Dispose();
+        //        if (canProcessNL.IsCreated) canProcessNL.Dispose();
+        //    }
+
+        //    // Keep the existing TAA array and native array disposal code
+        //    if (driveTargetTAA.isCreated) driveTargetTAA.Dispose();
+        //    if (carTAA.isCreated) carTAA.Dispose();
+        //    if (frontRightWheelTAA.isCreated) frontRightWheelTAA.Dispose();
+        //    if (frontLeftWheelTAA.isCreated) frontLeftWheelTAA.Dispose();
+        //    if (backRightWheelTAA.isCreated) backRightWheelTAA.Dispose();
+        //    if (backLeftWheelTAA.isCreated) backLeftWheelTAA.Dispose();
+
+        //    if (frontBoxcastCommands.IsCreated) frontBoxcastCommands.Dispose();
+        //    if (leftBoxcastCommands.IsCreated) leftBoxcastCommands.Dispose();
+        //    if (rightBoxcastCommands.IsCreated) rightBoxcastCommands.Dispose();
+        //    if (frontBoxcastResults.IsCreated) frontBoxcastResults.Dispose();
+        //    if (leftBoxcastResults.IsCreated) leftBoxcastResults.Dispose();
+        //    if (rightBoxcastResults.IsCreated) rightBoxcastResults.Dispose();
+        //    DisposeAllNativeCollections();
+        //}
 
         #endregion
 
@@ -3160,6 +3545,10 @@
         }
 
         // In AITrafficController class
+        // Add to AITrafficController class
+        /// <summary>
+        /// Call this method when a traffic light changes state from red to green to restart cars that were stopped at the light
+        /// </summary>
         public void CheckForTrafficLightsChangedToGreen()
         {
             // Only proceed if we have cars

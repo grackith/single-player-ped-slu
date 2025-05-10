@@ -105,25 +105,29 @@ public class AITrafficVRPlayerDetection : MonoBehaviour
                 // Only slow down cars if player is on the road AND within detection radius
                 if (playerOnRoad && distance <= detectionRadius)
                 {
-                    // MODIFIED: If car is very close to player (within 2 units), stop it completely
+                    // MODIFIED: If car is very close to player (within 5 units), stop it completely
                     if (distance < 5.0f)
                     {
                         try
                         {
-                            // Stop the car completely
-                            car.StopDriving();
-
-                            // Apply immediate braking force for safety
-                            Rigidbody rb = car.GetComponent<Rigidbody>();
-                            if (rb != null)
+                            // Only stop the car if it's already driving
+                            if (car.isDriving)
                             {
-                                rb.velocity = Vector3.zero;
-                                rb.drag = 100; // High drag to ensure it stops quickly
+                                car.StopDriving();
+
+                                // Apply immediate braking force for safety
+                                Rigidbody rb = car.GetComponent<Rigidbody>();
+                                if (rb != null)
+                                {
+                                    rb.velocity = Vector3.zero;
+                                    rb.drag = 100; // High drag to ensure it stops quickly
+                                }
                             }
                         }
-                        catch
+                        catch (System.Exception ex)
                         {
-                            // Silently fail if error occurs
+                            // Log error but continue processing
+                            Debug.LogWarning($"Error stopping car: {ex.Message}");
                         }
                     }
                     else
@@ -137,9 +141,10 @@ public class AITrafficVRPlayerDetection : MonoBehaviour
                         {
                             car.SetTopSpeed(targetSpeed);
                         }
-                        catch
+                        catch (System.Exception ex)
                         {
-                            // Silently fail if error occurs
+                            // Log error but continue processing
+                            Debug.LogWarning($"Error setting car speed: {ex.Message}");
                         }
                     }
                 }
@@ -148,33 +153,127 @@ public class AITrafficVRPlayerDetection : MonoBehaviour
                     // Player is not on road or car is far away - resume normal driving
                     try
                     {
-                        // Resume driving if it was stopped
+                        // Resume driving if it was stopped - with critical safety checks
                         if (!car.isDriving)
                         {
-                            car.StartDriving();
-
-                            // Reset drag to normal
-                            Rigidbody rb = car.GetComponent<Rigidbody>();
-                            if (rb != null)
+                            // *** CRITICAL SAFETY CHECK ***
+                            // Verify route is valid before attempting to start driving
+                            if (car.waypointRoute != null &&
+                                car.waypointRoute.waypointDataList != null &&
+                                car.waypointRoute.waypointDataList.Count > 0)
                             {
-                                rb.drag = 1.0f; // Set to normal drag value
+                                car.StartDriving();
+
+                                // Reset drag to normal
+                                Rigidbody rb = car.GetComponent<Rigidbody>();
+                                if (rb != null)
+                                {
+                                    rb.drag = 1.0f; // Set to normal drag value
+                                }
+                            }
+                            else
+                            {
+                                // Car has an invalid route, try to fix it
+                                TryToFixCarRoute(car);
                             }
                         }
 
-                        // Reset to normal speed
-                        car.SetTopSpeed(car.topSpeed);
+                        // Reset to normal speed if the car is driving
+                        if (car.isDriving)
+                        {
+                            car.SetTopSpeed(car.topSpeed);
+                        }
                     }
-                    catch
+                    catch (System.Exception ex)
                     {
-                        // Silently fail if error occurs
+                        // Log error but continue processing
+                        Debug.LogWarning($"Error starting car: {ex.Message}");
                     }
                 }
             }
-            catch
+            catch (System.Exception ex)
             {
-                // Silently catch any errors
+                // Log general error
+                Debug.LogWarning($"General error processing car: {ex.Message}");
             }
         }
+    }
+
+    // New helper method to try to fix a car with an invalid route
+    private void TryToFixCarRoute(AITrafficCar car)
+    {
+        if (car == null) return;
+
+        // Find a valid route in the scene
+        var routes = FindObjectsOfType<AITrafficWaypointRoute>();
+        if (routes == null || routes.Length == 0) return;
+
+        // Find a compatible route
+        foreach (var route in routes)
+        {
+            if (route == null || !route.isRegistered ||
+                route.waypointDataList == null ||
+                route.waypointDataList.Count == 0)
+            {
+                continue;
+            }
+
+            // Check if this route supports this vehicle type
+            bool isCompatible = false;
+            foreach (var vehicleType in route.vehicleTypes)
+            {
+                if (vehicleType == car.vehicleType)
+                {
+                    isCompatible = true;
+                    break;
+                }
+            }
+
+            if (isCompatible)
+            {
+                // Found a compatible route, assign it to the car
+                Debug.Log($"Fixing car {car.name} by assigning valid route {route.name}");
+
+                // First stop the car if it's trying to drive
+                car.StopDriving();
+
+                // Assign the new route
+                car.waypointRoute = route;
+
+                // Re-register with traffic controller
+                if (AITrafficController.Instance != null)
+                {
+                    try
+                    {
+                        car.RegisterCar(route);
+
+                        // Initialize drive target
+                        Transform driveTarget = car.transform.Find("DriveTarget");
+                        if (driveTarget == null)
+                        {
+                            driveTarget = new GameObject("DriveTarget").transform;
+                            driveTarget.SetParent(car.transform);
+                        }
+
+                        // Position at first waypoint
+                        if (route.waypointDataList.Count > 0 &&
+                            route.waypointDataList[0]._transform != null)
+                        {
+                            driveTarget.position = route.waypointDataList[0]._transform.position;
+                        }
+
+                        return; // Successfully fixed
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogError($"Failed to register car with new route: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        // If we get here, we couldn't fix the car
+        Debug.LogWarning($"Couldn't find a compatible route for car {car.name}");
     }
 
     void CheckIfPlayerOnRoad()

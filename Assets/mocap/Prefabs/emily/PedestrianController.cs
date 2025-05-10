@@ -197,7 +197,7 @@ public class PedestrianController : MonoBehaviour
             // If stuck for too long, force move to next waypoint
             if (stuckTimer >= STUCK_TIMEOUT)
             {
-                Debug.LogWarning("Agent appears stuck at waypoint " + currentWaypoint + ". Moving to next waypoint.");
+                //Debug.LogWarning("Agent appears stuck at waypoint " + currentWaypoint + ". Moving to next waypoint.");
                 SetNextWaypoint();
             }
         }

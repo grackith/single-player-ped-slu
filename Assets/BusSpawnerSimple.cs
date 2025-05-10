@@ -515,11 +515,11 @@ public class BusSpawnerSimple : MonoBehaviour
             spawnedBus.StopDriving();
             yield return new WaitForSeconds(0.2f);
 
-            // Force path update
-            if (spawnedBus.waypointRoute != null)
-            {
-                spawnedBus.ForceWaypointPathUpdate();
-            }
+            //// Force path update
+            //if (spawnedBus.waypointRoute != null)
+            //{
+            //    spawnedBus.ForceWaypointPathUpdate();
+            //}
 
             // Force drive target position
             if (driveTarget != null && spawnedBus.waypointRoute != null &&

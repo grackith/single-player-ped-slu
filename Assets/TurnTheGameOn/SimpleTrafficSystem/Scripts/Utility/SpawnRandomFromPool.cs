@@ -37,8 +37,51 @@
                             spawnPosition = spawnPoint.transform.position + spawnOffset;
                             spawnRotation = spawnPoint.transform.rotation;
                             spawnCar.transform.SetPositionAndRotation(spawnPosition, spawnRotation);
-                            nextPoint = spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute.transform;
-                            spawnCar.transform.LookAt(nextPoint);
+
+                            // Important: set the current waypoint index first
+                            spawnCar.currentWaypointIndex = 0; // Start at first waypoint
+
+                            // Get the next waypoint for drive target positioning
+                            nextPoint = null;
+                            if (spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute != null)
+                            {
+                                nextPoint = spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute.transform;
+                            }
+                            else if (route.waypointDataList.Count > 1)
+                            {
+                                nextPoint = route.waypointDataList[1]._transform;
+                            }
+
+                            // Look at next waypoint
+                            if (nextPoint != null)
+                            {
+                                spawnCar.transform.LookAt(nextPoint);
+                            }
+
+                            // Find or create drive target
+                            Transform driveTarget = spawnCar.transform.Find("DriveTarget");
+                            if (driveTarget == null)
+                            {
+                                driveTarget = new GameObject("DriveTarget").transform;
+                                driveTarget.SetParent(spawnCar.transform);
+                            }
+
+                            // Position drive target at next waypoint
+                            if (nextPoint != null)
+                            {
+                                driveTarget.position = nextPoint.position;
+                            }
+
+                            // Update controller with current waypoint info
+                            if (spawnCar.assignedIndex >= 0)
+                            {
+                                AITrafficController.Instance.Set_CurrentRoutePointIndexArray(
+                                    spawnCar.assignedIndex,
+                                    spawnCar.currentWaypointIndex,
+                                    spawnPoint.waypoint);
+
+                                AITrafficController.Instance.Set_RoutePointPositionArray(spawnCar.assignedIndex);
+                            }
                         }
                     }
                 }
