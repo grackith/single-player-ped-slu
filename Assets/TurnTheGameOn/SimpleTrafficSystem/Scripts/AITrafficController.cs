@@ -107,18 +107,13 @@
         public float actizeZone = 225;
         [Tooltip("Cars can spawn anywhere in this zone, even if spawn point is visible by the camera. Cars outside of this zone will be despawned.")]
         public float spawnZone = 350;
-        
+
 
         #endregion
 
         #region Set Array Data
-
         public void Set_IsDrivingArray(int _index, bool _value)
         {
-            // First check if index is valid
-            if (_index < 0 || _index >= isDrivingNL.Length)
-                return;
-
             if (isDrivingNL[_index] != _value)
             {
                 isBrakingNL[_index] = _value == true ? false : true;
@@ -128,76 +123,129 @@
                     motorTorqueNL[_index] = 0;
                     brakeTorqueNL[_index] = -1;
                     moveHandBrakeNL[_index] = 1;
-
-                    // Add null checking for wheel colliders
                     for (int j = 0; j < 4; j++) // move
                     {
-                        WheelCollider collider = null;
-
-                        switch (j)
+                        if (j == 0)
                         {
-                            case 0:
-                                if (_index >= frontRightWheelColliderList.Count) continue;
-                                collider = frontRightWheelColliderList[_index];
-                                break;
-                            case 1:
-                                if (_index >= frontLefttWheelColliderList.Count) continue;
-                                collider = frontLefttWheelColliderList[_index];
-                                break;
-                            case 2:
-                                if (_index >= backRighttWheelColliderList.Count) continue;
-                                collider = backRighttWheelColliderList[_index];
-                                break;
-                            case 3:
-                                if (_index >= backLeftWheelColliderList.Count) continue;
-                                collider = backLeftWheelColliderList[_index];
-                                break;
-                        }
-
-                        if (collider == null) continue;
-
-                        currentWheelCollider = collider;
-
-                        try
-                        {
-                            if (j == 0 || j == 1) // Front wheels
-                                currentWheelCollider.steerAngle = steerAngleNL[_index];
-
+                            currentWheelCollider = frontRightWheelColliderList[_index];
+                            currentWheelCollider.steerAngle = steerAngleNL[_index];
                             currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-
-                            // Store positions/rotations based on wheel
-                            switch (j)
-                            {
-                                case 0:
-                                    FRwheelPositionNL[_index] = wheelPosition_Cached;
-                                    FRwheelRotationNL[_index] = wheelQuaternion_Cached;
-                                    break;
-                                case 1:
-                                    FLwheelPositionNL[_index] = wheelPosition_Cached;
-                                    FLwheelRotationNL[_index] = wheelQuaternion_Cached;
-                                    break;
-                                case 2:
-                                    BRwheelPositionNL[_index] = wheelPosition_Cached;
-                                    BRwheelRotationNL[_index] = wheelQuaternion_Cached;
-                                    break;
-                                case 3:
-                                    BLwheelPositionNL[_index] = wheelPosition_Cached;
-                                    BLwheelRotationNL[_index] = wheelQuaternion_Cached;
-                                    break;
-                            }
-
-                            // Apply torque values
-                            currentWheelCollider.motorTorque = motorTorqueNL[_index];
-                            currentWheelCollider.brakeTorque = brakeTorqueNL[_index];
+                            FRwheelPositionNL[_index] = wheelPosition_Cached;
+                            FRwheelRotationNL[_index] = wheelQuaternion_Cached;
                         }
-                        catch (System.Exception ex)
+                        else if (j == 1)
                         {
-                            Debug.LogWarning($"Error processing wheel {j} for car {_index}: {ex.Message}");
+                            currentWheelCollider = frontLefttWheelColliderList[_index];
+                            currentWheelCollider.steerAngle = steerAngleNL[_index];
+                            currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
+                            FLwheelPositionNL[_index] = wheelPosition_Cached;
+                            FLwheelRotationNL[_index] = wheelQuaternion_Cached;
                         }
+                        else if (j == 2)
+                        {
+                            currentWheelCollider = backRighttWheelColliderList[_index];
+                            currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
+                            BRwheelPositionNL[_index] = wheelPosition_Cached;
+                            BRwheelRotationNL[_index] = wheelQuaternion_Cached;
+                        }
+                        else if (j == 3)
+                        {
+                            currentWheelCollider = backLeftWheelColliderList[_index];
+                            currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
+                            BLwheelPositionNL[_index] = wheelPosition_Cached;
+                            BLwheelRotationNL[_index] = wheelQuaternion_Cached;
+                        }
+                        currentWheelCollider.motorTorque = motorTorqueNL[_index];
+                        currentWheelCollider.brakeTorque = brakeTorqueNL[_index];
                     }
                 }
             }
         }
+        //public void Set_IsDrivingArray(int _index, bool _value)
+        //{
+        //    // First check if index is valid
+        //    if (_index < 0 || _index >= isDrivingNL.Length)
+        //        return;
+
+        //    if (isDrivingNL[_index] != _value)
+        //    {
+        //        isBrakingNL[_index] = _value == true ? false : true;
+        //        isDrivingNL[_index] = _value;
+        //        if (_value == false)
+        //        {
+        //            motorTorqueNL[_index] = 0;
+        //            brakeTorqueNL[_index] = -1;
+        //            moveHandBrakeNL[_index] = 1;
+
+        //            // Add null checking for wheel colliders
+        //            for (int j = 0; j < 4; j++) // move
+        //            {
+        //                WheelCollider collider = null;
+
+        //                switch (j)
+        //                {
+        //                    case 0:
+        //                        if (_index >= frontRightWheelColliderList.Count) continue;
+        //                        collider = frontRightWheelColliderList[_index];
+        //                        break;
+        //                    case 1:
+        //                        if (_index >= frontLefttWheelColliderList.Count) continue;
+        //                        collider = frontLefttWheelColliderList[_index];
+        //                        break;
+        //                    case 2:
+        //                        if (_index >= backRighttWheelColliderList.Count) continue;
+        //                        collider = backRighttWheelColliderList[_index];
+        //                        break;
+        //                    case 3:
+        //                        if (_index >= backLeftWheelColliderList.Count) continue;
+        //                        collider = backLeftWheelColliderList[_index];
+        //                        break;
+        //                }
+
+        //                if (collider == null) continue;
+
+        //                currentWheelCollider = collider;
+
+        //                try
+        //                {
+        //                    if (j == 0 || j == 1) // Front wheels
+        //                        currentWheelCollider.steerAngle = steerAngleNL[_index];
+
+        //                    currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
+
+        //                    // Store positions/rotations based on wheel
+        //                    switch (j)
+        //                    {
+        //                        case 0:
+        //                            FRwheelPositionNL[_index] = wheelPosition_Cached;
+        //                            FRwheelRotationNL[_index] = wheelQuaternion_Cached;
+        //                            break;
+        //                        case 1:
+        //                            FLwheelPositionNL[_index] = wheelPosition_Cached;
+        //                            FLwheelRotationNL[_index] = wheelQuaternion_Cached;
+        //                            break;
+        //                        case 2:
+        //                            BRwheelPositionNL[_index] = wheelPosition_Cached;
+        //                            BRwheelRotationNL[_index] = wheelQuaternion_Cached;
+        //                            break;
+        //                        case 3:
+        //                            BLwheelPositionNL[_index] = wheelPosition_Cached;
+        //                            BLwheelRotationNL[_index] = wheelQuaternion_Cached;
+        //                            break;
+        //                    }
+
+        //                    // Apply torque values
+        //                    currentWheelCollider.motorTorque = motorTorqueNL[_index];
+        //                    currentWheelCollider.brakeTorque = brakeTorqueNL[_index];
+        //                }
+        //                catch (System.Exception ex)
+        //                {
+        //                    Debug.LogWarning($"Error processing wheel {j} for car {_index}: {ex.Message}");
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
         public void Set_RouteInfo(int _index, AITrafficWaypointRouteInfo routeInfo)
         {
             carAIWaypointRouteInfo[_index] = routeInfo;

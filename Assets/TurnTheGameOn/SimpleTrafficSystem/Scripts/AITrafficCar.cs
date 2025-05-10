@@ -201,7 +201,7 @@
             if (waypointRoute != null && AITrafficController.Instance != null && assignedIndex >= 0)
             {
                 AITrafficController.Instance.Set_RouteInfo(assignedIndex, waypointRoute.routeInfo);
-                //SynchronizeTrafficLightAwareness();
+                SynchronizeTrafficLightAwareness();
             }
 
             // Set driving state
@@ -256,26 +256,73 @@
             Debug.Log($"Car {name} started driving on route {waypointRoute.name}");
         }
 
+        // Add this method to your AITrafficCar class
+        private void SynchronizeTrafficLightAwareness()
+        {
+            // Safety check
+            if (AITrafficController.Instance == null || assignedIndex < 0 || waypointRoute == null)
+            {
+                Debug.LogWarning($"Car {name}: Cannot synchronize traffic light awareness - invalid references");
+                return;
+            }
+
+            // Ensure route info is set in the controller
+            if (waypointRoute.routeInfo != null)
+            {
+                // Make sure the controller knows which route info this car is following
+                AITrafficController.Instance.Set_RouteInfo(assignedIndex, waypointRoute.routeInfo);
+
+                // Log confirmation
+                Debug.Log($"Car {name}: Synchronized traffic light awareness with route {waypointRoute.name}");
+
+                // If route has traffic lights, log that information
+                if (waypointRoute.routeInfo.stopForTrafficLight)
+                {
+                    Debug.Log($"Car {name}: Route {waypointRoute.name} is configured to stop for traffic lights");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"Car {name}: Route {waypointRoute.name} has no routeInfo, traffic lights will not function");
+            }
+        }
+
         [ContextMenu("StopDriving")]
         // In AITrafficCar.cs, modify StopDriving method:
         // In AITrafficCar.cs
         public void StopDriving()
         {
-            try
+            if (goToStartOnStop)
             {
-                if (AITrafficController.Instance != null &&
-                    assignedIndex >= 0 &&
-                    AITrafficController.Instance.GetCarList().Count > assignedIndex)
-                {
-                    AITrafficController.Instance.Set_IsDrivingArray(assignedIndex, false);
-                }
-                isDriving = false;
+                ChangeToRouteWaypoint(startRoute.waypointDataList[0]._waypoint.onReachWaypointSettings);
+                goToPointWhenStoppedVector3 = startRoute.waypointDataList[0]._transform.position;
+                goToPointWhenStoppedVector3.y += 1;
+                transform.position = goToPointWhenStoppedVector3;
+                transform.LookAt(startRoute.waypointDataList[1]._transform);
+                rb.velocity = Vector3.zero;
             }
-            catch (System.Exception ex)
+            else
             {
-                Debug.LogWarning($"Error stopping car {name}: {ex.Message}");
+                AITrafficController.Instance.Set_IsDrivingArray(assignedIndex, false);
             }
         }
+        //public void StopDriving()
+        //{
+        //    try
+        //    {
+        //        if (AITrafficController.Instance != null &&
+        //            assignedIndex >= 0 &&
+        //            AITrafficController.Instance.GetCarList().Count > assignedIndex)
+        //        {
+        //            AITrafficController.Instance.Set_IsDrivingArray(assignedIndex, false);
+        //        }
+        //        isDriving = false;
+        //    }
+        //    catch (System.Exception ex)
+        //    {
+        //        Debug.LogWarning($"Error stopping car {name}: {ex.Message}");
+        //    }
+        //}
         // Add this method to prevent accidental drive target changes
 
 

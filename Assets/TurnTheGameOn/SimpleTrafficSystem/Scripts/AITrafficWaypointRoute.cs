@@ -59,32 +59,37 @@
         // Replace the StopForTrafficlight method in AITrafficWaypointRoute.cs
         public void StopForTrafficlight(bool _stop)
         {
-            stopForTrafficLight = _stop;
-
-            if (routeInfo != null)
-            {
-                // CRITICAL: Ensure the component stays enabled
-                if (!routeInfo.enabled)
-                {
-                    routeInfo.enabled = true;
-                    Debug.Log($"Re-enabled disabled route info for {name}");
-                }
-
-                // Set the flag - these should match
-                stopForTrafficLight = routeInfo.stopForTrafficLight = _stop;
-
-                // CRITICAL CHANGE: DO NOT disable the component - it needs to stay active
-                // The problem is here - this is disabling the component when light is red!
-                // routeInfo.enabled = _stop ? false : true;  <-- REMOVE THIS LINE
-
-                // Log state change
-                //Debug.Log($"Route {name} stopForTrafficLight set to {_stop}");
-            }
-            else
-            {
-                Debug.LogWarning($"Route {name} has no routeInfo component!");
-            }
+            stopForTrafficLight = routeInfo.stopForTrafficLight = _stop;
+            routeInfo.enabled = _stop ? false : true;
         }
+        //public void StopForTrafficlight(bool _stop)
+        //{
+        //    stopForTrafficLight = _stop;
+
+        //    if (routeInfo != null)
+        //    {
+        //        // CRITICAL: Ensure the component stays enabled
+        //        if (!routeInfo.enabled)
+        //        {
+        //            routeInfo.enabled = true;
+        //            Debug.Log($"Re-enabled disabled route info for {name}");
+        //        }
+
+        //        // Set the flag - these should match
+        //        stopForTrafficLight = routeInfo.stopForTrafficLight = _stop;
+
+        //        // CRITICAL CHANGE: DO NOT disable the component - it needs to stay active
+        //        // The problem is here - this is disabling the component when light is red!
+        //        // routeInfo.enabled = _stop ? false : true;  <-- REMOVE THIS LINE
+
+        //        // Log state change
+        //        //Debug.Log($"Route {name} stopForTrafficLight set to {_stop}");
+        //    }
+        //    else
+        //    {
+        //        Debug.LogWarning($"Route {name} has no routeInfo component!");
+        //    }
+        //}
 
         public List<AITrafficSpawnPoint> spawnpoints = new List<AITrafficSpawnPoint>();
 
