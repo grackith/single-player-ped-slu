@@ -36,7 +36,7 @@ public class PersistentRDW : MonoBehaviour
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         // Reconnect to necessary components in new scene
-        GetComponent<GlobalConfiguration>().ReconnectToSceneComponents();
+        //GetComponent<GlobalConfiguration>().ReconnectToSceneComponents();
 
         // Reset redirection when a new scene is loaded
         if (redirectionManager != null)

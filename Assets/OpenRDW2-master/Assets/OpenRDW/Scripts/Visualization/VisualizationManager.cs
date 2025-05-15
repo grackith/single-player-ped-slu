@@ -44,6 +44,7 @@ public class VisualizationManager : MonoBehaviour
     [HideInInspector]
     public LineRenderer targetLine;
 
+    // Fix the layer issue in VisualizationManager.Awake()
     void Awake()
     {
         ifVisible = true;
@@ -51,7 +52,6 @@ public class VisualizationManager : MonoBehaviour
         redirectionManager = GetComponent<RedirectionManager>();
         movementManager = GetComponent<MovementManager>();
 
-        //cameraTopReal = transform.Find("Real Top View Cam").GetComponent<Camera>();
         headFollower = transform.Find("Body").GetComponent<HeadFollower>();
 
         obstacleParents = new List<Transform>();
@@ -66,10 +66,26 @@ public class VisualizationManager : MonoBehaviour
             if (transform.Find("Target Line") == null)
             {
                 GameObject obj = new GameObject("Target Line");
-                obj.layer = LayerMask.NameToLayer("Virtual");
+
+                // Fix the layer assignment
+                int virtualLayer = LayerMask.NameToLayer("Virtual");
+                if (virtualLayer >= 0 && virtualLayer <= 31)
+                {
+                    obj.layer = virtualLayer;
+                }
+                else
+                {
+                    Debug.LogWarning("Virtual layer not found, using default layer");
+                    obj.layer = 0; // Default layer
+                }
+
                 targetLine = obj.AddComponent<LineRenderer>();
                 obj.transform.parent = transform;
-                Material lineMaterial = new Material(Shader.Find("Standard"));
+                Material lineMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (lineMaterial.shader == null)
+                {
+                    lineMaterial = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+                }
                 lineMaterial.color = targetLineColor;
                 targetLine.material = lineMaterial;
                 targetLine.widthMultiplier = targetLineWidth;
@@ -202,6 +218,39 @@ public class VisualizationManager : MonoBehaviour
             Destroy(otherAvatar.gameObject);
         }
     }
+    // Add this method to VisualizationManager to help debug the issue
+    public void Initialize(int avatarId)
+    {
+        Debug.Log($"VisualizationManager.Initialize called for avatar {avatarId}");
+
+        // Ensure HeadFollower is properly initialized first
+        if (headFollower == null)
+        {
+            headFollower = transform.Find("Body")?.GetComponent<HeadFollower>();
+            if (headFollower == null)
+            {
+                Debug.LogError("HeadFollower component not found on Body!");
+                return;
+            }
+        }
+
+        InitializeOtherAvatarRepresentations();
+
+        Debug.Log("Calling headFollower.CreateAvatarViualization()");
+        headFollower.CreateAvatarViualization();
+
+        if (headFollower.avatar == null)
+        {
+            Debug.LogError($"HeadFollower avatar is null after CreateAvatarViualization for avatar {avatarId}");
+            return;
+        }
+
+        var avatarColors = generalManager.avatarColors;
+        if (avatarColors != null && avatarColors.Length > avatarId)
+        {
+            ChangeColor(avatarColors[avatarId]);
+        }
+    }
 
     public void InitializeOtherAvatarRepresentations()
     {
@@ -216,12 +265,12 @@ public class VisualizationManager : MonoBehaviour
             var avatarColor = generalManager.avatarColors[i];
             foreach (var mr in representation.GetComponentsInChildren<MeshRenderer>())
             {
-                mr.material = new Material(Shader.Find("Standard"));
+                mr.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 mr.material.color = avatarColor;
             }
             foreach (var mr in representation.GetComponentsInChildren<SkinnedMeshRenderer>())
             {
-                mr.material = new Material(Shader.Find("Standard"));
+                mr.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 mr.material.color = avatarColor;
             }
 
@@ -336,12 +385,46 @@ public class VisualizationManager : MonoBehaviour
         return obj;
     }
     //visualization relative, update other avatar representations...
+    // Add this debug method to VisualizationManager
+    [ContextMenu("Debug Target Line")]
+    public void DebugTargetLine()
+    {
+        Debug.Log("=== Target Line Debug ===");
+
+        if (targetLine == null)
+        {
+            Debug.LogError("Target line is null!");
+            return;
+        }
+
+        Debug.Log($"Target line enabled: {targetLine.enabled}");
+        Debug.Log($"Draw target line setting: {drawTargetLine}");
+
+        if (headFollower != null && headFollower.transform != null)
+        {
+            Debug.Log($"Head position: {headFollower.transform.position}");
+        }
+
+        if (redirectionManager != null && redirectionManager.targetWaypoint != null)
+        {
+            Debug.Log($"Target waypoint position: {redirectionManager.targetWaypoint.position}");
+            Debug.Log($"Target waypoint name: {redirectionManager.targetWaypoint.name}");
+        }
+        else
+        {
+            Debug.LogError("No target waypoint set!");
+        }
+    }
+
+    // Update the UpdateVisualizations method to better handle target line
     public void UpdateVisualizations()
     {
         //update avatar
         headFollower.UpdateManually();
+
         //update trail   
         redirectionManager.trailDrawer.UpdateManually();
+
         for (int i = 0; i < otherAvatarRepresentations.Count; i++)
         {
             if (i == movementManager.avatarId)
@@ -352,10 +435,25 @@ public class VisualizationManager : MonoBehaviour
             otherAvatarRepresentations[i].localRotation = Quaternion.LookRotation(rm.currDirReal, Vector3.up);
         }
 
-        if (drawTargetLine)
+        // Update target line
+        if (drawTargetLine && targetLine != null)
         {
-            targetLine.SetPosition(0, headFollower.transform.position + new Vector3(0, 0.01f, 0));
-            targetLine.SetPosition(1, redirectionManager.targetWaypoint.position + new Vector3(0, 0.01f, 0));
+            targetLine.enabled = true;
+
+            if (headFollower != null && redirectionManager != null && redirectionManager.targetWaypoint != null)
+            {
+                Vector3 startPos = headFollower.transform.position + new Vector3(0, 0.01f, 0);
+                Vector3 endPos = redirectionManager.targetWaypoint.position + new Vector3(0, 0.01f, 0);
+
+                targetLine.SetPosition(0, startPos);
+                targetLine.SetPosition(1, endPos);
+
+                // Debug log every few frames
+                if (Time.frameCount % 60 == 0) // Log once per second at 60fps
+                {
+                    Debug.Log($"Target line: {startPos} -> {endPos}");
+                }
+            }
         }
     }
 
@@ -368,11 +466,4 @@ public class VisualizationManager : MonoBehaviour
         avatarBufferRepresentations[movementManager.avatarId].SetActive(false);
     }
 
-    public void Initialize(int avatarId)
-    {
-        InitializeOtherAvatarRepresentations();
-        headFollower.CreateAvatarViualization();
-        var avatarColors = generalManager.avatarColors;
-        ChangeColor(avatarColors[avatarId % avatarColors.Length]);
-    }
 }

@@ -1,0 +1,412 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!200 &20000000
+ShaderVariantCollection:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: single-player-ped-slu-graphics-urp
+  m_Shaders:
+  - first: {fileID: 10770, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 66, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: SHADOWS_DEPTH
+        passType: 8
+  - first: {fileID: 50, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+  - first: {fileID: 106, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: _SUNDISK_SIMPLE
+        passType: 0
+  - first: {fileID: 207, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 10490, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 13
+      - keywords: INSTANCING_ON
+        passType: 13
+  - first: {fileID: 9000, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 9001, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 9002, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 9003, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 9004, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 9007, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 9101, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 9103, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 18002, guid: 0000000000000000f000000000000000, type: 0}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: d6dae50ee9e1bfa4db75f19f99355220, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+      - keywords: _OUTPUT_DEPTH
+        passType: 0
+  - first: {fileID: 4800000, guid: 65df88701913c224d95fc554db28381a, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: ec9fec698a3456d4fb18cf8bacb7a2bc, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+      - keywords: _TONEMAP_ACES
+        passType: 0
+      - keywords: _TONEMAP_NEUTRAL
+        passType: 0
+  - first: {fileID: 4800000, guid: e7857e9d0c934dc4f83f270f8447b006, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+      - keywords: _HDR_GRADING
+        passType: 0
+  - first: {fileID: 4800000, guid: e6e9a19c3678ded42a3bc431ebef7dbd, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 93446b5c5339d4f00b85c159e1159b7c, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: c56b7e0d4c7cb484e959caeeedae9bbf, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 7b3ede40266cd49a395def176e1bc486, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 12
+  - first: {fileID: 4800000, guid: 131f1b93a4ebd459ba87b6bad055fb33, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 29868e73b638e48ca99a19ea58c48d90, type: 3}
+    second:
+      variants:
+      - keywords: DIRLIGHTMAP_COMBINED LIGHTMAP_ON _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS
+        passType: 0
+      - keywords: 
+        passType: 13
+  - first: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: INSTANCING_ON
+        passType: 8
+      - keywords: _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: DIRLIGHTMAP_COMBINED EVALUATE_SH_VERTEX LIGHTMAP_ON _ADDITIONAL_LIGHTS
+          _ADDITIONAL_LIGHT_SHADOWS _EMISSION _MAIN_LIGHT_SHADOWS _SPECULARHIGHLIGHTS_OFF
+          _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: DIRLIGHTMAP_COMBINED EVALUATE_SH_VERTEX LIGHTMAP_ON _ADDITIONAL_LIGHTS
+          _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS _NORMALMAP _OCCLUSIONMAP
+          _PARALLAXMAP _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: DIRLIGHTMAP_COMBINED EVALUATE_SH_VERTEX LIGHTMAP_ON _ADDITIONAL_LIGHTS
+          _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+          _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: DIRLIGHTMAP_COMBINED EVALUATE_SH_VERTEX LIGHTMAP_ON _ADDITIONAL_LIGHTS
+          _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS _SPECULARHIGHLIGHTS_OFF _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: DIRLIGHTMAP_COMBINED EVALUATE_SH_VERTEX LIGHTMAP_ON _ADDITIONAL_LIGHTS
+          _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _ALPHAPREMULTIPLY_ON _MAIN_LIGHT_SHADOWS _NORMALMAP _SURFACE_TYPE_TRANSPARENT
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _EMISSION _MAIN_LIGHT_SHADOWS _SPECULARHIGHLIGHTS_OFF
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _EMISSION _MAIN_LIGHT_SHADOWS _SPECULARHIGHLIGHTS_OFF _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _EMISSION _MAIN_LIGHT_SHADOWS _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _METALLICSPECGLOSSMAP _OCCLUSIONMAP _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+          _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _NORMALMAP _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _SPECULARHIGHLIGHTS_OFF
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _SPECULARHIGHLIGHTS_OFF _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _MAIN_LIGHT_SHADOWS _NORMALMAP
+        passType: 13
+      - keywords: _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+        passType: 13
+  - first: {fileID: 4800000, guid: 69c1f799e772cb6438f56c23efccb782, type: 3}
+    second:
+      variants:
+      - keywords: INSTANCING_ON
+        passType: 8
+      - keywords: DIRLIGHTMAP_COMBINED EVALUATE_SH_VERTEX INSTANCING_ON LIGHTMAP_ON
+          _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS _MASKMAP
+          _NORMALMAP _TERRAIN_INSTANCED_PERPIXEL_NORMAL _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: INSTANCING_ON
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: e04709d9927a7534a8956e063f9767ac, type: 3}
+    second:
+      variants:
+      - keywords: INSTANCING_ON
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: DIRLIGHTMAP_COMBINED LIGHTMAP_ON _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+          _WRITE_RENDERING_LAYERS
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: 5ef5a835e8c6b724091c27b3186972d4, type: 3}
+    second:
+      variants:
+      - keywords: DIRLIGHTMAP_COMBINED LIGHTMAP_ON _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: 29868922b720a4941ad12e476dd3fba4, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: INSTANCING_ON
+        passType: 8
+      - keywords: _MASKMAP
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: DIRLIGHTMAP_COMBINED LIGHTMAP_ON _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _MASKMAP _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: DIRLIGHTMAP_COMBINED LIGHTMAP_ON _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+          _MASKMAP _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+          _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: _MASKMAP
+        passType: 13
+  - first: {fileID: 4800000, guid: fe393ace9b354375a9cb14cdbbc28be4, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: -6465566751694194690, guid: 5e7b80a9481da6b408f7249d0aa9ee62, type: 3}
+    second:
+      variants:
+      - keywords: INSTANCING_ON
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+          _WRITE_RENDERING_LAYERS
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: 89a6790c28795dd4987bb267c3d05338, type: 3}
+    second:
+      variants:
+      - keywords: _SURFACE_TYPE_TRANSPARENT
+        passType: 0
+      - keywords: 
+        passType: 8
+      - keywords: 
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: c4c83248202a1d544a33f2fc9400d246, type: 3}
+    second:
+      variants:
+      - keywords: INSTANCING_ON
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+          _WRITE_RENDERING_LAYERS
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: b612478f51ef7ef469da1126c2c716de, type: 3}
+    second:
+      variants:
+      - keywords: _MASKMAP
+        passType: 8
+      - keywords: DIRLIGHTMAP_COMBINED LIGHTMAP_ON _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _MASKMAP _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+          _MASKMAP _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: _MASKMAP
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: 137a9d0b49032c544abaff345d2c4f5c, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS _WRITE_RENDERING_LAYERS
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: bb749e5d0d3e2fa4db0d93fa14187a96, type: 3}
+    second:
+      variants:
+      - keywords: INSTANCING_ON
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: INSTANCING_ON
+        passType: 13
+      - keywords: INSTANCING_ON _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+          _WRITE_RENDERING_LAYERS
+        passType: 13
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+          _WRITE_RENDERING_LAYERS
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: b14f8ef4116b97446a22693a145d90a2, type: 3}
+    second:
+      variants:
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+        passType: 13
+  - first: {fileID: 4800000, guid: 3ff7faa3aa8991a4eb1a459f880a75a6, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 8fbe92a9edfe6074e841d6dd1509bc59, type: 3}
+    second:
+      variants:
+      - keywords: _MASKMAP
+        passType: 0
+  - first: {fileID: 4800000, guid: 0a7e590f3cf1d4ee8a8fab5b6eff09ef, type: 3}
+    second:
+      variants:
+      - keywords: DIRLIGHTMAP_COMBINED INSTANCING_ON LIGHTMAP_ON _ADDITIONAL_LIGHTS
+          _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS _MASKMAP _NORMALMAP _TERRAIN_INSTANCED_PERPIXEL_NORMAL
+        passType: 13
+  - first: {fileID: 4800000, guid: 21322c8b137c66e49b86085d3c8161f6, type: 3}
+    second:
+      variants:
+      - keywords: INSTANCING_ON
+        passType: 8
+  - first: {fileID: -6465566751694194690, guid: ed1db5fda84b5e84bbd26eef428fb422, type: 3}
+    second:
+      variants:
+      - keywords: DIRLIGHTMAP_COMBINED LIGHTMAP_ON _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _MAIN_LIGHT_SHADOWS
+        passType: 13
+      - keywords: _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS
+        passType: 13
+  - first: {fileID: 4800000, guid: 4293210a3280c4283b9872316017f1f9, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 0
+  - first: {fileID: 4800000, guid: 8d2bb70cbf9db8d4da26e15b26e74248, type: 3}
+    second:
+      variants:
+      - keywords: 
+        passType: 8
+      - keywords: 
+        passType: 13
+      - keywords: EVALUATE_SH_VERTEX _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHT_SHADOWS
+          _EMISSION _MAIN_LIGHT_SHADOWS _WRITE_RENDERING_LAYERS
+        passType: 13
+  - first: {fileID: -6465566751694194690, guid: 4ff4bf42ffc12e34a9c53b2f216f5442, type: 3}
+    second:
+      variants:
+      - keywords: _SURFACE_TYPE_TRANSPARENT
+        passType: 0
+      - keywords: INSTANCING_ON
+        passType: 8
+      - keywords: 
+        passType: 13

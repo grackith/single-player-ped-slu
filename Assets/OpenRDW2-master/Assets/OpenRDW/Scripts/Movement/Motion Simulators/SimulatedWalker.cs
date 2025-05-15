@@ -4,7 +4,6 @@ using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
 
 public class SimulatedWalker : MonoBehaviour
 {
-
     private GlobalConfiguration globalConfiguration;
     private RedirectionManager redirectionManager;
 
@@ -12,28 +11,74 @@ public class SimulatedWalker : MonoBehaviour
     public MovementManager movementManager;
 
     const float MINIMUM_DISTANCE_TO_WAYPOINT_FOR_ROTATION = 0.0001f;
-    const float ROTATIONAL_ERROR_ACCEPTED_IN_DEGRESS = 1;// If user's angular deviation from target is more than this value, we won't move (until we face the target better) - If you go low sometimes it can stop close to target
+    const float ROTATIONAL_ERROR_ACCEPTED_IN_DEGRESS = 1;
     const float EXTRA_WALK_TO_ENSURE_RESET = 0.01f;
 
     private void Awake()
     {
-        globalConfiguration = GetComponentInParent<GlobalConfiguration>();
-        redirectionManager = GetComponentInParent<RedirectionManager>();
-        movementManager = GetComponentInParent<MovementManager>();
+        // Find components more robustly
+        // First try to find the Redirected Avatar in the parent hierarchy
+        Transform current = transform;
+        GameObject redirectedAvatar = null;
+
+        // Walk up the hierarchy to find the Redirected Avatar
+        while (current != null)
+        {
+            if (current.name.Contains("Redirected Avatar"))
+            {
+                redirectedAvatar = current.gameObject;
+                break;
+            }
+            current = current.parent;
+        }
+
+        if (redirectedAvatar != null)
+        {
+            // Get components from the Redirected Avatar
+            redirectionManager = redirectedAvatar.GetComponent<RedirectionManager>();
+            movementManager = redirectedAvatar.GetComponent<MovementManager>();
+
+            // Debug log to verify
+            Debug.Log($"SimulatedWalker found RedirectedAvatar: {redirectedAvatar.name}");
+            Debug.Log($"RedirectionManager: {redirectionManager != null}");
+            Debug.Log($"MovementManager: {movementManager != null}");
+        }
+        else
+        {
+            Debug.LogError($"SimulatedWalker could not find Redirected Avatar in hierarchy! Current object: {name}");
+        }
+
+        // Find GlobalConfiguration (usually at root)
+        globalConfiguration = FindObjectOfType<GlobalConfiguration>();
+
+        if (globalConfiguration == null)
+        {
+            Debug.LogError("SimulatedWalker could not find GlobalConfiguration!");
+        }
     }
-    // Use this for initialization
+
     void Start()
     {
-
+        // Double-check connections at start
+        if (redirectionManager == null || movementManager == null)
+        {
+            Debug.LogError($"SimulatedWalker missing critical components on {name}");
+        }
     }
-
-    // Update is called once per frame
 
     public void UpdateSimulatedWalker()
     {
+        // Add null checks
+        if (globalConfiguration == null || redirectionManager == null || movementManager == null)
+        {
+            Debug.LogError("SimulatedWalker missing required components!");
+            return;
+        }
+
         //experiment is not running
         if (!redirectionManager.globalConfiguration.experimentInProgress)
             return;
+
         if (redirectionManager.globalConfiguration.avatarIsWalking)
         {
             if (redirectionManager.globalConfiguration.movementController == GlobalConfiguration.MovementController.AutoPilot)
@@ -71,8 +116,9 @@ public class SimulatedWalker : MonoBehaviour
             }
         }
     }
+
     //calculate position/rotation and set
-    public void GetPosDirAndSet()//jon: we don't change this function because it's only called when movementManager.pathSeedChoide==PathSeedChoice.RealUserPath
+    public void GetPosDirAndSet()
     {
         if (movementManager.ifMissionComplete || movementManager.waypointIterator == 0)
             return;
@@ -86,9 +132,17 @@ public class SimulatedWalker : MonoBehaviour
         if (dir.magnitude != 0)
             transform.forward = Utilities.UnFlatten(dir);
     }
+
     //turn to target then walk to target
     public void TurnAndWalkToWaypoint()
     {
+        // Add safety check
+        if (redirectionManager.targetWaypoint == null)
+        {
+            Debug.LogError("No target waypoint set!");
+            return;
+        }
+
         Vector3 userToTargetVectorFlat;
         float rotationToTargetInDegrees;
         GetDistanceAndRotationToWaypoint(out rotationToTargetInDegrees, out userToTargetVectorFlat);
@@ -107,7 +161,6 @@ public class SimulatedWalker : MonoBehaviour
         // Preventing Rotation When At Waypoint By Checking If Distance Is Sufficient        
         if (userToTargetVectorFlat.magnitude > MINIMUM_DISTANCE_TO_WAYPOINT_FOR_ROTATION)
             transform.Rotate(Vector3.up, rotationToApplyInDegrees, Space.World);
-
     }
 
     // Rotates rightward in place    
@@ -116,8 +169,6 @@ public class SimulatedWalker : MonoBehaviour
         transform.Rotate(Vector3.up, rotateAngle, Space.World);
     }
 
-
-
     public void WalkIfPossible(float rotationToTargetInDegrees, Vector3 userToTargetVectorFlat)
     {
         // Handle Translation To Waypoint
@@ -125,34 +176,50 @@ public class SimulatedWalker : MonoBehaviour
         if (Mathf.Abs(rotationToTargetInDegrees) < ROTATIONAL_ERROR_ACCEPTED_IN_DEGRESS)
         {
             // Ensuring we don't overshoot the waypoint, and we don't go out of boundary
-
             float distanceToTravel = redirectionManager.GetDeltaTime() * globalConfiguration.translationSpeed;
+
             if (redirectionManager.redirectorChoice == RedirectionManager.RedirectorChoice.SeparateSpace)
             {
                 var rd = (SeparateSpace_Redirector)redirectionManager.redirector;
-                if (rd.useRedirectParams)
+                if (rd != null && rd.useRedirectParams)
                 {
                     distanceToTravel *= 1 / rd.redirectParams.Item3; // gt
                 }
             }
+
             distanceToTravel = Mathf.Min(distanceToTravel, userToTargetVectorFlat.magnitude);
-            //Debug.Log("distanceToTravel:" + distanceToTravel + ", redirectionManager.GetDeltaTime():" + redirectionManager.GetDeltaTime());
             transform.Translate(distanceToTravel * Utilities.FlattenedPos3D(redirectionManager.currDir).normalized, Space.World);
+
+            // Debug every few frames
+            if (Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"Walking: distance={distanceToTravel:F3}, toWaypoint={userToTargetVectorFlat.magnitude:F3}");
+            }
         }
         else
-        {//do nothing
-            //Debug.Log("Not Travelling");
-            //Debug.Log("rotationToWaypointInDegrees: " + rotationToWaypointInDegrees);
+        {
+            // Debug rotation issues
+            if (Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"Not walking - rotation needed: {rotationToTargetInDegrees:F1}°");
+            }
         }
     }
 
     //get rotation and translation vector
     void GetDistanceAndRotationToWaypoint(out float rotationToTargetInDegrees, out Vector3 userToTargetVectorFlat)
     {
+        // Add null check
+        if (redirectionManager.targetWaypoint == null)
+        {
+            userToTargetVectorFlat = Vector3.zero;
+            rotationToTargetInDegrees = 0f;
+            return;
+        }
+
         //vector between the avatar to the next target
         userToTargetVectorFlat = Utilities.FlattenedPos3D(redirectionManager.targetWaypoint.position - redirectionManager.currPos);
         //rotation angle needed
         rotationToTargetInDegrees = Utilities.GetSignedAngle(Utilities.FlattenedDir3D(redirectionManager.currDir), userToTargetVectorFlat);
     }
-
 }

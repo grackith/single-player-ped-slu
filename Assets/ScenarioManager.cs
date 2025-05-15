@@ -80,6 +80,10 @@ public class ScenarioManager : MonoBehaviour
     [Header("Redirected Walking")]
     public GlobalConfiguration rdwGlobalConfiguration;
     private PersistentRDW persistentRDW;
+    //private RDWInitializationFix rdwInitFix;
+
+    // ADD THESE MISSING FIELDS
+    private bool isRDWInitialized = false;
     #endregion
 
     #region Private Fields
@@ -87,6 +91,9 @@ public class ScenarioManager : MonoBehaviour
     private bool isTransitioning = false;
     private Scene currentlyLoadedScenario;
     private RouteConnectionPreserver routePreserver;
+
+    
+
 
     // Singleton instance
     private static ScenarioManager _instance;
@@ -133,63 +140,159 @@ public class ScenarioManager : MonoBehaviour
         // Save connections from editor setup
         //routePreserver.SaveAllConnections();
     }
-    private void InitializeRedirectedWalking()
+   
+
+    // Helper method to get objects in DontDestroyOnLoad scene
+    private GameObject[] GetDontDestroyOnLoadObjects()
     {
-        // Find or create the OpenRDW GameObject
-        GameObject openRDW = GameObject.Find("RDW");
-        if (openRDW == null)
+        GameObject temp = null;
+        try
         {
-            openRDW = new GameObject("RDW");
-
-            // Add required components
-            rdwGlobalConfiguration = openRDW.AddComponent<GlobalConfiguration>();
-            openRDW.AddComponent<RedirectionManager>();
-            persistentRDW = openRDW.AddComponent<PersistentRDW>();
-
-            // Configure the RedirectionManager
-            RedirectionManager redirectionManager = openRDW.GetComponent<RedirectionManager>();
-            if (redirectionManager != null && Camera.main != null)
-            {
-                redirectionManager.headTransform = Camera.main.transform;
-            }
-
-            // Make it persistent
-            DontDestroyOnLoad(openRDW);
-            Debug.Log("Created persistent OpenRDW GameObject");
+            temp = new GameObject();
+            DontDestroyOnLoad(temp);
+            UnityEngine.SceneManagement.Scene dontDestroyOnLoad = temp.scene;
+            temp.hideFlags = HideFlags.HideAndDontSave;
+            GameObject[] allObjects = dontDestroyOnLoad.GetRootGameObjects();
+            return allObjects;
         }
-        else
+        finally
         {
-            // Get references to existing components
-            rdwGlobalConfiguration = openRDW.GetComponent<GlobalConfiguration>();
-            persistentRDW = openRDW.GetComponent<PersistentRDW>();
+            if (temp != null)
+                DestroyImmediate(temp);
+        }
+    }
+
+    private void UpdateRDWForScenario(Scenario scenario)
+    {
+        // Find the RDW setup
+        //RDWSceneSetup rdwSetup = FindObjectOfType<RDWSceneSetup>();
+        //if (rdwSetup == null)
+        //{
+        //    Debug.LogWarning("RDWSceneSetup not found, cannot update for scenario");
+        //    return;
+        //}
+
+        //if (rdwGlobalConfiguration == null)
+        //{
+        //    rdwGlobalConfiguration = rdwSetup.globalConfig;
+        //}
+
+        if (rdwGlobalConfiguration == null || rdwGlobalConfiguration.redirectedAvatars.Count == 0)
+        {
+            Debug.LogWarning("No RDW configuration or avatars found");
+            return;
         }
 
-        // Configure tracking space
-        if (rdwGlobalConfiguration != null)
+        // Get the main redirected avatar
+        var redirectedAvatar = rdwGlobalConfiguration.redirectedAvatars[0];
+        var redirectionManager = redirectedAvatar.GetComponent<RedirectionManager>();
+        var movementManager = redirectedAvatar.GetComponent<MovementManager>();
+
+        if (redirectionManager == null || movementManager == null)
         {
-            // Set physical space dimensions (adjust to match your actual space)
-            rdwGlobalConfiguration.squareWidth = 13.7f; // Width in meters
-            rdwGlobalConfiguration.trackingSpaceChoice = (GlobalConfiguration.TrackingSpaceChoice)4; // File Path option
-            rdwGlobalConfiguration.trackingSpaceFilePath = "TrackingSpaces/custom/VRlab.txt";
+            Debug.LogError("RedirectionManager or MovementManager not found!");
+            return;
+        }
 
-            // Set movement controller to HMD
-            rdwGlobalConfiguration.movementController = (GlobalConfiguration.MovementController)1; // HMD
+        // Update start position if specified
+        if (scenario.playerStartPosition != null)
+        {
+            Vector2 virtualPos = new Vector2(
+                scenario.playerStartPosition.position.x,
+                scenario.playerStartPosition.position.z
+            );
 
-            // Enable synchronized reset
-            rdwGlobalConfiguration.synchronizedReset = true;
+            Vector2 virtualDir = new Vector2(
+                scenario.playerStartPosition.forward.x,
+                scenario.playerStartPosition.forward.z
+            ).normalized;
+
+            movementManager.virtualInitPose = new InitialPose(virtualPos, virtualDir);
+
+            // Re-initialize from the new position
+            redirectionManager.Initialize();
+
+            Debug.Log($"Updated RDW for scenario with start position: {virtualPos}");
         }
     }
 
     // Call this from PositionPlayerForScenario
-    private void UpdateRDWForScenario(Scenario scenario)
+    // Call this from PositionPlayerForScenario
+    //private void InitializeRedirectedWalking()
+    //{
+    //    Debug.Log("Starting RDW initialization");
+
+    //    // Find RDW root
+    //    GameObject rdwRoot = FindRDWRoot();
+
+    //    if (rdwRoot != null)
+    //    {
+    //        // Get GlobalConfiguration
+    //        rdwGlobalConfiguration = rdwRoot.GetComponent<GlobalConfiguration>();
+
+    //        // Make sure the RDW system is active
+    //        if (!rdwRoot.activeInHierarchy)
+    //        {
+    //            rdwRoot.SetActive(true);
+    //            Debug.Log("Activated RDW root GameObject");
+    //        }
+
+    //        // Since we removed RDWInitializationFix, we'll use our own initialization tracking
+    //        StartCoroutine(WaitForRDWInitialization());
+    //    }
+    //    else
+    //    {
+    //        Debug.LogError("Could not find RDW system!");
+    //    }
+    //}
+
+    //private IEnumerator WaitForRDWInitialization()
+    //{
+    //    // Wait for GlobalConfiguration to initialize
+    //    while (rdwGlobalConfiguration == null || !rdwGlobalConfiguration.enabled)
+    //    {
+    //        yield return null;
+    //    }
+
+    //    // Wait a bit more for full initialization
+    //    yield return new WaitForSeconds(0.5f);
+
+    //    // Now mark as initialized
+    //    isRDWInitialized = true;
+    //    Debug.Log("RDW system initialized (using direct approach)");
+
+    //    // Update references
+    //    UpdateRDWReferencesForScene();
+    //}
+
+
+
+    // Helper method to find RDW root
+    private GameObject FindRDWRoot()
     {
-        if (persistentRDW != null && scenario.playerStartPosition != null)
+        GameObject rdwRoot = GameObject.Find("RDW");
+
+        if (rdwRoot != null)
         {
-            persistentRDW.UpdateRedirectionOrigin(scenario.playerStartPosition);
-            Debug.Log("Updated RDW origin for new scenario position");
+            Debug.Log($"Found RDW root: {rdwRoot.name}");
         }
+        else
+        {
+            Debug.LogError("RDW root not found! Make sure RDWSceneSetup has initialized it.");
+        }
+
+        return rdwRoot;
     }
 
+    // Update RDW for scenario using your PersistentRDW's UpdateRedirectionOrigin
+    //private void UpdateRDWForScenario(Scenario scenario)
+    //{
+    //    if (persistentRDW != null && scenario.playerStartPosition != null)
+    //    {
+    //        persistentRDW.UpdateRedirectionOrigin(scenario.playerStartPosition);
+    //        Debug.Log("Updated RDW origin for new scenario position");
+    //    }
+    //}
 
     private void Start()
     {
@@ -210,7 +313,7 @@ public class ScenarioManager : MonoBehaviour
         CheckForDuplicateManagers();
 
         // Initialize the redirected walking setup
-        InitializeRedirectedWalking();
+        //InitializeRedirectedWalking();
 
         if (AITrafficController.Instance != null)
         {
@@ -257,10 +360,52 @@ public class ScenarioManager : MonoBehaviour
         }
     }
 
+    //private void UpdateRDWReferencesForScene()
+    //{
+    //    if (!isRDWInitialized || rdwGlobalConfiguration == null) return;
+
+    //    // Update camera references
+    //    if (rdwGlobalConfiguration.redirectedAvatars != null)
+    //    {
+    //        foreach (var avatar in rdwGlobalConfiguration.redirectedAvatars)
+    //        {
+    //            if (avatar == null) continue;
+
+    //            var rm = avatar.GetComponent<RedirectionManager>();
+    //            if (rm != null)
+    //            {
+    //                if (Camera.main != null)
+    //                {
+    //                    rm.headTransform = Camera.main.transform;
+    //                }
+
+    //                var xrOrigin = FindXROrigin();
+    //                if (xrOrigin != null)
+    //                {
+    //                    rm.xrOrigin = xrOrigin.transform;
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+
+
+    // Add this method to handle RDW initialization event
+    private void OnRDWInitialized()
+    {
+        isRDWInitialized = true;
+        Debug.Log("RDW system successfully initialized!");
+
+        // Update references for current scenario
+        //UpdateRDWReferencesForScene();
+    }
+
     private void OnDestroy()
     {
         // Unsubscribe from events to prevent memory leaks
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        //RDWInitializationFix.OnRDWInitialized -= OnRDWInitialized;
+
     }
     #endregion
 
@@ -686,39 +831,22 @@ public class ScenarioManager : MonoBehaviour
         // Inside your existing Update() method, add these key checks:
 
         // R key - Start the redirected walking experience 
+        // R key - Start the redirected walking experience 
         if (Input.GetKeyDown(KeyCode.R))
         {
             Debug.Log("R key pressed - Starting RDW experiment");
 
-            // Find RedirectionManager and ensure it's properly set up
-            RedirectionManager rdwManager = FindObjectOfType<RedirectionManager>();
-            if (rdwManager != null)
-            {
-                // Ensure camera reference is up to date
-                if (Camera.main != null)
-                {
-                    rdwManager.headTransform = Camera.main.transform;
-                }
-
-                // If redirected user is using HMD controls, this is the key trigger to begin
-                if (rdwManager.globalConfiguration != null)
-                {
-                    rdwManager.globalConfiguration.movementController = GlobalConfiguration.MovementController.HMD;
-                    Debug.Log("Set HMD movement controller mode");
-                }
-
-                // Initialize the redirector if needed
-                if (rdwManager.redirector != null)
-                {
-                    // This initializes/resets the state
-                    rdwManager.Initialize();
-                    Debug.Log("Initialized redirected walking");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("No RedirectionManager found in scene");
-            }
+            // Find the RDW setup
+            //RDWSceneSetup rdwSetup = FindObjectOfType<RDWSceneSetup>();
+            //if (rdwSetup != null)
+            //{
+            //    // The RDWSceneSetup will handle the key press
+            //    Debug.Log("Delegating to RDWSceneSetup");
+            //}
+            //else
+            //{
+            //    Debug.LogWarning("No RDWSceneSetup found!");
+            //}
         }
 
         // ~ (tilde) key - Toggle physical space overview
@@ -743,19 +871,29 @@ public class ScenarioManager : MonoBehaviour
             // This might involve switching camera modes
         }
 
-        // Q key - End the RDW experiment (if one is running)
+        // Q key - End RDW experiment
         if (Input.GetKeyDown(KeyCode.Q))
         {
             Debug.Log("Q key pressed - Ending current experiment");
+
             RedirectionManager rdwManager = FindObjectOfType<RedirectionManager>();
-            if (rdwManager != null && rdwManager.inReset)
+            if (rdwManager != null)
             {
-                // End any active reset
-                rdwManager.OnResetEnd();
-                Debug.Log("Ended redirection reset");
+                if (rdwManager.inReset)
+                {
+                    rdwManager.OnResetEnd();
+                    Debug.Log("Ended redirection reset");
+                }
+
+                // Clear trails
+                var trailDrawer = rdwManager.GetComponent<TrailDrawer>();
+                if (trailDrawer != null)
+                {
+                    trailDrawer.ClearTrail("RealTrail");
+                    trailDrawer.ClearTrail("VirtualTrail");
+                }
             }
 
-            // This would normally call EndCurrentScenario() which you already have
             EndCurrentScenario();
         }
 
@@ -861,6 +999,10 @@ public class ScenarioManager : MonoBehaviour
     /// </summary>
     public void EndCurrentScenario()
     {
+        //if (isRDWInitialized && rdwInitFix != null)
+        //{
+        //    rdwInitFix.ResetForNewScenario();
+        //}
         if (isTransitioning)
         {
             return;
@@ -1139,6 +1281,11 @@ public class ScenarioManager : MonoBehaviour
         // 5. Wait for a moment to ensure scene is fully loaded
         yield return new WaitForSeconds(0.5f);
 
+        // FIX: Pass the scenario parameter
+        yield return new WaitForEndOfFrame();
+        UpdateRDWForScenario(scenario);  // Changed from UpdateRDWForScenario() to UpdateRDWForScenario(scenario)
+
+
         // 6. Make sure traffic controller is still enabled
         if (controller != null && !controller.enabled)
         {
@@ -1195,6 +1342,10 @@ public class ScenarioManager : MonoBehaviour
         if (scenario.playerStartPosition != null)
         {
             PositionPlayerForScenario(scenario);
+
+            // Update RDW system for new scenario position
+            yield return new WaitForEndOfFrame(); // Give physics a frame to settle
+            UpdateRDWForScenario(scenario);
         }
 
         // 12. Hide researcher UI
@@ -1635,20 +1786,41 @@ public class ScenarioManager : MonoBehaviour
                     xrOrigin.transform.rotation = scenario.playerStartPosition.rotation;
 
                     Debug.Log($"Positioned player at scenario start point");
-                    UpdateRDWForScenario(scenario);
-                }
 
+                    // Update RDW system for the new position
+                    UpdateRDWForScenario(scenario);
+
+                    // Get the RedirectionManager to update its tracking space
+                    if (rdwGlobalConfiguration != null && rdwGlobalConfiguration.redirectedAvatars.Count > 0)
+                    {
+                        var redirectionManager = rdwGlobalConfiguration.redirectedAvatars[0].GetComponent<RedirectionManager>();
+                        if (redirectionManager != null)
+                        {
+                            // Update the tracking space position relative to the new player position
+                            Vector3 realPos = redirectionManager.GetPosReal(xrOrigin.transform.position);
+                            redirectionManager.trackingSpace.position = xrOrigin.transform.position - realPos;
+
+                            // Update the tracking space rotation
+                            Vector3 realDir = redirectionManager.GetDirReal(xrOrigin.transform.forward);
+                            float angleOffset = Vector3.SignedAngle(realDir, xrOrigin.transform.forward, Vector3.up);
+                            redirectionManager.trackingSpace.rotation = Quaternion.Euler(0, angleOffset, 0) * redirectionManager.trackingSpace.rotation;
+
+                            // Update current state
+                            redirectionManager.UpdateCurrentUserState();
+
+                            Debug.Log("Updated RDW tracking space for new scenario position");
+                        }
+                    }
+                }
             }
 
             return true;
         }
-
         catch (System.Exception ex)
         {
             Debug.LogError($"Error positioning player: {ex.Message}");
             return false;
         }
-
     }
 
     // Step 8: Initialize traffic lights

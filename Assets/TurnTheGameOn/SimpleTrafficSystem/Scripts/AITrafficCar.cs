@@ -353,7 +353,7 @@
                     }
                     else
                     {
-                        Debug.LogWarning($"Invalid brakeMaterialIndex {brakeMaterialIndex}, using default material");
+                        //Debug.LogWarning($"Invalid brakeMaterialIndex {brakeMaterialIndex}, using default material");
                         brakeMaterial = null; // Controller will use unassignedBrakeMaterial
                     }
                 }

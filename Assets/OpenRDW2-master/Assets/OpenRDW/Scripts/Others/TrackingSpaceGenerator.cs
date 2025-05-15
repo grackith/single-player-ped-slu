@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
+using System;
 
 public class SingleSpace
 {
@@ -363,13 +364,22 @@ public class TrackingSpaceGenerator
     //load TrackingSpace and obstacle Points from file, first description is tracking space, the rest are obstacles
     public static void LoadTrackingSpacePointsFromFile(string path, out List<SingleSpace> physicalSpaces, out SingleSpace virtualSpace)
     {
-        if (!File.Exists(path))
+        physicalSpaces = null;
+        virtualSpace = null;
+
+        // Try to resolve the file path with multiple strategies
+        string resolvedPath = ResolveFilePath(path);
+
+        if (!File.Exists(resolvedPath))
         {
-            Debug.LogError("trackingSpaceFilePath does not exist!");
-            physicalSpaces = null;
-            virtualSpace = null;
+            Debug.LogError($"Tracking space file not found. Attempted paths:");
+            Debug.LogError($"Original: {path}");
+            Debug.LogError($"Resolved: {resolvedPath}");
             return;
         }
+
+        Debug.Log($"Loading tracking space from: {resolvedPath}");
+
         var rePhysicalSpaces = new List<SingleSpace>();
         var reTrackingSpacePoints = new List<Vector2>();
         var reObstaclePolygons = new List<List<Vector2>>();
@@ -382,16 +392,19 @@ public class TrackingSpaceGenerator
         var nowPolygon = new List<Vector2>();
         ReadStatus status = ReadStatus.AVATARNUM;
 
-        // bool ifObstacle = false;//if this polygon is obstacle
         try
         {
-            var content = File.ReadAllLines(path);
+            var content = File.ReadAllLines(resolvedPath);
             int lineId = 0;
+
             foreach (var line in content)
             {
                 lineId++;
+                Debug.Log($"Line {lineId}: '{line}' Status: {status}");
+
                 if (status == ReadStatus.AVATARNUM)
-                { // this status is for BatchExperimentGenerator
+                {
+                    // Skip the avatar number line
                     status = ReadStatus.VSPACE;
                     continue;
                 }
@@ -399,29 +412,43 @@ public class TrackingSpaceGenerator
                 {
                     if (line.Trim().Length == 0)
                     {
+                        // Empty line after virtual space vertices
                         if (nowPolygon.Count > 2)
                         {
                             reVirtualTrackingSpace = nowPolygon;
-                            status = ReadStatus.VOBSTACLE;
                         }
                         nowPolygon = new List<Vector2>();
+                        status = ReadStatus.VOBSTACLE;
+                        continue;
+                    }
+                    else if (line.Trim() == "//")
+                    {
+                        // Direct transition to physical space (no obstacles)
+                        if (nowPolygon.Count > 2)
+                        {
+                            reVirtualTrackingSpace = nowPolygon;
+                        }
+                        nowPolygon = new List<Vector2>();
+                        status = ReadStatus.SPACE;
                         continue;
                     }
                 }
                 else if (status == ReadStatus.VOBSTACLE)
                 {
-                    if (line.Trim().Length == 0)
+                    if (line.Trim() == "//")
                     {
+                        // End of virtual configuration
+                        status = ReadStatus.SPACE;
+                        nowPolygon = new List<Vector2>();
+                        continue;
+                    }
+                    else if (line.Trim().Length == 0)
+                    {
+                        // Empty line after obstacle vertices
                         if (nowPolygon.Count > 2)
                         {
                             reVirtualObstacles.Add(nowPolygon);
                         }
-                        nowPolygon = new List<Vector2>();
-                        continue;
-                    }
-                    else if (line.Trim().Length == 2)
-                    {
-                        status = ReadStatus.SPACE;
                         nowPolygon = new List<Vector2>();
                         continue;
                     }
@@ -430,19 +457,39 @@ public class TrackingSpaceGenerator
                 {
                     if (line.Trim().Length == 0)
                     {
+                        // Empty line after physical space vertices
                         if (nowPolygon.Count > 2)
                         {
                             reTrackingSpacePoints = nowPolygon;
-                            status = ReadStatus.OBSTACLE;
                         }
                         nowPolygon = new List<Vector2>();
+                        status = ReadStatus.OBSTACLE;
+                        continue;
+                    }
+                    else if (line.Trim() == "/")
+                    {
+                        // Direct transition to avatar configuration (no obstacles)
+                        if (nowPolygon.Count > 2)
+                        {
+                            reTrackingSpacePoints = nowPolygon;
+                        }
+                        nowPolygon = new List<Vector2>();
+                        status = ReadStatus.AVATAR;
                         continue;
                     }
                 }
                 else if (status == ReadStatus.OBSTACLE)
                 {
-                    if (line.Trim().Length == 0)
+                    if (line.Trim() == "/")
                     {
+                        // End of obstacle configuration
+                        status = ReadStatus.AVATAR;
+                        nowPolygon = new List<Vector2>();
+                        continue;
+                    }
+                    else if (line.Trim().Length == 0)
+                    {
+                        // Empty line after obstacle vertices
                         if (nowPolygon.Count > 2)
                         {
                             reObstaclePolygons.Add(nowPolygon);
@@ -450,17 +497,32 @@ public class TrackingSpaceGenerator
                         nowPolygon = new List<Vector2>();
                         continue;
                     }
-                    else if (line.Trim().Length == 1)
-                    {
-                        status = ReadStatus.AVATAR;
-                        nowPolygon = new List<Vector2>();
-                        continue;
-                    }
                 }
                 else if (status == ReadStatus.AVATAR)
                 {
-                    if (line.Trim().Length == 0)
+                    if (line.Trim() == "//")
                     {
+                        // End of this physical space configuration
+                        if (nowPolygon.Count == 4)
+                        {
+                            reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
+                            reVirtualPoses.Add(new InitialPose(nowPolygon[2], nowPolygon[3].normalized));
+                        }
+
+                        // Add this physical space
+                        rePhysicalSpaces.Add(new SingleSpace(reTrackingSpacePoints, reObstaclePolygons, reInitialPoses));
+
+                        // Reset for next physical space (if any)
+                        reTrackingSpacePoints = new List<Vector2>();
+                        reObstaclePolygons = new List<List<Vector2>>();
+                        reInitialPoses = new List<InitialPose>();
+                        nowPolygon = new List<Vector2>();
+                        status = ReadStatus.SPACE;
+                        continue;
+                    }
+                    else if (line.Trim().Length == 0)
+                    {
+                        // Empty line after avatar configuration
                         if (nowPolygon.Count == 4)
                         {
                             reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
@@ -469,35 +531,90 @@ public class TrackingSpaceGenerator
                         nowPolygon = new List<Vector2>();
                         continue;
                     }
-                    else if (line.Trim().Length == 2)
-                    { // this space is finished, move to next space
-                        status = ReadStatus.SPACE;
-                        rePhysicalSpaces.Add(new SingleSpace(reTrackingSpacePoints, reObstaclePolygons, reInitialPoses));
+                }
 
-                        reTrackingSpacePoints = new List<Vector2>();
-                        reObstaclePolygons = new List<List<Vector2>>();
-                        reInitialPoses = new List<InitialPose>();
-                        nowPolygon = new List<Vector2>();
-                        continue;
+                // Parse coordinates if not a special marker
+                if (line.Trim().Length > 0 && line.Trim() != "/" && line.Trim() != "//")
+                {
+                    var split = line.Split(',');
+                    if (split.Length >= 2)
+                    {
+                        float x = float.Parse(split[0].Trim());
+                        float y = float.Parse(split[1].Trim());
+                        nowPolygon.Add(new Vector2(x, y));
+                    }
+                    else
+                    {
+                        Debug.LogError($"Invalid coordinate format in line {lineId}: {line}");
                     }
                 }
-                var split = line.Split(',');
-                if (split.Length != 2)
-                {
-                    Debug.LogError("Input TrackingSpacePoints File Error in Line: " + lineId);
-                    break;
-                }
-                nowPolygon.Add(new Vector2(float.Parse(split[0]), float.Parse(split[1])));
+            }
+
+            // Handle any remaining data at end of file
+            if (status == ReadStatus.AVATAR && nowPolygon.Count == 4)
+            {
+                reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
+                reVirtualPoses.Add(new InitialPose(nowPolygon[2], nowPolygon[3].normalized));
+            }
+
+            if (rePhysicalSpaces.Count == 0 && reTrackingSpacePoints.Count > 0)
+            {
+                rePhysicalSpaces.Add(new SingleSpace(reTrackingSpacePoints, reObstaclePolygons, reInitialPoses));
             }
         }
-        catch
+        catch (Exception e)
         {
-            Debug.LogError("Read error");
+            Debug.LogError($"Error reading tracking space file: {e.Message}");
+            Debug.LogError(e.StackTrace);
+            return;
         }
+
         physicalSpaces = rePhysicalSpaces;
         virtualSpace = new SingleSpace(reVirtualTrackingSpace, reVirtualObstacles, reVirtualPoses);
+
+        // Log what was loaded for debugging
+        Debug.Log($"Loaded {physicalSpaces.Count} physical spaces");
+        if (physicalSpaces.Count > 0)
+        {
+            Debug.Log($"First physical space has {physicalSpaces[0].trackingSpace.Count} vertices");
+            Debug.Log($"First physical space has {physicalSpaces[0].initialPoses.Count} initial poses");
+            if (physicalSpaces[0].initialPoses.Count > 0)
+            {
+                var pose = physicalSpaces[0].initialPoses[0];
+                Debug.Log($"First pose - Physical: {pose.initialPosition}, Dir: {pose.initialForward}");
+            }
+        }
+        if (virtualSpace != null && virtualSpace.initialPoses.Count > 0)
+        {
+            var vPose = virtualSpace.initialPoses[0];
+            Debug.Log($"Virtual pose: {vPose.initialPosition}, Dir: {vPose.initialForward}");
+        }
     }
 
+    // Helper method to resolve file paths
+    private static string ResolveFilePath(string path)
+    {
+        // Try various path combinations
+        string[] pathsToTry = {
+        path,
+        Path.Combine(Application.dataPath, path),
+        Path.Combine(Application.dataPath, "OpenRDW2-master/Assets", path),
+        Path.Combine(Application.dataPath, "OpenRDW2-master/Assets/TrackingSpaces", Path.GetFileName(path)),
+        Path.Combine("Assets", path),
+        Path.Combine("Assets/OpenRDW2-master/Assets", path)
+    };
+
+        foreach (var tryPath in pathsToTry)
+        {
+            if (File.Exists(tryPath))
+            {
+                Debug.Log($"Found tracking space file at: {tryPath}");
+                return tryPath;
+            }
+        }
+
+        return path; // Return original if not found
+    }
     // add triangle to list in clockwise
     public static void AddTriangle(List<int> newTriangles, int a, int b, int c, bool inner)
     {

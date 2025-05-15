@@ -48,7 +48,7 @@ public abstract class Resetter : MonoBehaviour
         }
         if (resetPanel == null)
         {
-            Transform root = transform.Find("Simulated Avatar").Find("Head");
+            Transform root = transform.Find("Simulated User").Find("Head");
             resetPanel = root.Find("ResetPanel").gameObject;
             resetPanel.SetActive(true);
             resetPanel.transform.parent = redirectionManager.headTransform;

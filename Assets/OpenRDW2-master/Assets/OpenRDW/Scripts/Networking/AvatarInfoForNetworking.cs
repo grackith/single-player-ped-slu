@@ -50,7 +50,7 @@ public class AvatarInfoForNetworking : MonoBehaviourPunCallbacks, IPunObservable
             }
             if (synchronizedByNet == null)
             {
-                synchronizedByNet = globalConfiguration.redirectedAvatars[avatarId].transform.Find("Simulated Avatar").Find("Head").GetComponent<SynchronizedByNet>();
+                synchronizedByNet = globalConfiguration.redirectedAvatars[avatarId].transform.Find("Simulated User").Find("Head").GetComponent<SynchronizedByNet>();
             }
             synchronizedByNet.UpdateTransform(virtualT, realT);
             //Debug.Log(string.Format("receive data, avatarid:{0}, time:{1}", avatarId, Time.time));

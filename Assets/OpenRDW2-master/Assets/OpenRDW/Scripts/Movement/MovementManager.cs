@@ -69,7 +69,7 @@ public class MovementManager : MonoBehaviour
         generalManager = GetComponentInParent<GlobalConfiguration>();
         redirectionManager = GetComponent<RedirectionManager>();
         visualizationManager = GetComponent<VisualizationManager>();
-        simulatedWalker = transform.Find("Simulated Avatar").Find("Head").GetComponent<SimulatedWalker>();
+        simulatedWalker = transform.Find("Simulated User").Find("Head").GetComponent<SimulatedWalker>();
         crystal = Resources.Load("Crystalsv01") as GameObject;
     }
 
@@ -101,13 +101,62 @@ public class MovementManager : MonoBehaviour
             generalManager.GenerateWaypoints(randomSeed, pathSeedChoice, virtualInitPose, waypointsFilePath, samplingIntervalsFilePath, out waypoints, out samplingIntervals);
         }
     }
+    //public void InitializeWaypointsPattern(int randomSeed)
+    //{
+    //    if (pathSeedChoice == PathSeedChoice.VEPath)
+    //    {
+    //        vePathWaypoints = vePath.pathWaypoints;
+
+    //        // IMPORTANT: Set the first waypoint as the initial target
+    //        if (vePathWaypoints != null && vePathWaypoints.Length > 0)
+    //        {
+    //            waypointIterator = 0;
+
+    //            // Create or update the waypoint object
+    //            if (redirectionManager.targetWaypoint == null)
+    //            {
+    //                GameObject waypointObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+    //                waypointObj.name = "VE Path Waypoint";
+    //                waypointObj.transform.localScale = Vector3.one * 0.5f;
+    //                Destroy(waypointObj.GetComponent<Collider>());
+
+    //                var renderer = waypointObj.GetComponent<Renderer>();
+    //                renderer.material = new Material(Shader.Find("Standard"));
+    //                renderer.material.color = Color.cyan;
+
+    //                redirectionManager.targetWaypoint = waypointObj.transform;
+    //            }
+
+    //            // Set to first waypoint
+    //            redirectionManager.targetWaypoint = vePathWaypoints[0];
+    //            redirectionManager.targetWaypoint.gameObject.SetActive(true);
+
+    //            Debug.Log($"Initialized VE Path with {vePathWaypoints.Length} waypoints");
+    //            Debug.Log($"First waypoint at: {vePathWaypoints[0].position}");
+    //        }
+    //    }
+    //    else
+    //    {
+    //        generalManager.GenerateWaypoints(randomSeed, pathSeedChoice, virtualInitPose, waypointsFilePath, samplingIntervalsFilePath, out waypoints, out samplingIntervals);
+    //    }
+    //}
 
     //check if need to update waypoint
     void UpdateSimulatedWaypointIfRequired()
     {
-        //experiment is not in progress
         if (!generalManager.experimentInProgress)
             return;
+        // For free exploration mode, we don't update waypoints
+        if (generalManager.freeExplorationMode)
+            return;
+
+        // Add debug info
+        if (Time.frameCount % 60 == 0) // Log once per second
+        {
+            float distanceToWaypoint = (redirectionManager.currPos - Utilities.FlattenedPos3D(redirectionManager.targetWaypoint.position)).magnitude;
+            Debug.Log($"Distance to waypoint {waypointIterator}: {distanceToWaypoint:F3}, Threshold: {generalManager.distanceToWaypointThreshold}");
+            Debug.Log($"Current pos: {redirectionManager.currPos}, Target: {redirectionManager.targetWaypoint.position}");
+        }
 
         if (pathSeedChoice == PathSeedChoice.RealUserPath)
         {
@@ -145,17 +194,29 @@ public class MovementManager : MonoBehaviour
     //get next waypoint
     public void UpdateWaypoint()
     {
-        if (pathSeedChoice == PathSeedChoice.VEPath)//jon: new option, using waypoints defined in VEPath
+        if (pathSeedChoice == PathSeedChoice.VEPath)
         {
+            // Check bounds BEFORE incrementing
             if (waypointIterator == vePathWaypoints.Length - 1)
             {
                 ifMissionComplete = true;
+                Debug.Log("Mission complete - reached final waypoint");
+                //return; // Exit early
             }
             else
             {
                 waypointIterator++;
                 redirectionManager.targetWaypoint = vePathWaypoints[waypointIterator];
             }
+
+            //// Move to next waypoint
+            //waypointIterator++;
+            //if (waypointIterator < vePathWaypoints.Length)
+            //{
+            //    // Update the waypoint transform reference
+            //    redirectionManager.targetWaypoint = vePathWaypoints[waypointIterator];
+            //    Debug.Log($"Updated to waypoint {waypointIterator} at position {vePathWaypoints[waypointIterator].position}");
+            //}
         }
         else if (waypointIterator == waypoints.Count - 1)
         {
@@ -168,6 +229,54 @@ public class MovementManager : MonoBehaviour
             redirectionManager.targetWaypoint.position = new Vector3(waypoints[waypointIterator].x, redirectionManager.targetWaypoint.position.y, waypoints[waypointIterator].y);
         }
     }
+    //public void UpdateWaypoint()
+    //{
+    //    if (pathSeedChoice == PathSeedChoice.VEPath)
+    //    {
+    //        // Check bounds BEFORE incrementing
+    //        if (waypointIterator >= vePathWaypoints.Length - 1)
+    //        {
+    //            ifMissionComplete = true;
+    //            Debug.Log("Mission complete - reached final waypoint");
+    //            return; // Exit early
+    //        }
+
+    //        // Move to next waypoint
+    //        waypointIterator++;
+
+    //        if (waypointIterator < vePathWaypoints.Length)
+    //        {
+    //            // Update the waypoint transform reference
+    //            Transform newWaypoint = vePathWaypoints[waypointIterator];
+    //            redirectionManager.targetWaypoint = newWaypoint;
+
+    //            // Make sure it's active
+    //            newWaypoint.gameObject.SetActive(true);
+
+    //            // CRITICAL: For AutoPilot mode, we need to tell the walker about the new target
+    //            if (generalManager.movementController == GlobalConfiguration.MovementController.AutoPilot)
+    //            {
+    //                // The SimulatedWalker uses redirectionManager.targetWaypoint directly,
+    //                // so this should work automatically
+
+    //                Debug.Log($"Updated to VE waypoint {waypointIterator} at position {newWaypoint.position}");
+    //            }
+
+    //            // Mark that we touched a waypoint (for synchronization)
+    //            redirectionManager.touchWaypoint = true;
+    //        }
+    //    }
+    //    else if (waypointIterator == waypoints.Count - 1)
+    //    {
+    //        ifMissionComplete = true;
+    //    }
+    //    else
+    //    {
+    //        waypointIterator++;
+    //        redirectionManager.touchWaypoint = true;
+    //        redirectionManager.targetWaypoint.position = new Vector3(waypoints[waypointIterator].x, redirectionManager.targetWaypoint.position.y, waypoints[waypointIterator].y);
+    //    }
+    //}
 
     //align the recorded waypoints to the given point and direction,     
     public List<Vector2> GetRealWaypoints(List<Vector2> preWaypoints, Vector2 initialPosition, Vector2 initialForward, out float sumOfDistances, out float sumOfRotations)
@@ -267,6 +376,29 @@ public class MovementManager : MonoBehaviour
     }
 
     //need to reload data for each trial
+    //public void ForceVEPathUsage(string vePathName)
+    //{
+    //    pathSeedChoice = PathSeedChoice.VEPath;
+    //    vePath = GameObject.Find(vePathName)?.GetComponent<VEPath>();
+
+    //    if (vePath == null)
+    //    {
+    //        Debug.LogError($"VEPath not found: {vePathName}");
+    //        return;
+    //    }
+
+    //    // Initialize waypoints from VEPath
+    //    vePathWaypoints = vePath.pathWaypoints;
+    //    waypointIterator = 0;
+
+    //    // Set first waypoint as target
+    //    if (vePathWaypoints != null && vePathWaypoints.Length > 0)
+    //    {
+    //        redirectionManager.targetWaypoint = vePathWaypoints[0];
+    //        Debug.Log($"Set first waypoint to: {vePathWaypoints[0].position}");
+    //    }
+    //}
+
     public void LoadData(int avatarId, AvatarInfo avatar)
     {
         var rm = redirectionManager;
@@ -299,6 +431,7 @@ public class MovementManager : MonoBehaviour
 
         //Set virtual path
 
+        //Set virtual path
         if (pathSeedChoice == PathSeedChoice.VEPath)//jon: newly added VE Path
         {
             vePath = GameObject.Find(avatar.vePathName).GetComponent<VEPath>();

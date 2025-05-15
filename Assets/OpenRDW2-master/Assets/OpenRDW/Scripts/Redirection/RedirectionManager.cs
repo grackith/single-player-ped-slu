@@ -2,7 +2,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.XR.CoreUtils;
 
 public class RedirectionManager : MonoBehaviour
 {
@@ -35,8 +34,6 @@ public class RedirectionManager : MonoBehaviour
 
     [Tooltip("Overt Redirection Controller")]
     public ResetterChoice resetterChoice;
-    [Tooltip("The XR Origin that defines the tracking space")]
-    public Transform xrOrigin;
 
     // Experiment Variables
     [HideInInspector]
@@ -144,7 +141,7 @@ public class RedirectionManager : MonoBehaviour
         else
         {
             // hide avatar body
-            body.gameObject.SetActive(false);
+            // body.gameObject.SetActive(false);
         }
 
         // Resetter needs ResetTrigger to be initialized before initializing itself
@@ -156,7 +153,50 @@ public class RedirectionManager : MonoBehaviour
         isRotating = false;
         isWalking = false;
         touchWaypoint = false;
+        // Add this to the Awake() method after existing initialization
+        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+        {
+            // Find XR Origin at root level
+            GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+            if (xrOrigin != null)
+            {
+                // Try to find the main camera within XR Origin
+                Transform mainCamera = xrOrigin.transform.Find("Camera Offset/Main Camera");
+                if (mainCamera != null)
+                {
+                    headTransform = mainCamera;
+                    Debug.Log("Successfully found and assigned XR camera as head transform");
+                }
+                else
+                {
+                    // Try alternative paths if your XR setup is different
+                    // This searches all children recursively for a camera
+                    Camera cam = xrOrigin.GetComponentInChildren<Camera>();
+                    if (cam != null)
+                    {
+                        headTransform = cam.transform;
+                        Debug.Log("Found camera in XR Origin children");
+                    }
+                    else
+                    {
+                        Debug.LogError("Could not find camera in XR Origin. Please assign headTransform manually in inspector.");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogError("Could not find 'XR Origin Hands (XR Rig)' in scene. Make sure the name matches exactly.");
+            }
+        }
     }
+
+    // void Start()
+    // {
+    //     if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+    //     {
+    //         body.gameObject.SetActive(false);
+    //     }
+    // }
 
     //modify these trhee functions when adding a new redirector
     public System.Type RedirectorChoiceToRedirector(RedirectorChoice redirectorChoice)
@@ -303,7 +343,7 @@ public class RedirectionManager : MonoBehaviour
 
     public Transform GetSimulatedAvatarHead()
     {
-        return transform.Find("Simulated Avatar").Find("Head");
+        return transform.Find("Simulated User").Find("Head");
     }
     public void FixHeadTransform()
     {
@@ -568,6 +608,13 @@ public class RedirectionManager : MonoBehaviour
         currDir = Utilities.FlattenedDir3D(headTransform.forward);
         currDirReal = GetDirReal(currDir);
         walkDist += (Utilities.FlattenedPos2D(currPos) - Utilities.FlattenedPos2D(prevPos)).magnitude;
+        // Add to UpdateCurrentUserState() or similar method that runs every frame
+        if (globalConfiguration.freeExplorationMode && targetWaypoint != null)
+        {
+            // Place the waypoint 3 meters ahead of the user in their walking direction
+            Vector3 forward = Utilities.FlattenedDir3D(headTransform.forward);
+            targetWaypoint.position = currPos + forward * 3f;
+        }
     }
 
     void UpdatePreviousUserState()
@@ -579,23 +626,12 @@ public class RedirectionManager : MonoBehaviour
     }
     public Vector3 GetPosReal(Vector3 pos)
     {
-        // Use XR Origin as the reference frame instead of trackingSpace
-        return xrOrigin.transform.InverseTransformPoint(pos);
+        return Utilities.GetRelativePosition(pos, trackingSpace.transform);
     }
-    //public Vector3 GetPosReal(Vector3 pos)
-    //{
-    //    return Utilities.GetRelativePosition(pos, trackingSpace.transform);
-    //}
-
     public Vector3 GetDirReal(Vector3 dir)
     {
-        // Use XR Origin for rotation calculations
-        return xrOrigin.transform.InverseTransformDirection(dir);
+        return Utilities.FlattenedDir3D(Utilities.GetRelativeDirection(dir, transform));
     }
-    //public Vector3 GetDirReal(Vector3 dir)
-    //{
-    //    return Utilities.FlattenedDir3D(Utilities.GetRelativeDirection(dir, transform));
-    //}
 
     void CalculateStateChanges()
     {

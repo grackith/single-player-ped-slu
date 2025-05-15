@@ -90,30 +90,35 @@ public class SimpleTeleportButton : MonoBehaviour
             }
         }
 
-        // Get mesh renderer for visual feedback
+        // Get mesh renderer for visual feedback - FIXED VERSION
         meshRenderer = GetComponent<MeshRenderer>();
         if (meshRenderer == null)
         {
-            Debug.LogWarning("MeshRenderer not found on button");
-            // Not critical, continue anyway
+            // Try to find MeshRenderer in children (like the "press" object)
+            MeshRenderer[] childRenderers = GetComponentsInChildren<MeshRenderer>();
+            if (childRenderers.Length > 0)
+            {
+                meshRenderer = childRenderers[0]; // Use the first one found
+                Debug.Log("Using child MeshRenderer from: " + meshRenderer.gameObject.name);
+            }
+            else
+            {
+                Debug.LogWarning("MeshRenderer not found on button or children - visual feedback will be limited");
+            }
         }
 
         // Find button visuals if not assigned
         if (pressVisual == null)
         {
-            // Try to find the "press" object as a sibling
-            Transform parent = transform.parent;
-            if (parent != null)
+            // Try to find the "press" object as a child
+            pressVisual = transform.Find("press");
+            if (pressVisual != null)
             {
-                pressVisual = parent.Find("press");
-                if (pressVisual != null)
-                {
-                    Debug.Log("Found press visual: " + pressVisual.name);
-                }
+                Debug.Log("Found press visual: " + pressVisual.name);
             }
         }
 
-        if (buttonText == null && transform.childCount > 0)
+        if (buttonText == null)
         {
             // Try to find the text object as a child
             buttonText = transform.Find("home button text");
@@ -204,7 +209,8 @@ public class SimpleTeleportButton : MonoBehaviour
     public void OnButtonSelected(SelectEnterEventArgs args)
     {
         // Move button inward
-        buttonVisual.localPosition = pressedButtonPosition;
+        // Move button inward
+        transform.localPosition = pressedButtonPosition;
 
         // Visual feedback
         if (meshRenderer != null && pressedMaterial != null)

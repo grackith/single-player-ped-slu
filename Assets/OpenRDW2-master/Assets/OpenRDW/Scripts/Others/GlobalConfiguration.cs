@@ -6,14 +6,19 @@ using AvatarInfo = ExperimentSetup.AvatarInfo;
 using System.IO;
 using System;
 using TMPro;
+using static GlobalConfiguration;
 
 //Store common parameters 
 public class GlobalConfiguration : MonoBehaviour
 {
+
+    [Header("Virtual World")]
+    public GameObject virtualWorld; // Make it public instead of using getter
     const float INF = 100000;
     const float EPS = 1e-5f;
     public List<SingleSpace> physicalSpaces;
     public SingleSpace virtualSpace;
+    private string preservedTrackingSpaceFilePath;
 
     private float pathCircleRadius;
     private int pathCircleWaypointNum = 20;
@@ -116,6 +121,9 @@ public class GlobalConfiguration : MonoBehaviour
     [Tooltip("Number of trails will be repeated")]
     [Range(1, 10)]
     public int trialsForRepeating;
+
+    [Tooltip("Enable for free exploration without waypoints")]
+    public bool freeExplorationMode = false;
 
     [HideInInspector]
     public List<ExperimentSetup> experimentSetups;//experimentSetup of one command file
@@ -232,6 +240,9 @@ public class GlobalConfiguration : MonoBehaviour
     [Tooltip("Side length if trackingSpace == Square")]
     public float squareWidth;
 
+    private GameObject[] preservedAvatarPrefabs; // Add this field
+
+
     public Color virtualObstacleColor;
 
     public Color obstacleColor;
@@ -254,7 +265,7 @@ public class GlobalConfiguration : MonoBehaviour
     private List<GameObject> planesForAllAvatar;//plane gameobject in overview mode
     private List<GameObject> bufferRepresentations;//for buffer visualization
 
-    public GameObject virtualWorld { get; private set; }//
+    //public GameObject virtualWorld { get; private set; }//
     public bool useVECollision = false;
     #endregion
 
@@ -348,6 +359,56 @@ public class GlobalConfiguration : MonoBehaviour
     const int AVATAR_LAYER = 8;//jon: the layer for avatar objects, used in VE collision
 
     // redirection & reset phase for separatespace redirector
+
+    // Add this method to GlobalConfiguration to verify waypoint alignment
+    [ContextMenu("Debug First Waypoint Alignment")]
+    public void DebugFirstWaypointAlignment()
+    {
+        if (redirectedAvatars == null || redirectedAvatars.Count == 0)
+        {
+            Debug.LogError("No redirected avatars found!");
+            return;
+        }
+
+        var mm = redirectedAvatars[0].GetComponent<MovementManager>();
+        if (mm == null)
+        {
+            Debug.LogError("No MovementManager found!");
+            return;
+        }
+
+        Debug.Log("=== First Waypoint Alignment Debug ===");
+
+        // Physical initial position (should be 0,0)
+        if (mm.physicalInitPose != null)
+        {
+            Debug.Log($"Physical Init Pos: {mm.physicalInitPose.initialPosition}");
+        }
+
+        // Virtual initial position (should be your waypoint position)
+        if (mm.virtualInitPose != null)
+        {
+            Debug.Log($"Virtual Init Pos: {mm.virtualInitPose.initialPosition}");
+        }
+
+        // First waypoint position
+        if (mm.waypoints != null && mm.waypoints.Count > 0)
+        {
+            Debug.Log($"First Waypoint: {mm.waypoints[0]}");
+        }
+
+        // Current avatar position
+        var rm = redirectedAvatars[0].GetComponent<RedirectionManager>();
+        if (rm != null)
+        {
+            Debug.Log($"Current Avatar Pos: {rm.currPos}");
+            Debug.Log($"Head Transform Pos: {rm.headTransform.position}");
+        }
+
+        // Settings
+        Debug.Log($"firstWayPointIsStartPoint: {firstWayPointIsStartPoint}");
+        Debug.Log($"alignToInitialForward: {alignToInitialForward}");
+    }
     public void SeparateSpaceDecision()
     {
         List<RedirectionManager> managers = new List<RedirectionManager>();
@@ -465,14 +526,50 @@ public class GlobalConfiguration : MonoBehaviour
 
     private void Awake()
     {
+        // Preserve the tracking space file path before any modifications
+        preservedTrackingSpaceFilePath = trackingSpaceFilePath;
+        Debug.Log($"Preserved tracking space path: {preservedTrackingSpaceFilePath}");
+
         startTimeOfProgram = Utilities.GetTimeString();
         statisticsLogger = GetComponent<StatisticsLogger>();
-
         userInterfaceManager = GetComponent<UserInterfaceManager>();
-        cameraVirtualTopForAllAvatars = transform.Find("Virtual Top View Cam For All Avatars").GetComponent<Camera>();
+        // Safe camera finding
+        Transform camTransform = transform.Find("Virtual Top View Cam For All Avatars");
+        if (camTransform != null)
+        {
+            cameraVirtualTopForAllAvatars = camTransform.GetComponent<Camera>();
+            if (cameraVirtualTopForAllAvatars != null)
+            {
+                Transform signTransform = cameraVirtualTopForAllAvatars.transform.GetChild(0);
+                if (signTransform != null)
+                {
+                    signText = signTransform.GetComponent<TextMeshPro>();
+                    signTransform.gameObject.SetActive(true);
+                }
+                else
+                {
+                    Debug.LogWarning("Sign Text child not found on camera");
+                }
+            }
+            else
+            {
+                Debug.LogError("Camera component not found on Virtual Top View Cam object");
+            }
+        }
+        else
+        {
+            Debug.LogError("Virtual Top View Cam For All Avatars not found!");
+            // Create it if needed
+            GameObject cameraObj = new GameObject("Virtual Top View Cam For All Avatars");
+            cameraObj.transform.SetParent(transform);
+            cameraVirtualTopForAllAvatars = cameraObj.AddComponent<Camera>();
+
+            GameObject textObj = new GameObject("Sign Text");
+            textObj.transform.SetParent(cameraObj.transform);
+            signText = textObj.AddComponent<TextMeshPro>();
+        }
         signText = cameraVirtualTopForAllAvatars.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>();
         cameraVirtualTopForAllAvatars.transform.GetChild(0).gameObject.SetActive(true);
-        virtualWorld = transform.Find("Virtual World").gameObject;
 
         if (movementController == MovementController.AutoPilot)
         {
@@ -486,26 +583,35 @@ public class GlobalConfiguration : MonoBehaviour
             useSimulationTime = false;
             runInBackstage = false;
         }
+        // Preserve avatar prefabs more robustly
+        if (avatarPrefabs != null && avatarPrefabs.Length > 0)
+        {
+            preservedAvatarPrefabs = new GameObject[avatarPrefabs.Length];
+            for (int i = 0; i < avatarPrefabs.Length; i++)
+            {
+                preservedAvatarPrefabs[i] = avatarPrefabs[i];
+            }
+            Debug.Log($"Preserved {preservedAvatarPrefabs.Length} avatar prefabs");
+        }
+
 
         Initialize();
 
         // Initialization
         experimentIterator = 0;
         trialsForCurrentExperiment = trialsForRepeating;
-
         firstPersonViewOldChoice = firstPersonView;
         virtualWorldVisibleOldChoice = virtualWorldVisible;
         trackingSpaceVisibleOldChoice = trackingSpaceVisible;
         bufferVisibleOldChoice = bufferVisible;
 
-
-        //networking
-        networkManager = GetComponentInChildren<NetworkManager>(true);
-        networkManager.gameObject.SetActive(networkingMode);
-        if (networkingMode)
-        {
-            avatarNum = 1;
-        }
+        ////networking
+        //networkManager = GetComponentInChildren<NetworkManager>(true);
+        //networkManager.gameObject.SetActive(networkingMode);
+        //if (networkingMode)
+        //{
+        //    avatarNum = 1;
+        //}
         pathCircleRadius = pathLength / 2 / Mathf.PI;
         timeStepBase = (int)(timeStep * targetFPS);
         timeStepCountDown = 0;
@@ -542,6 +648,32 @@ public class GlobalConfiguration : MonoBehaviour
         {
             //generate experimentSetups according to UI settings
             GenerateExperimentSetupsByUI();
+        }
+        if (virtualWorld == null)
+        {
+            Debug.LogError("Virtual World is null in Start!");
+            // Try to find it in the scene
+            virtualWorld = GameObject.Find("VirtualWorld") ?? GameObject.Find("CiDyGraph");
+            if (virtualWorld != null)
+            {
+                Debug.Log($"Found virtual world: {virtualWorld.name}");
+            }
+        }
+    }
+    public void PreserveReferences()
+    {
+        if (avatarPrefabs == null || avatarPrefabs.Length == 0)
+        {
+            Debug.LogError("Avatar prefabs lost! Check inspector settings.");
+        }
+
+        if (virtualWorld == null)
+        {
+            virtualWorld = GameObject.Find("VirtualWorld") ?? GameObject.Find("CiDyGraph");
+            if (virtualWorld == null)
+            {
+                Debug.LogError("Virtual World reference lost!");
+            }
         }
     }
 
@@ -961,8 +1093,8 @@ public class GlobalConfiguration : MonoBehaviour
     }
     private void GenerateExperimentSetupsByUI()
     {
+        PreserveReferences();
         experimentSetupsList = new List<List<ExperimentSetup>>();
-        // Here we generate the corresponding experiments
         experimentSetups = new List<ExperimentSetup>();
 
         for (; redirectedAvatars.Count < avatarNum;)
@@ -973,13 +1105,59 @@ public class GlobalConfiguration : MonoBehaviour
 
         GenerateTrackingSpace(redirectedAvatars.Count, out physicalSpaces, out virtualSpace);
 
+        // FIX: Handle missing initial poses
+        if (physicalSpaces == null || physicalSpaces.Count == 0)
+        {
+            Debug.LogError("No physical spaces generated, creating default");
+            physicalSpaces = new List<SingleSpace>();
+
+            // Create a default square physical space
+            var defaultSpace = new SingleSpace(
+                new List<Vector2> {
+                new Vector2(2.25f, 6.25f),
+                new Vector2(-2.25f, 6.25f),
+                new Vector2(-2.25f, -6.25f),
+                new Vector2(2.25f, -6.25f)
+                },
+                new List<List<Vector2>>(), // No obstacles
+                new List<InitialPose> { new InitialPose(Vector2.zero, Vector2.up) }
+            );
+            physicalSpaces.Add(defaultSpace);
+        }
+
+        // Ensure each physical space has initial poses
+        foreach (var space in physicalSpaces)
+        {
+            if (space.initialPoses == null || space.initialPoses.Count == 0)
+            {
+                space.initialPoses = new List<InitialPose>();
+                space.initialPoses.Add(new InitialPose(Vector2.zero, Vector2.up));
+            }
+        }
+
+        // Continue with the rest of the method...
         var avatarList = new List<AvatarInfo>();
         int physicalSpaceIndex = 0;
         int avatarIndex = 0;
+
         for (int i = 0; i < redirectedAvatars.Count; i++)
         {
             var ra = redirectedAvatars[i];
             var mm = ra.GetComponent<MovementManager>();
+
+            // Check bounds before accessing
+            if (physicalSpaceIndex >= physicalSpaces.Count)
+            {
+                Debug.LogError($"Physical space index {physicalSpaceIndex} out of bounds");
+                break;
+            }
+
+            if (avatarIndex >= physicalSpaces[physicalSpaceIndex].initialPoses.Count)
+            {
+                Debug.LogError($"Avatar index {avatarIndex} out of bounds for physical space {physicalSpaceIndex}");
+                break;
+            }
+
             mm.physicalInitPose = physicalSpaces[physicalSpaceIndex].initialPoses[avatarIndex];
             mm.physicalSpaceIndex = physicalSpaceIndex;
             if (virtualSpace != null)
@@ -991,8 +1169,10 @@ public class GlobalConfiguration : MonoBehaviour
                 mm.virtualInitPose = mm.physicalInitPose;
             }
 
+            // Initialize waypoints using the default pattern
             mm.InitializeWaypointsPattern(DEFAULT_RANDOM_SEED);
             mm.randomSeed = DEFAULT_RANDOM_SEED;
+
             var avatarInfo = mm.GetCurrentAvatarInfo();
             avatarList.Add(avatarInfo);
             avatarIndex++;
@@ -1308,26 +1488,121 @@ public class GlobalConfiguration : MonoBehaviour
     //which avatar for visualization    
     public GameObject GetUserSelectedAvatarPrefab()
     {
-        return avatarPrefabs[avatarPrefabId];
+        // First try the main array
+        if (avatarPrefabs != null && avatarPrefabId < avatarPrefabs.Length && avatarPrefabs[avatarPrefabId] != null)
+        {
+            return avatarPrefabs[avatarPrefabId];
+        }
+
+        // Fallback to preserved array
+        if (preservedAvatarPrefabs != null && avatarPrefabId < preservedAvatarPrefabs.Length)
+        {
+            return preservedAvatarPrefabs[avatarPrefabId];
+        }
+
+        Debug.LogError($"No avatar prefab found for id {avatarPrefabId}");
+        return null;
     }
 
+    // Update the CreateNewRedirectedAvatar method in GlobalConfiguration
     public GameObject CreateNewRedirectedAvatar(int avatarId)
     {
         var av0 = redirectedAvatars[0];
         var newAvatar = Instantiate(av0, av0.transform.position, av0.transform.rotation, av0.transform.parent);
         newAvatar.name = av0.name + "_" + avatarId;
-        if (newAvatar.transform.Find("Body").childCount != 0)
+
+        // Fix the destroy issue - don't destroy during runtime
+        Transform bodyTransform = newAvatar.transform.Find("Body");
+        if (bodyTransform != null && bodyTransform.childCount > 0)
         {
-            Destroy(newAvatar.transform.Find("Body").GetChild(0).gameObject);
+            GameObject childToDestroy = bodyTransform.GetChild(0).gameObject;
+            // Just deactivate instead of destroying
+            childToDestroy.SetActive(false);
         }
+
+        // Handle planes similarly
         int planeIndex = 0;
-        while (newAvatar.transform.Find("Plane" + planeIndex) != null)
+        Transform planeTransform = newAvatar.transform.Find("Plane" + planeIndex);
+        while (planeTransform != null)
         {
-            Destroy(newAvatar.transform.Find("Plane" + planeIndex).gameObject);
+            // Just deactivate instead of destroying
+            planeTransform.gameObject.SetActive(false);
             planeIndex++;
+            planeTransform = newAvatar.transform.Find("Plane" + planeIndex);
         }
+
         return newAvatar;
     }
+    // Add this method to GlobalConfiguration to align tracking space with waypoints
+    public void AlignTrackingSpaceToWaypoints()
+    {
+        if (redirectedAvatars.Count == 0) return;
+
+        var firstAvatar = redirectedAvatars[0];
+        var mm = firstAvatar.GetComponent<MovementManager>();
+        var rm = firstAvatar.GetComponent<RedirectionManager>();
+
+        if (mm.pathSeedChoice == PathSeedChoice.VEPath && mm.vePath != null)
+        {
+            if (mm.vePathWaypoints != null && mm.vePathWaypoints.Length > 0)
+            {
+                Vector3 firstWaypointPos = mm.vePathWaypoints[0].position;
+
+                // Don't offset the tracking space - keep it at origin
+                // Just set the avatar's virtual position to match the waypoint
+                mm.virtualInitPose = new InitialPose(
+                    new Vector2(firstWaypointPos.x, firstWaypointPos.z),
+                    Vector2.up
+                );
+
+                // Keep tracking space at origin
+                rm.trackingSpace.position = Vector3.zero;
+
+                Debug.Log($"Set virtual init pose to first waypoint: {firstWaypointPos}");
+            }
+        }
+    }
+    void FixComponentReferences(GameObject avatar, int avatarId)
+    {
+        var mm = avatar.GetComponent<MovementManager>();
+        var rm = avatar.GetComponent<RedirectionManager>();
+        var vm = avatar.GetComponent<VisualizationManager>();
+
+        if (mm == null || rm == null || vm == null)
+        {
+            Debug.LogError($"Missing components on avatar {avatarId}");
+            return;
+        }
+
+        // Fix redirector references
+        if (rm.redirector != null)
+        {
+            rm.redirector.globalConfiguration = this;
+            rm.redirector.movementManager = mm;
+            rm.redirector.redirectionManager = rm;
+        }
+
+        // Fix resetter references
+        if (rm.resetter != null)
+        {
+            rm.resetter.globalConfiguration = this;
+            rm.resetter.movementManager = mm;
+            rm.resetter.redirectionManager = rm;
+        }
+
+        // Ensure visualization manager has proper references
+        vm.generalManager = this;
+        vm.redirectionManager = rm;
+        vm.movementManager = mm;
+
+        // Fix head follower
+        if (vm.headFollower != null)
+        {
+            vm.headFollower.avatarId = avatarId;
+            vm.headFollower.globalConfiguration = this;
+        }
+    }
+
     void StartNextExperiment()
     {
         Debug.Log(string.Format("---------- EXPERIMENT STARTED ----------"));
@@ -1470,7 +1745,27 @@ public class GlobalConfiguration : MonoBehaviour
             defaultId = networkManager.avatarId;
         }
 
-        redirectedAvatars[defaultId].transform.Find("[CameraRig]").gameObject.SetActive(movementController == MovementController.HMD);
+        // Find the XR Origin at root level instead of looking for "[CameraRig]" as a child
+        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+        if (xrOrigin != null)
+        {
+            xrOrigin.SetActive(movementController == MovementController.HMD);
+        }
+        else
+        {
+            Debug.LogError("Could not find 'XR Origin Hands (XR Rig)' GameObject in scene. Please check the name.");
+
+            // Fallback to the original code in case the object name changed
+            var cameraRig = redirectedAvatars[defaultId].transform.Find("[CameraRig]");
+            if (cameraRig != null)
+            {
+                cameraRig.gameObject.SetActive(movementController == MovementController.HMD);
+            }
+            else
+            {
+                Debug.LogError("Could not find camera rig. Neither 'XR Origin Hands (XR Rig)' nor '[CameraRig]' found.");
+            }
+        }
 
         if (overviewModeEveryTrial)
         {
@@ -1482,7 +1777,21 @@ public class GlobalConfiguration : MonoBehaviour
         }
     }
 
+
     //physical plane in overviewmode    
+    public Material GetStandardMaterial(Color color)
+    {
+        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (mat.shader == null)
+        {
+            // Fallback to a built-in shader
+            mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+        }
+        mat.color = color;
+        return mat;
+    }
+
+    // Update GenerateTrackingSpaceMeshForAllAvatarView to use proper materials
     public void GenerateTrackingSpaceMeshForAllAvatarView(List<SingleSpace> physicalSpaces)
     {
         // destroy old gameobjects
@@ -1507,7 +1816,17 @@ public class GlobalConfiguration : MonoBehaviour
             var trackingSpaceMesh = TrackingSpaceGenerator.GeneratePolygonMesh(space.trackingSpace);
             plane.AddComponent<MeshFilter>().mesh = trackingSpaceMesh;
             var planeMr = plane.AddComponent<MeshRenderer>();
-            planeMr.material = new Material(trackingSpacePlaneMat);
+
+            // Make sure the material is properly assigned
+            if (trackingSpacePlaneMat != null)
+            {
+                planeMr.material = trackingSpacePlaneMat;
+            }
+            else
+            {
+                planeMr.material = GetStandardMaterial(new Color(0.5f, 0.5f, 0.5f, 0.5f));
+            }
+
             planesForAllAvatar.Add(plane);
 
             // obstacle
@@ -1535,6 +1854,7 @@ public class GlobalConfiguration : MonoBehaviour
         }
     }
 
+    // Fix the AddBufferMesh method
     public GameObject AddBufferMesh(Mesh bufferMesh, Transform bufferParent)
     {
         var obj = new GameObject("bufferMesh" + bufferRepresentations.Count);
@@ -1544,8 +1864,17 @@ public class GlobalConfiguration : MonoBehaviour
 
         obj.AddComponent<MeshFilter>().mesh = bufferMesh;
         var mr = obj.AddComponent<MeshRenderer>();
-        mr.material = new Material(transparentMat);
-        mr.material.color = bufferColor;
+
+        // Make sure materials are properly assigned
+        if (transparentMat != null)
+        {
+            mr.material = transparentMat;
+            mr.material.color = bufferColor;
+        }
+        else
+        {
+            mr.material = GetStandardMaterial(bufferColor);
+        }
 
         bufferRepresentations.Add(obj);
         return obj;
@@ -1554,8 +1883,10 @@ public class GlobalConfiguration : MonoBehaviour
     //endState of experiment, 0 indicates normal end, -1 indicates invalid data, 1 indicates end manually
     void EndExperiment(int endState)
     {
-        if (experimentIterator >= experimentSetups.Count)
-            return;
+        if (experimentIterator < experimentSetups.Count)
+        {
+            PreserveReferences(); // Add here
+        }
 
         //HMD mode, press key R to be ready for the next trial
         if (movementController == MovementController.HMD)
@@ -1796,6 +2127,7 @@ public class GlobalConfiguration : MonoBehaviour
     }
 
     //create an avatar, return the root object, trans: the parent transform of avatarRoot
+    // Updated GlobalConfiguration.cs - CreateAvatar method
     public GameObject CreateAvatar(Transform trans, int avatarId, bool isOtherAvatarRepresentation)
     {
         if (isOtherAvatarRepresentation)
@@ -1880,4 +2212,9 @@ public class GlobalConfiguration : MonoBehaviour
 
         return avatarRoot;
     }
+
+
 }
+
+// Add this extension to make private methods accessible for testing
+
