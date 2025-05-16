@@ -831,35 +831,78 @@ public class ScenarioManager : MonoBehaviour
         // Inside your existing Update() method, add these key checks:
 
         // R key - Start the redirected walking experience 
+        // Inside your ScenarioManager's Update method, add:
+        // R key - Start the redirected walking experience 
         // R key - Start the redirected walking experience 
         if (Input.GetKeyDown(KeyCode.R))
         {
             Debug.Log("R key pressed - Starting RDW experiment");
 
-            // Find the RDW setup
-            //RDWSceneSetup rdwSetup = FindObjectOfType<RDWSceneSetup>();
-            //if (rdwSetup != null)
-            //{
-            //    // The RDWSceneSetup will handle the key press
-            //    Debug.Log("Delegating to RDWSceneSetup");
-            //}
-            //else
-            //{
-            //    Debug.LogWarning("No RDWSceneSetup found!");
-            //}
+            // Find the GlobalConfiguration
+            GlobalConfiguration rdwConfig = FindObjectOfType<GlobalConfiguration>();
+
+            if (rdwConfig != null)
+            {
+                // Set the experiment in progress flag
+                rdwConfig.experimentInProgress = true;
+                rdwConfig.readyToStart = true;
+
+                // Ensure HMD mode is active
+                rdwConfig.movementController = GlobalConfiguration.MovementController.HMD;
+
+                // Make sure we're in free exploration mode
+                rdwConfig.freeExplorationMode = true;
+
+                Debug.Log("RDW experiment started via GlobalConfiguration");
+
+                // Set up all redirection managers for HMD
+                foreach (var avatar in rdwConfig.redirectedAvatars)
+                {
+                    if (avatar != null)
+                    {
+                        RedirectionManager rdwManager = avatar.GetComponent<RedirectionManager>();
+                        if (rdwManager != null)
+                        {
+                            // Log before
+                            Debug.Log($"Before setup: Redirector={rdwManager.redirectorChoice}, Resetter={rdwManager.resetterChoice}");
+
+                            // Force direct assignment
+                            rdwManager.redirectorChoice = RedirectionManager.RedirectorChoice.S2C;
+                            rdwManager.resetterChoice = RedirectionManager.ResetterChoice.TwoOneTurn;
+
+                            // Update both components
+                            rdwManager.UpdateRedirector(typeof(S2CRedirector));
+                            rdwManager.UpdateResetter(typeof(TwoOneTurnResetter));
+
+                            // Setup
+                            rdwManager.SetupForHMDFreeExploration();
+
+                            // Log after
+                            Debug.Log($"After setup: Redirector={rdwManager.redirectorChoice}, Resetter={rdwManager.resetterChoice}");
+
+                            // Check actual components
+                            var actualRedirector = rdwManager.gameObject.GetComponent<Redirector>();
+                            var actualResetter = rdwManager.gameObject.GetComponent<Resetter>();
+                            Debug.Log($"Actual components: Redirector={actualRedirector.GetType().Name}, Resetter={actualResetter.GetType().Name}");
+                        }
+                    }
+                }
+            }
         }
 
         // ~ (tilde) key - Toggle physical space overview
         if (Input.GetKeyDown(KeyCode.BackQuote))
         {
             Debug.Log("~ key pressed - Toggling physical space view");
-            // This is typically handled by visualizing the physical boundaries
-            VisualizationManager visManager = FindObjectOfType<VisualizationManager>();
-            if (visManager != null)
+
+            RedirectionManager rdwManager = FindObjectOfType<RedirectionManager>();
+            if (rdwManager != null)
             {
-                // Toggle visualization of physical space
-                // Implementation depends on how visualization is handled in your project
-                Debug.Log("Toggled physical space visualization");
+                rdwManager.ToggleTrackingSpaceVisualization();
+            }
+            else
+            {
+                Debug.LogError("No RedirectionManager found - can't toggle tracking space visualization");
             }
         }
 
@@ -1782,38 +1825,74 @@ public class ScenarioManager : MonoBehaviour
                     // Position at start point with offset
                     Vector3 targetPosition = scenario.playerStartPosition.position - cameraOffset;
                     targetPosition.y = xrOrigin.transform.position.y; // Maintain floor height
+
+                    // Save original position for logging
+                    Vector3 originalPosition = xrOrigin.transform.position;
+
+                    // Move XR Origin to target position
                     xrOrigin.transform.position = targetPosition;
                     xrOrigin.transform.rotation = scenario.playerStartPosition.rotation;
 
-                    Debug.Log($"Positioned player at scenario start point");
+                    Debug.Log($"Positioned player at scenario start point. Moved from {originalPosition} to {targetPosition}");
 
-                    // Update RDW system for the new position
-                    UpdateRDWForScenario(scenario);
-
-                    // Get the RedirectionManager to update its tracking space
+                    // Handle RDW system update with improved approach
                     if (rdwGlobalConfiguration != null && rdwGlobalConfiguration.redirectedAvatars.Count > 0)
                     {
                         var redirectionManager = rdwGlobalConfiguration.redirectedAvatars[0].GetComponent<RedirectionManager>();
                         if (redirectionManager != null)
                         {
-                            // Update the tracking space position relative to the new player position
-                            Vector3 realPos = redirectionManager.GetPosReal(xrOrigin.transform.position);
-                            redirectionManager.trackingSpace.position = xrOrigin.transform.position - realPos;
+                            // SIMPLIFIED APPROACH: Just set tracking space directly at the new position
+                            // This makes the real position (relative to tracking space) zero
+                            redirectionManager.trackingSpace.position = targetPosition;
 
-                            // Update the tracking space rotation
-                            Vector3 realDir = redirectionManager.GetDirReal(xrOrigin.transform.forward);
-                            float angleOffset = Vector3.SignedAngle(realDir, xrOrigin.transform.forward, Vector3.up);
-                            redirectionManager.trackingSpace.rotation = Quaternion.Euler(0, angleOffset, 0) * redirectionManager.trackingSpace.rotation;
+                            // Align rotation with player's new rotation
+                            redirectionManager.trackingSpace.rotation = Quaternion.Euler(0, xrOrigin.transform.rotation.eulerAngles.y, 0);
 
-                            // Update current state
+                            // Force update current state
                             redirectionManager.UpdateCurrentUserState();
 
-                            Debug.Log("Updated RDW tracking space for new scenario position");
+                            // Verify alignment
+                            Vector3 realPosAfterUpdate = redirectionManager.GetPosReal(xrOrigin.transform.position);
+
+                            Debug.Log($"Reset tracking space to position {redirectionManager.trackingSpace.position}");
+                            Debug.Log($"Real position after update: {realPosAfterUpdate} (should be near zero)");
+
+                            // Update visualization if needed
+                            if (redirectionManager.visualizationManager != null)
+                            {
+                                redirectionManager.visualizationManager.GenerateTrackingSpaceMesh(rdwGlobalConfiguration.physicalSpaces);
+                                redirectionManager.visualizationManager.ChangeTrackingSpaceVisibility(true);
+                            }
+
+                            // Update target waypoint
+                            if (redirectionManager.targetWaypoint != null)
+                            {
+                                Vector3 forward = Utilities.FlattenedDir3D(xrOrigin.transform.forward);
+                                redirectionManager.targetWaypoint.position = targetPosition + forward * 3f;
+                                Debug.Log($"Positioned target waypoint at {redirectionManager.targetWaypoint.position}");
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogWarning("RedirectionManager component not found on redirected avatar");
                         }
                     }
+                    else
+                    {
+                        // Still call UpdateRDWForScenario as a fallback
+                        UpdateRDWForScenario(scenario);
+                    }
+                }
+                else
+                {
+                    Debug.LogError("Could not find XR Origin in the scene");
+                    return false;
                 }
             }
-
+            else
+            {
+                Debug.Log("No player start position specified in scenario");
+            }
             return true;
         }
         catch (System.Exception ex)

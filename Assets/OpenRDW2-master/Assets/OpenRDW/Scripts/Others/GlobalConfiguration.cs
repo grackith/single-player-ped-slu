@@ -1,12 +1,15 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using PathSeed = VirtualPathGenerator.PathSeed;
-using AvatarInfo = ExperimentSetup.AvatarInfo;
 using System.IO;
-using System;
 using TMPro;
+using UnityEngine;
+using UnityEngine.XR.ARSubsystems;
+//using static Cinemachine.Editor.CinemachineScreenComposerGuides;
 using static GlobalConfiguration;
+using static RedirectionManager;
+using AvatarInfo = ExperimentSetup.AvatarInfo;
+using PathSeed = VirtualPathGenerator.PathSeed;
 
 //Store common parameters 
 public class GlobalConfiguration : MonoBehaviour
@@ -926,64 +929,255 @@ public class GlobalConfiguration : MonoBehaviour
             return redirectedAvatars[y].GetComponent<RedirectionManager>().priority.CompareTo(redirectedAvatars[x].GetComponent<RedirectionManager>().priority);
         });
     }
+    // Add this method to your GlobalConfiguration class
+    public void MakeOneStepRedirection()
+    {
+        bool touchWaypoint = false;
+        bool triggerSyncReset = false;
+
+        // Check if any avatar touched a waypoint or needs reset
+        for (int i = 0; i < avatarNum; i++)
+        {
+            RedirectionManager remanager = redirectedAvatars[i].GetComponent<RedirectionManager>();
+            if (remanager.touchWaypoint)
+            {
+                touchWaypoint = true;
+                remanager.touchWaypoint = false;
+            }
+            if (remanager.resetter != null && !remanager.inReset && remanager.resetter.IsResetRequired() && remanager.EndResetCountDown == 0)
+            {
+                triggerSyncReset = true;
+                for (int j = 0; j < avatarNum; j++)
+                {
+                    redirectedAvatars[j].GetComponent<RedirectionManager>().resetSign = true;
+                }
+                Debug.Log(i);
+                break;
+            }
+        }
+
+        // Handle SeparateSpace redirector if needed
+        if (redirectedAvatars[0].GetComponent<RedirectionManager>().redirectorChoice == RedirectionManager.RedirectorChoice.SeparateSpace)
+        {
+            if (touchWaypoint || triggerSyncReset)
+            {
+                for (int i = 0; i < avatarNum; i++)
+                {
+                    RedirectionManager rm = redirectedAvatars[i].GetComponent<RedirectionManager>();
+                    SeparateSpace_Redirector rd = (SeparateSpace_Redirector)(rm.redirector);
+                    rd.collisionParams = rd.GetCollisionParams(new Vector2(rm.currPosReal.x, rm.currPosReal.z), Utilities.FlattenedPos2D(Utilities.GetRelativePosition(rm.targetWaypoint.position, rm.trackingSpace.transform) - rm.currPosReal));
+                    rd.resetTimeRange = rd.GetResetTimeRange(new Vector2(rm.currPosReal.x, rm.currPosReal.z));
+                    rd.collisionTimeRange = rd.GetTimeRange(rd.collisionParams);
+                    rd.timeToWayPoint = rd.GetTimeToWayPoint();
+                }
+                SeparateSpaceDecision();
+            }
+        }
+
+        // Call MakeOneStepRedirection on each RedirectionManager in priority order
+        for (int i = 0; i < avatarIdSortedFromHighPriorityToLow.Count; i++)
+        {
+            redirectedAvatars[avatarIdSortedFromHighPriorityToLow[i]].GetComponent<RedirectionManager>().MakeOneStepRedirection();
+        }
+
+        // Log data
+        statisticsLogger.UpdateStats();
+    }
 
     //large cycle
     public void MakeOneStepCycle()
     {
-        //experiment is finished
+        // Check if experiment is finished or waiting for network
         if (experimentIterator >= experimentSetups.Count)
             return;
         if (networkingMode && !readyToStart)
             return;
 
+        // Add null checks
+        if (redirectedAvatars == null || redirectedAvatars.Count == 0)
+        {
+            Debug.LogError("redirectedAvatars is null or empty in MakeOneStepCycle");
+            return;
+        }
+
+        // Update simulation time
         UpdateSimulatedTime();
+
+        // Make redirection steps
         MakeOneStepMovement();
         MakeOneStepRedirection();
 
+        // Initialize collections if they don't exist
+        if (realTrailPoints == null) realTrailPoints = new List<List<TrailDrawer.Vertice>>();
+        if (virtualSpaceTrailPoints == null) virtualSpaceTrailPoints = new List<List<TrailDrawer.Vertice>>();
+        if (realTrailList == null) realTrailList = new List<GameObject>();
+        if (virtualSpaceTrailList == null) virtualSpaceTrailList = new List<GameObject>();
+        if (avatarRepresentations == null) avatarRepresentations = new List<GameObject>();
+
+        // Ensure collections have enough entries
+        while (realTrailPoints.Count < redirectedAvatars.Count)
+            realTrailPoints.Add(new List<TrailDrawer.Vertice>());
+        while (virtualSpaceTrailPoints.Count < redirectedAvatars.Count)
+            virtualSpaceTrailPoints.Add(new List<TrailDrawer.Vertice>());
+
+        // Create trail objects if needed
+        while (realTrailList.Count < redirectedAvatars.Count)
+        {
+            var trail = TrailDrawer.GetNewTrailObj(
+                "realTrail" + realTrailList.Count,
+                (avatarColors != null && avatarColors.Length > realTrailList.Count)
+                    ? avatarColors[realTrailList.Count]
+                    : Color.white,
+                transform);
+            realTrailList.Add(trail);
+        }
+
+        while (virtualSpaceTrailList.Count < redirectedAvatars.Count)
+        {
+            var trail = TrailDrawer.GetNewTrailObj(
+                "virtualTrail" + virtualSpaceTrailList.Count,
+                (avatarColors != null && avatarColors.Length > virtualSpaceTrailList.Count)
+                    ? avatarColors[virtualSpaceTrailList.Count]
+                    : Color.white,
+                transform);
+            virtualSpaceTrailList.Add(trail);
+        }
+
+        // Create avatar representations if needed
+        while (avatarRepresentations.Count < redirectedAvatars.Count)
+        {
+            var avatarRepresentation = CreateAvatar(transform, avatarRepresentations.Count, false);
+            avatarRepresentations.Add(avatarRepresentation);
+        }
+
+        // Process each avatar
         for (var id = 0; id < redirectedAvatars.Count; id++)
         {
-            var mm = redirectedAvatars[id].GetComponent<MovementManager>();
-            var rm = redirectedAvatars[id].GetComponent<RedirectionManager>();
-            var vm = redirectedAvatars[id].GetComponent<VisualizationManager>();
-            vm.UpdateVisualizations();
+            // Get components
+            MovementManager mm = null;
+            RedirectionManager rm = null;
+            VisualizationManager vm = null;
 
-            //draw real trails in overview mode
-            if (drawRealTrail)
-                TrailDrawer.UpdateTrailPoints(realTrailPoints[id], rm.trackingSpace.transform, realTrailList[id].GetComponent<MeshFilter>().mesh,
-                    Utilities.FlattenedPos3D(rm.headTransform.position, TrailDrawer.PATH_HEIGHT), trailVisualTime);
-            if (drawVirtualTrail)
-                TrailDrawer.UpdateTrailPoints(virtualSpaceTrailPoints[id], transform, virtualSpaceTrailList[id].GetComponent<MeshFilter>().mesh,
-                Utilities.FlattenedPos3D(rm.headTransform.position, TrailDrawer.PATH_HEIGHT), trailVisualTime);
+            if (redirectedAvatars[id] != null)
+            {
+                mm = redirectedAvatars[id].GetComponent<MovementManager>();
+                rm = redirectedAvatars[id].GetComponent<RedirectionManager>();
+                vm = redirectedAvatars[id].GetComponent<VisualizationManager>();
+            }
 
-            var prePos = avatarRepresentations[id].transform.position;
-            avatarRepresentations[id].transform.localPosition = new Vector3(rm.currPosReal.x, avatarRepresentations[id].transform.localPosition.y, rm.currPosReal.z);
-            avatarRepresentations[id].transform.localRotation = Quaternion.LookRotation(rm.currDirReal, Vector3.up);
+            // Update visualizations
+            if (vm != null)
+            {
+                try
+                {
+                    vm.UpdateVisualizations();
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Error updating visualizations for avatar {id}: {e.Message}");
+                }
+            }
+
+            // Draw real trails
+            bool canDrawRealTrail = drawRealTrail &&
+                rm != null && rm.trackingSpace != null && rm.headTransform != null &&
+                id < realTrailList.Count && id < realTrailPoints.Count &&
+                realTrailList[id] != null && realTrailList[id].GetComponent<MeshFilter>() != null;
+
+            if (canDrawRealTrail)
+            {
+                try
+                {
+                    TrailDrawer.UpdateTrailPoints(
+                        realTrailPoints[id],
+                        rm.trackingSpace.transform,
+                        realTrailList[id].GetComponent<MeshFilter>().mesh,
+                        Utilities.FlattenedPos3D(rm.headTransform.position, TrailDrawer.PATH_HEIGHT),
+                        trailVisualTime);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Error updating real trail for avatar {id}: {e.Message}");
+                }
+            }
+
+            // Draw virtual trails
+            bool canDrawVirtualTrail = drawVirtualTrail &&
+                rm != null && rm.headTransform != null &&
+                id < virtualSpaceTrailList.Count && id < virtualSpaceTrailPoints.Count &&
+                virtualSpaceTrailList[id] != null && virtualSpaceTrailList[id].GetComponent<MeshFilter>() != null;
+
+            if (canDrawVirtualTrail)
+            {
+                try
+                {
+                    TrailDrawer.UpdateTrailPoints(
+                        virtualSpaceTrailPoints[id],
+                        transform,
+                        virtualSpaceTrailList[id].GetComponent<MeshFilter>().mesh,
+                        Utilities.FlattenedPos3D(rm.headTransform.position, TrailDrawer.PATH_HEIGHT),
+                        trailVisualTime);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Error updating virtual trail for avatar {id}: {e.Message}");
+                }
+            }
+
+            // Update avatar representation
+            bool canUpdateRepresentation =
+                id < avatarRepresentations.Count &&
+                avatarRepresentations[id] != null &&
+                rm != null;
+
+            if (canUpdateRepresentation)
+            {
+                try
+                {
+                    avatarRepresentations[id].transform.localPosition = new Vector3(
+                        rm.currPosReal.x,
+                        avatarRepresentations[id].transform.localPosition.y,
+                        rm.currPosReal.z);
+
+                    avatarRepresentations[id].transform.localRotation =
+                        Quaternion.LookRotation(rm.currDirReal, Vector3.up);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Error updating avatar representation for avatar {id}: {e.Message}");
+                }
+            }
         }
 
-        //if this experiment trial finished
+        // Check if experiment is complete
         bool ifExperimentEnd = true;
-        for (int i = 0; i < redirectedAvatars.Count; i++)
-        {
-            var us = redirectedAvatars[i];
-            if (!us.GetComponent<MovementManager>().ifMissionComplete)
-            {
-                ifExperimentEnd = false;
-                break;
-            }
-        }
-
         bool ifInvalidAvatarExist = false;
+
         for (int i = 0; i < redirectedAvatars.Count; i++)
         {
             var us = redirectedAvatars[i];
-            if (us.GetComponent<MovementManager>().ifInvalid)
+            if (us != null)
             {
-                ifInvalidAvatarExist = true;
-                Debug.Log("ifInvalid: " + i);
-                break;
+                var mm = us.GetComponent<MovementManager>();
+                if (mm != null)
+                {
+                    // Check if any avatar has not completed mission
+                    if (!mm.ifMissionComplete)
+                    {
+                        ifExperimentEnd = false;
+                    }
+
+                    // Check if any avatar is invalid
+                    if (mm.ifInvalid)
+                    {
+                        ifInvalidAvatarExist = true;
+                        Debug.Log($"Avatar {i} is invalid");
+                    }
+                }
             }
         }
 
+        // End experiment if needed
         if (ifInvalidAvatarExist)
         {
             EndExperiment(-1);
@@ -1026,58 +1220,7 @@ public class GlobalConfiguration : MonoBehaviour
     }
 
     //make one step redirection
-    public void MakeOneStepRedirection()
-    {
-        bool touchWaypoint = false;
-        bool triggerSyncReset = false;
-        // bool inSyncReset = false;
-        for (int i = 0; i < avatarNum; i++)
-        {
-            RedirectionManager remanager = redirectedAvatars[i].GetComponent<RedirectionManager>();
-            if (remanager.touchWaypoint)
-            {
-                touchWaypoint = true;
-                remanager.touchWaypoint = false;
-            }
-            if (remanager.resetter != null && remanager.inReset)
-            {
-                // inSyncReset = true;
-            }
-            else if (remanager.resetter != null && !remanager.inReset && remanager.resetter.IsResetRequired() && remanager.EndResetCountDown == 0)
-            {
-                triggerSyncReset = true;
-                for (int j = 0; j < avatarNum; j++)
-                {
-                    redirectedAvatars[j].GetComponent<RedirectionManager>().resetSign = true;
-                }
-                Debug.Log(i);
-                break;
-            }
-        }
-        if (redirectedAvatars[0].GetComponent<RedirectionManager>().redirectorChoice == RedirectionManager.RedirectorChoice.SeparateSpace)
-        {
-            if (touchWaypoint || triggerSyncReset)
-            {
-                for (int i = 0; i < avatarNum; i++)
-                {
-                    RedirectionManager rm = redirectedAvatars[i].GetComponent<RedirectionManager>();
-                    SeparateSpace_Redirector rd = (SeparateSpace_Redirector)(rm.redirector);
-                    rd.collisionParams = rd.GetCollisionParams(new Vector2(rm.currPosReal.x, rm.currPosReal.z), Utilities.FlattenedPos2D(Utilities.GetRelativePosition(rm.targetWaypoint.position, rm.trackingSpace.transform) - rm.currPosReal));
-                    rd.resetTimeRange = rd.GetResetTimeRange(new Vector2(rm.currPosReal.x, rm.currPosReal.z));
-                    rd.collisionTimeRange = rd.GetTimeRange(rd.collisionParams);
-                    rd.timeToWayPoint = rd.GetTimeToWayPoint();
-                }
-                SeparateSpaceDecision();
-            }
-        }
-        for (int i = 0; i < avatarIdSortedFromHighPriorityToLow.Count; i++)
-        {
-            redirectedAvatars[avatarIdSortedFromHighPriorityToLow[i]].GetComponent<RedirectionManager>().MakeOneStepRedirection();
-        }
-
-        //log data
-        statisticsLogger.UpdateStats();
-    }
+    
     private void GenerateExperimentSetupsByCommandFiles()
     {
         experimentSetupsList = new List<List<ExperimentSetup>>();
@@ -1091,7 +1234,7 @@ public class GlobalConfiguration : MonoBehaviour
         else
             experimentSetups = new List<ExperimentSetup>();
     }
-    private void GenerateExperimentSetupsByUI()
+    public void GenerateExperimentSetupsByUI()
     {
         PreserveReferences();
         experimentSetupsList = new List<List<ExperimentSetup>>();
@@ -1358,6 +1501,20 @@ public class GlobalConfiguration : MonoBehaviour
     }
     public void GenerateWaypoints(int randomSeed, PathSeedChoice pathSeedChoice, InitialPose initPose, string waypointsFilePath, string samplingIntervalsFilePath, out List<Vector2> waypoints, out List<float> samplingIntervals)
     {
+        // Special handling for free exploration mode
+        if (freeExplorationMode)
+        {
+            Debug.Log("Free exploration mode: Using generated default waypoints");
+            waypoints = new List<Vector2>();
+            // Add default waypoints for free exploration (start point and forward point)
+            waypoints.Add(Vector2.zero);
+            waypoints.Add(Vector2.up * 3f);
+
+            // Create default sampling intervals
+            samplingIntervals = new List<float> { 0f, 1f };
+            return;
+        }
+
         if (pathSeedChoice == PathSeedChoice.FilePath)
         {
             waypoints = LoadWaypointsFromFile(waypointsFilePath);
@@ -1366,12 +1523,33 @@ public class GlobalConfiguration : MonoBehaviour
         else if (pathSeedChoice == PathSeedChoice.RealUserPath)
         {
             waypoints = LoadWaypointsFromFile(waypointsFilePath);
-            if (File.Exists(samplingIntervalsFilePath))
+
+            // Generate default sampling intervals if file doesn't exist
+            if (!string.IsNullOrEmpty(samplingIntervalsFilePath) && File.Exists(samplingIntervalsFilePath))
+            {
                 samplingIntervals = LoadSamplingIntervalsFromFile(samplingIntervalsFilePath);
+            }
             else
             {
-                Debug.LogError("sampleIntervalsFile does not exist: " + samplingIntervalsFilePath);
-                samplingIntervals = null;
+                // For RealUserPath without a sampling file, create default intervals
+                Debug.LogWarning("Using default sampling intervals (file not found): " + samplingIntervalsFilePath);
+                samplingIntervals = new List<float>();
+
+                // Add a sampling interval for each waypoint (if waypoints exist)
+                if (waypoints != null && waypoints.Count > 0)
+                {
+                    samplingIntervals.Add(0f); // First point has 0 interval
+                    for (int i = 1; i < waypoints.Count; i++)
+                    {
+                        samplingIntervals.Add(1f); // Default 1-second interval for other points
+                    }
+                }
+                else
+                {
+                    // Default minimal intervals if no waypoints
+                    samplingIntervals.Add(0f);
+                    samplingIntervals.Add(1f);
+                }
             }
         }
         else
@@ -1408,15 +1586,35 @@ public class GlobalConfiguration : MonoBehaviour
             }
             samplingIntervals = null;
         }
-    }
 
+        // Final safety check - ensure we always have waypoints even if everything else failed
+        if (waypoints == null || waypoints.Count == 0)
+        {
+            Debug.LogWarning("No waypoints generated - creating fallback defaults");
+            waypoints = new List<Vector2> { Vector2.zero, Vector2.up * 3f };
+        }
+    }
     //load waypoints from txt
     public List<Vector2> LoadWaypointsFromFile(string path)
     {
+        // For free exploration mode or missing path, create a default waypoint ahead of the user
+        if (freeExplorationMode || string.IsNullOrEmpty(path))
+        {
+            Debug.Log("Free exploration mode or missing path: Using generated default waypoints");
+            List<Vector2> defaultWaypoints = new List<Vector2>();
+            // Add a single waypoint 3 meters ahead (only used as a reference point)
+            defaultWaypoints.Add(Vector2.zero);
+            defaultWaypoints.Add(Vector2.up * 3f);
+            return defaultWaypoints;
+        }
+
         if (!File.Exists(path))
         {
-            Debug.LogError("waypointsFilePath does not exist! :" + path);
-            return null;
+            Debug.LogWarning("waypointsFilePath does not exist, using default: " + path);
+            List<Vector2> defaultWaypoints = new List<Vector2>();
+            defaultWaypoints.Add(Vector2.zero);
+            defaultWaypoints.Add(Vector2.up * 3f);
+            return defaultWaypoints;
         }
 
         var re = new List<Vector2>();
@@ -1459,18 +1657,40 @@ public class GlobalConfiguration : MonoBehaviour
                 re.Add(new Vector2(x, y));
             }
         }
-        catch
+        catch (Exception e)
         {
-            return re;
+            Debug.LogWarning("Error reading waypoints file: " + e.Message);
+            // Create default waypoints on error
+            re = new List<Vector2> { Vector2.zero, Vector2.up * 3f };
         }
         return re;
     }
     public List<float> LoadSamplingIntervalsFromFile(string sampleIntervalsFilePath)
     {
+        if (freeExplorationMode || string.IsNullOrEmpty(sampleIntervalsFilePath))
+        {
+            Debug.Log("Free exploration mode or missing path: Using generated default sampling intervals");
+            return new List<float> { 0f, 1f }; // Default sampling intervals
+        }
+
+        if (!File.Exists(sampleIntervalsFilePath))
+        {
+            Debug.LogWarning("sampleIntervalsFile does not exist, using default: " + sampleIntervalsFilePath);
+            return new List<float> { 0f, 1f }; // Default sampling intervals
+        }
+
         var re = new List<float>();
-        var lines = File.ReadAllLines(sampleIntervalsFilePath);
-        foreach (var line in lines)
-            re.Add(float.Parse(line));
+        try
+        {
+            var lines = File.ReadAllLines(sampleIntervalsFilePath);
+            foreach (var line in lines)
+                re.Add(float.Parse(line));
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("Error reading sampling intervals file: " + e.Message);
+            re = new List<float> { 0f, 1f }; // Default on error
+        }
         return re;
     }
     //add avatar to avatarList
@@ -1648,6 +1868,7 @@ public class GlobalConfiguration : MonoBehaviour
                 virtualSpaceObject = transform.Find("VirtualPlane");
             }
         }
+        
 
         Initialize();
 
@@ -1743,6 +1964,15 @@ public class GlobalConfiguration : MonoBehaviour
         if (networkingMode)
         {
             defaultId = networkManager.avatarId;
+        }
+        // In the StartNextExperiment method after loading avatar data
+        if (freeExplorationMode)
+        {
+            for (int id = 0; id < redirectedAvatars.Count; id++)
+            {
+                var mm = redirectedAvatars[id].GetComponent<MovementManager>();
+                mm.ConfigureForFreeExploration();
+            }
         }
 
         // Find the XR Origin at root level instead of looking for "[CameraRig]" as a child

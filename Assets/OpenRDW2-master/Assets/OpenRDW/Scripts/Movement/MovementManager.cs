@@ -178,6 +178,23 @@ public class MovementManager : MonoBehaviour
         }
 
     }
+    public void ConfigureForFreeExploration()
+    {
+        pathSeedChoice = GlobalConfiguration.PathSeedChoice.RealUserPath;
+
+        // Make sure we have at least two waypoints (start and somewhere ahead)
+        if (waypoints == null || waypoints.Count < 2)
+        {
+            waypoints = new List<Vector2>();
+            waypoints.Add(Vector2.zero);
+            waypoints.Add(Vector2.up * 3f);
+        }
+
+        // We don't need to update waypoints in free exploration
+        // This is handled by the dynamic waypoint positioning in RedirectionManager
+
+        Debug.Log("MovementManager configured for free exploration");
+    }
     //0 index represents the start point, so the corresponding sampling Interval equals to 0
     public float GetSamplingIntervalByWaypointIterator(int waypointIterator)
     {

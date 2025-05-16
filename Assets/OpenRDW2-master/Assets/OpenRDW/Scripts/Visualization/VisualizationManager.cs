@@ -100,6 +100,154 @@ public class VisualizationManager : MonoBehaviour
             targetLine = null;
         }
     }
+    // Add this method to your VisualizationManager.cs class
+    // Place it somewhere after the Awake method but before the methods that use these collections
+
+    /// <summary>
+    /// Ensures all collections are properly initialized
+    /// Call this before any methods that might use the collections
+    /// </summary>
+    /// 
+
+    void Start()
+    {
+        // Call InitializeInOrder() with a small delay to ensure proper sequence
+        StartCoroutine(InitializeInOrder());
+    }
+    private IEnumerator InitializeInOrder()
+    {
+        Debug.Log("VisualizationManager: Starting ordered initialization");
+
+        // Wait one frame for other Awake() methods to complete
+        yield return null;
+
+        // Step 1: Basic initialization
+        EnsureInitialized();
+
+        // Step 2: Create tracking spaces if needed
+        EnsureTrackingSpaces();
+
+        // Step 3: Set up visualization components
+        SetupVisualization();
+
+        Debug.Log("VisualizationManager: Ordered initialization complete");
+    }
+    private void EnsureTrackingSpaces()
+    {
+        if (generalManager == null || generalManager.physicalSpaces == null || generalManager.physicalSpaces.Count == 0)
+        {
+            Debug.Log("VisualizationManager: Creating tracking spaces since they don't exist yet");
+
+            if (generalManager != null)
+            {
+                // Generate a default tracking space
+                generalManager.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
+                generalManager.squareWidth = 4.0f;
+
+                generalManager.GenerateTrackingSpace(
+                    generalManager.avatarNum,
+                    out var physicalSpaces,
+                    out var virtualSpace
+                );
+
+                generalManager.physicalSpaces = physicalSpaces;
+                generalManager.virtualSpace = virtualSpace;
+
+                Debug.Log($"VisualizationManager: Created {physicalSpaces.Count} physical spaces");
+            }
+        }
+        else
+        {
+            Debug.Log($"VisualizationManager: Using existing {generalManager.physicalSpaces.Count} physical spaces");
+        }
+    }
+    private void SetupVisualization()
+    {
+        if (generalManager != null && generalManager.physicalSpaces != null && generalManager.physicalSpaces.Count > 0)
+        {
+            Debug.Log("VisualizationManager: Setting up visualization");
+
+            // Generate meshes FIRST before trying to set visibility
+            GenerateTrackingSpaceMesh(generalManager.physicalSpaces);
+
+            // Now safely set visibility
+            ChangeTrackingSpaceVisibility(generalManager.trackingSpaceVisible);
+
+            // Only try to set buffer visibility if we have buffers
+            if (bufferRepresentations != null && bufferRepresentations.Count > 0)
+            {
+                SetBufferVisibility(generalManager.bufferVisible);
+            }
+            else
+            {
+                Debug.Log("VisualizationManager: Skipping buffer visibility as buffers are not yet created");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("VisualizationManager: Cannot set up visualization - physical spaces not available");
+        }
+    }
+    public void EnsureInitialized()
+    {
+        // Initialize collections if they're null
+        if (obstacleParents == null)
+        {
+            obstacleParents = new List<Transform>();
+        }
+
+        if (bufferParents == null)
+        {
+            bufferParents = new List<Transform>();
+        }
+
+        if (bufferRepresentations == null)
+        {
+            bufferRepresentations = new List<GameObject>();
+        }
+
+        if (avatarBufferRepresentations == null)
+        {
+            avatarBufferRepresentations = new List<GameObject>();
+        }
+
+        if (allPlanes == null)
+        {
+            allPlanes = new List<GameObject>();
+        }
+
+        if (otherAvatarRepresentations == null)
+        {
+            otherAvatarRepresentations = new List<Transform>();
+        }
+
+        // Ensure references are set
+        if (generalManager == null)
+        {
+            generalManager = GetComponentInParent<GlobalConfiguration>();
+        }
+
+        if (redirectionManager == null)
+        {
+            redirectionManager = GetComponent<RedirectionManager>();
+        }
+
+        if (movementManager == null)
+        {
+            movementManager = GetComponent<MovementManager>();
+        }
+
+        if (headFollower == null)
+        {
+            Transform bodyTransform = transform.Find("Body");
+            if (bodyTransform != null)
+            {
+                headFollower = bodyTransform.GetComponent<HeadFollower>();
+            }
+        }
+
+        Debug.Log("VisualizationManager collections initialized");
+    }
 
     public void SetRealTargetVisibility(bool visible)
     {
@@ -223,6 +371,8 @@ public class VisualizationManager : MonoBehaviour
     {
         Debug.Log($"VisualizationManager.Initialize called for avatar {avatarId}");
 
+        // Ensure all collections are initialized first
+        EnsureInitialized();
         // Ensure HeadFollower is properly initialized first
         if (headFollower == null)
         {
@@ -252,8 +402,10 @@ public class VisualizationManager : MonoBehaviour
         }
     }
 
+
     public void InitializeOtherAvatarRepresentations()
     {
+        EnsureInitialized();
         //initialize other avatars' representations
         avatarBufferRepresentations = new List<GameObject>();
         otherAvatarRepresentations = new List<Transform>();
@@ -311,55 +463,208 @@ public class VisualizationManager : MonoBehaviour
 
     public void GenerateTrackingSpaceMesh(List<SingleSpace> physicalSpaces)
     {
+        // Call the initialization method first
+        EnsureInitialized();
+
+        // Null checks for physicalSpaces
+        if (physicalSpaces == null || physicalSpaces.Count == 0)
+        {
+            Debug.LogError("physicalSpaces is null or empty in GenerateTrackingSpaceMesh");
+            return;
+        }
+
+        // Clear existing visualization
+        DestroyAll();
+
+        // Re-initialize collections after destroying
         allPlanes = new List<GameObject>();
         obstacleParents = new List<Transform>();
         bufferParents = new List<Transform>();
         bufferRepresentations = new List<GameObject>();
 
+        if (generalManager == null)
+        {
+            Debug.LogError("generalManager is null in GenerateTrackingSpaceMesh");
+            generalManager = GetComponentInParent<GlobalConfiguration>();
+            if (generalManager == null)
+            {
+                Debug.LogError("Could not find GlobalConfiguration component");
+                return;
+            }
+        }
+
+        if (movementManager == null)
+        {
+            Debug.LogError("movementManager is null in GenerateTrackingSpaceMesh");
+            movementManager = GetComponent<MovementManager>();
+            if (movementManager == null)
+            {
+                Debug.LogError("Could not find MovementManager component");
+                return;
+            }
+        }
+
+        if (redirectionManager == null)
+        {
+            Debug.LogError("redirectionManager is null in GenerateTrackingSpaceMesh");
+            redirectionManager = GetComponent<RedirectionManager>();
+            if (redirectionManager == null)
+            {
+                Debug.LogError("Could not find RedirectionManager component");
+                return;
+            }
+        }
+
+        // Initialize collections
+        allPlanes = new List<GameObject>();
+        obstacleParents = new List<Transform>();
+        bufferParents = new List<Transform>();
+        bufferRepresentations = new List<GameObject>();
+
+        // Create a fallback material if needed
+        Material fallbackMaterial = null;
+        if (generalManager.trackingSpacePlaneMat == null)
+        {
+            Debug.LogWarning("trackingSpacePlaneMat is null, creating fallback material");
+            fallbackMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (fallbackMaterial.shader == null)
+            {
+                fallbackMaterial = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+            }
+            fallbackMaterial.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+        }
+
         for (int i = 0; i < physicalSpaces.Count; i++)
         {
             var space = physicalSpaces[i];
 
-            // plane
-            var trackingSpaceMesh = TrackingSpaceGenerator.GeneratePolygonMesh(space.trackingSpace);
-            var newTrackingSpace = new GameObject("Plane" + allPlanes.Count);
-            if (movementManager.physicalSpaceIndex == allPlanes.Count)
+            // Check if space is valid
+            if (space == null)
             {
-                redirectionManager.trackingSpace = newTrackingSpace.transform;
+                Debug.LogError($"Physical space at index {i} is null");
+                continue;
             }
+
+            if (space.trackingSpace == null || space.trackingSpace.Count == 0)
+            {
+                Debug.LogError($"Tracking space at index {i} is null or empty");
+                continue;
+            }
+
+            // Generate tracking space plane
+            var trackingSpaceMesh = TrackingSpaceGenerator.GeneratePolygonMesh(space.trackingSpace);
+            if (trackingSpaceMesh == null)
+            {
+                Debug.LogError($"Failed to generate mesh for tracking space at index {i}");
+                continue;
+            }
+
+            var newTrackingSpace = new GameObject("Plane" + allPlanes.Count);
             newTrackingSpace.transform.SetParent(transform);
             newTrackingSpace.transform.localPosition = Vector3.zero;
             newTrackingSpace.transform.rotation = Quaternion.identity;
-            newTrackingSpace.AddComponent<MeshFilter>().mesh = trackingSpaceMesh;
+
+            var meshFilter = newTrackingSpace.AddComponent<MeshFilter>();
+            meshFilter.mesh = trackingSpaceMesh;
+
             var planeMr = newTrackingSpace.AddComponent<MeshRenderer>();
-            planeMr.material = new Material(generalManager.trackingSpacePlaneMat);
+            if (generalManager.trackingSpacePlaneMat != null)
+            {
+                planeMr.material = new Material(generalManager.trackingSpacePlaneMat);
+            }
+            else
+            {
+                planeMr.material = fallbackMaterial;
+            }
+
             allPlanes.Add(newTrackingSpace);
 
-            // obstacle
-            var obstacleParent = new GameObject().transform;
+            // Set as tracking space for the right avatar
+            if (movementManager.physicalSpaceIndex == allPlanes.Count - 1)
+            {
+                redirectionManager.trackingSpace = newTrackingSpace.transform;
+                Debug.Log($"Set tracking space for avatar {movementManager.avatarId}");
+            }
+
+            // Generate obstacle parent
+            var obstacleParent = new GameObject("ObstacleParent").transform;
             obstacleParent.SetParent(allPlanes[i].transform);
-            obstacleParent.name = "ObstacleParent";
             obstacleParent.localPosition = new Vector3(0, GlobalConfiguration.obstacleParentHeight, 0);
             obstacleParent.rotation = Quaternion.identity;
             obstacleParents.Add(obstacleParent);
-            TrackingSpaceGenerator.GenerateObstacleMesh(space.obstaclePolygons, obstacleParent, generalManager.obstacleColor, generalManager.if3dObstacle, generalManager.obstacleHeight);
 
-            // buffer
-            var bufferParent = new GameObject().transform;
+            // Check if obstacle polygons are valid
+            if (space.obstaclePolygons != null)
+            {
+                try
+                {
+                    TrackingSpaceGenerator.GenerateObstacleMesh(
+                        space.obstaclePolygons,
+                        obstacleParent,
+                        generalManager.obstacleColor,
+                        generalManager.if3dObstacle,
+                        generalManager.obstacleHeight);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Error generating obstacle mesh: {e.Message}");
+                }
+            }
+
+            // Generate buffer parent
+            var bufferParent = new GameObject("BufferParent").transform;
             bufferParent.SetParent(allPlanes[i].transform);
-            bufferParent.name = "BufferParent";
             bufferParent.localPosition = new Vector3(0, GlobalConfiguration.bufferParentHeight, 0);
             bufferParent.rotation = Quaternion.identity;
             bufferParents.Add(bufferParent);
 
-            var trackingSpaceBufferMesh = TrackingSpaceGenerator.GenerateBufferMesh(space.trackingSpace, true, generalManager.RESET_TRIGGER_BUFFER);
-            AddBufferMesh(trackingSpaceBufferMesh, bufferParent);
-            foreach (var obstaclePoints in space.obstaclePolygons)
+            // Generate tracking space buffer
+            try
             {
-                var obstacleBufferMesh = TrackingSpaceGenerator.GenerateBufferMesh(obstaclePoints, false, generalManager.RESET_TRIGGER_BUFFER);
-                AddBufferMesh(obstacleBufferMesh, bufferParent);
+                var trackingSpaceBufferMesh = TrackingSpaceGenerator.GenerateBufferMesh(
+                    space.trackingSpace,
+                    true,
+                    generalManager.RESET_TRIGGER_BUFFER);
+
+                if (trackingSpaceBufferMesh != null)
+                {
+                    AddBufferMesh(trackingSpaceBufferMesh, bufferParent);
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error generating tracking space buffer: {e.Message}");
+            }
+
+            // Generate obstacle buffers
+            if (space.obstaclePolygons != null)
+            {
+                foreach (var obstaclePoints in space.obstaclePolygons)
+                {
+                    if (obstaclePoints != null && obstaclePoints.Count > 0)
+                    {
+                        try
+                        {
+                            var obstacleBufferMesh = TrackingSpaceGenerator.GenerateBufferMesh(
+                                obstaclePoints,
+                                false,
+                                generalManager.RESET_TRIGGER_BUFFER);
+
+                            if (obstacleBufferMesh != null)
+                            {
+                                AddBufferMesh(obstacleBufferMesh, bufferParent);
+                            }
+                        }
+                        catch (System.Exception e)
+                        {
+                            Debug.LogError($"Error generating obstacle buffer: {e.Message}");
+                        }
+                    }
+                }
             }
         }
+
+        Debug.Log($"Generated tracking space with {allPlanes.Count} planes and {bufferRepresentations.Count} buffer meshes");
     }
 
     public GameObject AddBufferMesh(Mesh bufferMesh, Transform bufferParent)
@@ -457,13 +762,45 @@ public class VisualizationManager : MonoBehaviour
         }
     }
 
+    // Modified SetBufferVisibility method for VisualizationManager.cs
+    // Replace the existing method with this version
+
+    // Modified SetBufferVisibility method for VisualizationManager.cs
+    // Replace the existing method with this version
+
     public void SetBufferVisibility(bool ifVisible)
     {
-        for (int i = 0; i < bufferRepresentations.Count; i++)
+        // Safely handle buffer representations
+        if (bufferRepresentations != null)
         {
-            bufferRepresentations[i].SetActive(ifVisible);
+            for (int i = 0; i < bufferRepresentations.Count; i++)
+            {
+                if (bufferRepresentations[i] != null)
+                {
+                    bufferRepresentations[i].SetActive(ifVisible);
+                }
+            }
         }
-        avatarBufferRepresentations[movementManager.avatarId].SetActive(false);
+
+        // For avatar buffer representations, just log a warning if empty - this is expected early on
+        // and we don't need to do anything with them yet
+        if (avatarBufferRepresentations == null || avatarBufferRepresentations.Count == 0)
+        {
+            Debug.LogWarning("avatarBufferRepresentations is empty in SetBufferVisibility - this is expected during initialization");
+            return;
+        }
+
+        // If we do have avatar buffers, safely handle them
+        if (movementManager != null &&
+            movementManager.avatarId >= 0 &&
+            movementManager.avatarId < avatarBufferRepresentations.Count)
+        {
+            GameObject avatarBuffer = avatarBufferRepresentations[movementManager.avatarId];
+            if (avatarBuffer != null)
+            {
+                avatarBuffer.SetActive(false);
+            }
+        }
     }
 
 }
