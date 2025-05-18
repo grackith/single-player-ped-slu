@@ -80,6 +80,7 @@ public class ScenarioManager : MonoBehaviour
     [Header("Redirected Walking")]
     public GlobalConfiguration rdwGlobalConfiguration;
     private PersistentRDW persistentRDW;
+    private TrackingSpaceHelper trackingSpaceHelper; // Add this line
     //private RDWInitializationFix rdwInitFix;
 
     // ADD THESE MISSING FIELDS
@@ -305,14 +306,31 @@ public class ScenarioManager : MonoBehaviour
             researcherUI.SetActive(true);
             Debug.Log("Activated researcher UI in Start");
         }
+
         // Find the PersistentRDW component
         persistentRDW = FindObjectOfType<PersistentRDW>();
 
         if (persistentRDW == null)
         {
             Debug.LogWarning("PersistentRDW not found. RDW functionality may not persist between scenes.");
+        }
 
-            // Don't create one here, as the full hierarchy is needed, not just the script
+        TrackingSpaceHelper helper = FindObjectOfType<TrackingSpaceHelper>();
+        if (helper != null)
+        {
+            // Store the reference
+            trackingSpaceHelper = helper;
+
+            // Configure it
+            helper.width = 5f;
+            helper.length = 13.5f;
+            helper.verbose = true;
+            helper.InitializeTrackingSpace();
+            Debug.Log("Initialized tracking space with correct dimensions: 5m × 13.5m");
+        }
+        else
+        {
+            Debug.LogWarning("TrackingSpaceHelper not found. Tracking space may not be correctly sized.");
         }
 
         // Check for duplicate event systems and XR interaction managers
@@ -836,7 +854,52 @@ public class ScenarioManager : MonoBehaviour
         }
 
         // In your existing Update() method, add these key controls:
+        // C key - Calibrate tracking space to physical space
+        // C key - Calibrate tracking space to physical space
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            Debug.Log("C key pressed - Calibrating tracking space");
 
+            if (persistentRDW != null)
+            {
+                // Call the calibration method
+                persistentRDW.CalibrateTrackingSpace();
+
+                // Force enable tracking space visualization
+                if (rdwGlobalConfiguration != null)
+                {
+                    rdwGlobalConfiguration.trackingSpaceVisible = true;
+                    Debug.Log("Forced tracking space visibility ON");
+
+                    // Also force visualization update for all redirected avatars
+                    if (rdwGlobalConfiguration.redirectedAvatars != null)
+                    {
+                        foreach (var avatar in rdwGlobalConfiguration.redirectedAvatars)
+                        {
+                            if (avatar != null)
+                            {
+                                var rm = avatar.GetComponent<RedirectionManager>();
+                                if (rm != null && rm.visualizationManager != null)
+                                {
+                                    rm.visualizationManager.ChangeTrackingSpaceVisibility(true);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Create visual indicators at calibration point
+                if (Camera.main != null)
+                {
+                    GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    marker.name = "CalibrationPoint";
+                    marker.transform.position = new Vector3(Camera.main.transform.position.x, 0.01f, Camera.main.transform.position.z);
+                    marker.transform.localScale = new Vector3(0.5f, 0.02f, 0.5f);
+                    marker.GetComponent<Renderer>().material.color = Color.blue;
+                    GameObject.Destroy(marker, 20f); // Clean up after 20 seconds
+                }
+            }
+        }
         // R key - Start the redirected walking experience 
         if (Input.GetKeyDown(KeyCode.R))
         {
@@ -1267,10 +1330,27 @@ public class ScenarioManager : MonoBehaviour
         // 5. Wait for a moment to ensure scene is fully loaded
         yield return new WaitForSeconds(0.5f);
 
-        // FIX: Pass the scenario parameter
-        yield return new WaitForEndOfFrame();
-        UpdateRDWForScenario(scenario);  // Changed from UpdateRDWForScenario() to UpdateRDWForScenario(scenario)
+        // NEW: Prepare RDW system BEFORE positioning the player
+        if (trackingSpaceHelper != null)
+        {
+            // Set the correct rectangular dimensions - ensure length is greater than width
+            trackingSpaceHelper.width = 4.0f;  // Shorter dimension
+            trackingSpaceHelper.length = 13.5f; // Longer dimension
 
+            // Force re-initialization of tracking space with proper dimensions
+            Debug.Log("Reinitializing tracking space with correct dimensions (4.0m × 13.5m)");
+            trackingSpaceHelper.InitializeTrackingSpace();
+
+            // Verify dimensions after initialization
+            trackingSpaceHelper.VerifyTrackingSpaceDimensions();
+        }
+        else
+        {
+            Debug.LogWarning("TrackingSpaceHelper not found! Tracking space dimensions may not be correctly configured.");
+        }
+
+        // Wait for tracking space initialization to complete
+        yield return new WaitForEndOfFrame();
 
         // 6. Make sure traffic controller is still enabled
         if (controller != null && !controller.enabled)
@@ -1309,12 +1389,6 @@ public class ScenarioManager : MonoBehaviour
             Debug.Log($"Setting up bus spawn with delay: {scenario.busSpawnDelay}");
             BusSpawnerSimple.Reset();
             BusSpawnerSimple.TriggerBusSpawn(scenario.busSpawnDelay);
-        }
-        if (scenario.spawnBus && BusSpawnerSimple != null)
-        {
-            Debug.Log($"Setting up bus spawn with delay: {scenario.busSpawnDelay}");
-            BusSpawnerSimple.Reset();
-            BusSpawnerSimple.TriggerBusSpawn(scenario.busSpawnDelay);
 
             // Update all SkyLandmarks with the new timer
             SkyLandmark[] skyLandmarks = FindObjectsOfType<SkyLandmark>();
@@ -1331,14 +1405,23 @@ public class ScenarioManager : MonoBehaviour
 
             // Update RDW system for new scenario position
             yield return new WaitForEndOfFrame(); // Give physics a frame to settle
-            UpdateRDWForScenario(scenario);
-        }
-        // In your TransitionToScenario coroutine, after positioning the player:
-        if (scenario.playerStartPosition != null && persistentRDW != null)
-        {
-            // Update RDW system for new scenario position
-            yield return new WaitForEndOfFrame(); // Give physics a frame to settle
-            persistentRDW.UpdateRedirectionOrigin(scenario.playerStartPosition);
+
+            if (persistentRDW != null)
+            {
+                // Use the persistent RDW system to update the origin
+                persistentRDW.UpdateRedirectionOrigin(scenario.playerStartPosition);
+                Debug.Log("Updated RDW origin via PersistentRDW");
+
+                // NEW: Force the tracking space visualization ON
+                yield return new WaitForEndOfFrame();
+                ForceTrackingSpaceVisualization();
+            }
+            else
+            {
+                // Fallback to the old method if persistentRDW is not available
+                UpdateRDWForScenario(scenario);
+                Debug.Log("Updated RDW using fallback method");
+            }
         }
 
         // 12. Hide researcher UI
@@ -1357,8 +1440,97 @@ public class ScenarioManager : MonoBehaviour
         Debug.Log($"Transition to scenario: {scenario.scenarioName} complete");
 
         // 15. Run diagnostic check after a short delay
-        yield return new WaitForSeconds(2.0f);
+        yield return new WaitForSeconds(1.0f);
+
+        // NEW: Add additional tracking space dimension check
+        if (trackingSpaceHelper != null)
+        {
+            trackingSpaceHelper.VerifyTrackingSpaceDimensions();
+        }
+
+        // Finally run traffic system diagnostics
+        yield return new WaitForSeconds(1.0f);
         DebugTrafficSystem();
+    }
+
+    // NEW: Add this helper method to ensure tracking space remains visible
+    // Add this helper method to ScenarioManager.cs
+    private void ForceTrackingSpaceVisualization()
+    {
+        // Find all redirection managers in scene
+        var redirectionManagers = FindObjectsOfType<RedirectionManager>();
+        foreach (var rm in redirectionManagers)
+        {
+            if (rm != null)
+            {
+                // Toggle visualization on
+                rm.ToggleTrackingSpaceVisualization();
+
+                // Ensure it's on (in case it was already on before toggling)
+                if (rm.visualizationManager != null)
+                {
+                    rm.visualizationManager.ChangeTrackingSpaceVisibility(true);
+
+                    // Update global config setting
+                    if (rm.globalConfiguration != null)
+                    {
+                        rm.globalConfiguration.trackingSpaceVisible = true;
+                    }
+                }
+
+                Debug.Log($"Forced tracking space visualization ON for {rm.name}");
+            }
+        }
+    }
+
+    // NEW: Helper method to create visual markers showing tracking space orientation
+    private void CreateTrackingSpaceMarkers(RedirectionManager rm)
+    {
+        if (rm == null || rm.trackingSpace == null || rdwGlobalConfiguration == null ||
+            rdwGlobalConfiguration.physicalSpaces == null || rdwGlobalConfiguration.physicalSpaces.Count == 0)
+            return;
+
+        var physicalSpace = rdwGlobalConfiguration.physicalSpaces[0];
+        float width = 0, length = 0;
+
+        // Calculate dimensions
+        if (physicalSpace.trackingSpace != null && physicalSpace.trackingSpace.Count >= 4)
+        {
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+
+            foreach (var point in physicalSpace.trackingSpace)
+            {
+                minX = Mathf.Min(minX, point.x);
+                maxX = Mathf.Max(maxX, point.x);
+                minZ = Mathf.Min(minZ, point.y); // y in 2D coords is z in 3D
+                maxZ = Mathf.Max(maxZ, point.y);
+            }
+
+            width = maxX - minX;
+            length = maxZ - minZ;
+        }
+
+        // Create directional arrows
+        GameObject forwardArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        forwardArrow.name = "ForwardDirection";
+        forwardArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.forward * (length / 4) + Vector3.up * 0.05f;
+        forwardArrow.transform.rotation = rm.trackingSpace.rotation;
+        forwardArrow.transform.localScale = new Vector3(0.1f, 0.05f, 1.0f);
+        forwardArrow.GetComponent<Renderer>().material.color = Color.blue;
+
+        GameObject rightArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightArrow.name = "RightDirection";
+        rightArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.right * (width / 4) + Vector3.up * 0.05f;
+        rightArrow.transform.rotation = Quaternion.Euler(0, rm.trackingSpace.rotation.eulerAngles.y + 90, 0);
+        rightArrow.transform.localScale = new Vector3(0.1f, 0.05f, 0.5f);
+        rightArrow.GetComponent<Renderer>().material.color = Color.red;
+
+        // Clean up after 1 minute
+        Destroy(forwardArrow, 60f);
+        Destroy(rightArrow, 60f);
+
+        Debug.Log($"Created tracking space direction indicators: Blue arrow = Forward (length: {length}m), Red arrow = Right (width: {width}m)");
     }
 
     // This nested coroutine contains all the actual transition steps

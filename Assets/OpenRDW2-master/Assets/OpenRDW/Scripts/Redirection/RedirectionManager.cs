@@ -1122,42 +1122,101 @@ public class RedirectionManager : MonoBehaviour
             Debug.Log("Created missing real waypoint");
         }
     }
+    // Add these methods to the RedirectionManager.cs file
+
     public void ToggleTrackingSpaceVisualization()
     {
         if (visualizationManager != null)
         {
-            // Check if there are any tracking space planes created
-            if (visualizationManager.allPlanes != null && visualizationManager.allPlanes.Count > 0)
+            bool current = globalConfiguration.trackingSpaceVisible;
+            visualizationManager.ChangeTrackingSpaceVisibility(!current);
+            globalConfiguration.trackingSpaceVisible = !current;
+            Debug.Log($"Tracking space visualization: {!current}");
+
+            // Create dimensional markers to show actual space
+            if (!current)
             {
-                // Get the current visibility state from the first plane
-                bool isVisible = visualizationManager.allPlanes[0].activeSelf;
-
-                // Toggle visibility
-                visualizationManager.ChangeTrackingSpaceVisibility(!isVisible);
-
-                Debug.Log($"Tracking space visualization toggled: Physical={!isVisible}");
+                CreateCornerMarkers();
             }
-            else
-            {
-                // No visualization exists, try to generate it
-                Debug.Log("No tracking space visualization found, generating now...");
-
-                // Generate tracking space mesh for all physical spaces
-                visualizationManager.DestroyAll();
-                visualizationManager.GenerateTrackingSpaceMesh(globalConfiguration.physicalSpaces);
-
-                // Make sure it's visible
-                visualizationManager.ChangeTrackingSpaceVisibility(true);
-
-                Debug.Log("Tracking space visualization generated.");
-            }
-        }
-        else
-        {
-            Debug.LogError("VisualizationManager is null, can't toggle visualization");
         }
     }
-    // Add this to RedirectionManager class
+
+    private void CreateCornerMarkers()
+    {
+        if (trackingSpace == null || globalConfiguration == null ||
+            globalConfiguration.physicalSpaces == null ||
+            globalConfiguration.physicalSpaces.Count == 0)
+            return;
+
+        var physicalSpace = globalConfiguration.physicalSpaces[0];
+
+        // Create markers at each corner
+        int i = 0;
+        foreach (var point in physicalSpace.trackingSpace)
+        {
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            marker.name = $"Corner_{i++}";
+            Vector3 worldPos = trackingSpace.TransformPoint(new Vector3(point.x, 0, point.y));
+            marker.transform.position = worldPos;
+            marker.transform.localScale = Vector3.one * 0.2f;
+            marker.GetComponent<Renderer>().material.color = Color.green;
+
+            // Add text labels with coordinates
+            GameObject text = new GameObject("Label");
+            text.transform.position = worldPos + Vector3.up * 0.3f;
+            TextMesh textMesh = text.AddComponent<TextMesh>();
+            textMesh.text = $"({point.x:F2}, {point.y:F2})";
+            textMesh.fontSize = 50;
+            textMesh.characterSize = 0.05f;
+            textMesh.anchor = TextAnchor.MiddleCenter;
+
+            Destroy(marker, 30f); // Clean up after 30 seconds
+            Destroy(text, 30f);
+        }
+
+        // Create central marker
+        GameObject center = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        center.transform.position = trackingSpace.position + Vector3.up * 0.01f;
+        center.transform.localScale = new Vector3(0.5f, 0.02f, 0.5f);
+        center.GetComponent<Renderer>().material.color = Color.red;
+        Destroy(center, 30f);
+
+        // Add directional indicators
+        float minX = float.MaxValue, maxX = float.MinValue;
+        float minZ = float.MaxValue, maxZ = float.MinValue;
+
+        foreach (var point in physicalSpace.trackingSpace)
+        {
+            minX = Mathf.Min(minX, point.x);
+            maxX = Mathf.Max(maxX, point.x);
+            minZ = Mathf.Min(minZ, point.y); // y in 2D coordinates is z in 3D
+            maxZ = Mathf.Max(maxZ, point.y);
+        }
+
+        float width = maxX - minX;
+        float length = maxZ - minZ;
+
+        // Create forward direction indicator (blue)
+        GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        forwardMarker.name = "ForwardDirection";
+        forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * (length / 4) + Vector3.up * 0.05f;
+        forwardMarker.transform.rotation = trackingSpace.rotation;
+        forwardMarker.transform.localScale = new Vector3(0.1f, 0.05f, 1.0f);
+        forwardMarker.GetComponent<Renderer>().material.color = Color.blue;
+        Destroy(forwardMarker, 30f);
+
+        // Create right direction indicator (red)
+        GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightMarker.name = "RightDirection";
+        rightMarker.transform.position = trackingSpace.position + trackingSpace.right * (width / 4) + Vector3.up * 0.05f;
+        rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
+        rightMarker.transform.localScale = new Vector3(0.1f, 0.05f, 0.5f);
+        rightMarker.GetComponent<Renderer>().material.color = Color.red;
+        Destroy(rightMarker, 30f);
+
+        Debug.Log($"Tracking space dimensions: {width:F2}m × {length:F2}m");
+        Debug.Log("Created tracking space markers: Green spheres=corners, Red cylinder=center, Blue=forward, Red=right");
+    }
     public void LogTrackingSpaceInfo()
     {
         Debug.Log("==== TRACKING SPACE DIAGNOSTIC ====");
