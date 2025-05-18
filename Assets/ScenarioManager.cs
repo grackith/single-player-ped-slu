@@ -91,8 +91,9 @@ public class ScenarioManager : MonoBehaviour
     private bool isTransitioning = false;
     private Scene currentlyLoadedScenario;
     private RouteConnectionPreserver routePreserver;
-
     
+
+
 
 
     // Singleton instance
@@ -109,6 +110,12 @@ public class ScenarioManager : MonoBehaviour
 
     private void Awake()
     {
+        // In Awake() method of ScenarioManager
+        persistentRDW = FindObjectOfType<PersistentRDW>();
+        if (persistentRDW == null)
+        {
+            Debug.LogWarning("PersistentRDW not found. RDW functionality may be limited.");
+        }
         // Singleton pattern
         if (_instance != null && _instance != this)
         {
@@ -284,16 +291,6 @@ public class ScenarioManager : MonoBehaviour
         return rdwRoot;
     }
 
-    // Update RDW for scenario using your PersistentRDW's UpdateRedirectionOrigin
-    //private void UpdateRDWForScenario(Scenario scenario)
-    //{
-    //    if (persistentRDW != null && scenario.playerStartPosition != null)
-    //    {
-    //        persistentRDW.UpdateRedirectionOrigin(scenario.playerStartPosition);
-    //        Debug.Log("Updated RDW origin for new scenario position");
-    //    }
-    //}
-
     private void Start()
     {
         // Additional debug info
@@ -307,6 +304,15 @@ public class ScenarioManager : MonoBehaviour
         {
             researcherUI.SetActive(true);
             Debug.Log("Activated researcher UI in Start");
+        }
+        // Find the PersistentRDW component
+        persistentRDW = FindObjectOfType<PersistentRDW>();
+
+        if (persistentRDW == null)
+        {
+            Debug.LogWarning("PersistentRDW not found. RDW functionality may not persist between scenes.");
+
+            // Don't create one here, as the full hierarchy is needed, not just the script
         }
 
         // Check for duplicate event systems and XR interaction managers
@@ -828,65 +834,20 @@ public class ScenarioManager : MonoBehaviour
                 BusSpawnerSimple.SpawnBus();
             }
         }
-        // Inside your existing Update() method, add these key checks:
 
-        // R key - Start the redirected walking experience 
-        // Inside your ScenarioManager's Update method, add:
-        // R key - Start the redirected walking experience 
+        // In your existing Update() method, add these key controls:
+
         // R key - Start the redirected walking experience 
         if (Input.GetKeyDown(KeyCode.R))
         {
             Debug.Log("R key pressed - Starting RDW experiment");
-
-            // Find the GlobalConfiguration
-            GlobalConfiguration rdwConfig = FindObjectOfType<GlobalConfiguration>();
-
-            if (rdwConfig != null)
+            if (persistentRDW != null)
             {
-                // Set the experiment in progress flag
-                rdwConfig.experimentInProgress = true;
-                rdwConfig.readyToStart = true;
-
-                // Ensure HMD mode is active
-                rdwConfig.movementController = GlobalConfiguration.MovementController.HMD;
-
-                // Make sure we're in free exploration mode
-                rdwConfig.freeExplorationMode = true;
-
-                Debug.Log("RDW experiment started via GlobalConfiguration");
-
-                // Set up all redirection managers for HMD
-                foreach (var avatar in rdwConfig.redirectedAvatars)
-                {
-                    if (avatar != null)
-                    {
-                        RedirectionManager rdwManager = avatar.GetComponent<RedirectionManager>();
-                        if (rdwManager != null)
-                        {
-                            // Log before
-                            Debug.Log($"Before setup: Redirector={rdwManager.redirectorChoice}, Resetter={rdwManager.resetterChoice}");
-
-                            // Force direct assignment
-                            rdwManager.redirectorChoice = RedirectionManager.RedirectorChoice.S2C;
-                            rdwManager.resetterChoice = RedirectionManager.ResetterChoice.TwoOneTurn;
-
-                            // Update both components
-                            rdwManager.UpdateRedirector(typeof(S2CRedirector));
-                            rdwManager.UpdateResetter(typeof(TwoOneTurnResetter));
-
-                            // Setup
-                            rdwManager.SetupForHMDFreeExploration();
-
-                            // Log after
-                            Debug.Log($"After setup: Redirector={rdwManager.redirectorChoice}, Resetter={rdwManager.resetterChoice}");
-
-                            // Check actual components
-                            var actualRedirector = rdwManager.gameObject.GetComponent<Redirector>();
-                            var actualResetter = rdwManager.gameObject.GetComponent<Resetter>();
-                            Debug.Log($"Actual components: Redirector={actualRedirector.GetType().Name}, Resetter={actualResetter.GetType().Name}");
-                        }
-                    }
-                }
+                persistentRDW.InitializeRDW();
+            }
+            else
+            {
+                Debug.LogError("Cannot initialize RDW - PersistentRDW not found");
             }
         }
 
@@ -894,15 +855,23 @@ public class ScenarioManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.BackQuote))
         {
             Debug.Log("~ key pressed - Toggling physical space view");
-
-            RedirectionManager rdwManager = FindObjectOfType<RedirectionManager>();
-            if (rdwManager != null)
+            if (persistentRDW != null)
             {
-                rdwManager.ToggleTrackingSpaceVisualization();
+                persistentRDW.ToggleTrackingSpaceVisualization();
+            }
+        }
+
+        // Q key - End current experiment
+        if (Input.GetKeyDown(KeyCode.Q))
+        {
+            Debug.Log("Q key pressed - Ending current experiment");
+            if (persistentRDW != null && persistentRDW.IsInitialized)
+            {
+                persistentRDW.EndScenario();
             }
             else
             {
-                Debug.LogError("No RedirectionManager found - can't toggle tracking space visualization");
+                EndCurrentScenario();
             }
         }
 
@@ -912,32 +881,6 @@ public class ScenarioManager : MonoBehaviour
             Debug.Log("Tab key pressed - Toggling virtual view");
             // Similar to above, toggle between views
             // This might involve switching camera modes
-        }
-
-        // Q key - End RDW experiment
-        if (Input.GetKeyDown(KeyCode.Q))
-        {
-            Debug.Log("Q key pressed - Ending current experiment");
-
-            RedirectionManager rdwManager = FindObjectOfType<RedirectionManager>();
-            if (rdwManager != null)
-            {
-                if (rdwManager.inReset)
-                {
-                    rdwManager.OnResetEnd();
-                    Debug.Log("Ended redirection reset");
-                }
-
-                // Clear trails
-                var trailDrawer = rdwManager.GetComponent<TrailDrawer>();
-                if (trailDrawer != null)
-                {
-                    trailDrawer.ClearTrail("RealTrail");
-                    trailDrawer.ClearTrail("VirtualTrail");
-                }
-            }
-
-            EndCurrentScenario();
         }
 
         // Number keys to switch user views
@@ -1389,6 +1332,13 @@ public class ScenarioManager : MonoBehaviour
             // Update RDW system for new scenario position
             yield return new WaitForEndOfFrame(); // Give physics a frame to settle
             UpdateRDWForScenario(scenario);
+        }
+        // In your TransitionToScenario coroutine, after positioning the player:
+        if (scenario.playerStartPosition != null && persistentRDW != null)
+        {
+            // Update RDW system for new scenario position
+            yield return new WaitForEndOfFrame(); // Give physics a frame to settle
+            persistentRDW.UpdateRedirectionOrigin(scenario.playerStartPosition);
         }
 
         // 12. Hide researcher UI
