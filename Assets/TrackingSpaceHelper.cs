@@ -64,6 +64,8 @@ public class TrackingSpaceHelper : MonoBehaviour
         Invoke("InitializeTrackingSpace", 0.5f);
     }
 
+   
+
     public void InitializeTrackingSpace()
     {
         if (verbose) Debug.Log("=== TRACKING SPACE HELPER: INITIALIZATION STARTING ===");
@@ -71,14 +73,17 @@ public class TrackingSpaceHelper : MonoBehaviour
         // Add unit conversion if needed
         float actualWidth = width;
         float actualLength = length;
+        // CRITICAL: Hard-code the exact dimensions needed for the physical space
+        actualWidth = 5.0f;   // Your exactly specified width
+        actualLength = 13.5f; // Your exactly specified length
 
         if (convertFromFeetToMeters)
         {
-            // Convert feet to meters (1 foot = 0.3048 meters)
-            actualWidth *= 0.3048f;
-            actualLength *= 0.3048f;
-            if (verbose) Debug.Log($"Converting dimensions: {width}ft × {length}ft → {actualWidth}m × {actualLength}m");
+            if (verbose) Debug.Log($"Original dimensions before override: {width}ft × {length}ft → {width * 0.3048f}m × {length * 0.3048f}m");
         }
+
+        if (verbose) Debug.Log($"FORCED tracking space dimensions: {actualWidth}m × {actualLength}m");
+
 
         // To fix scope issues, declare these variables at the method level
         List<SingleSpace> physicalSpaces;
@@ -235,45 +240,89 @@ public class TrackingSpaceHelper : MonoBehaviour
                 }
 
                 // Position tracking space directly at head position, with zero Y
+                //if (rm.trackingSpace != null && headTransform != null)
+                //{
+                //    Vector3 oldPosition = rm.trackingSpace.position;
+                //    Quaternion oldRotation = rm.trackingSpace.rotation;
+
+                //    // Position at head position
+                //    Vector3 newPosition = new Vector3(headPosition.x, 0, headPosition.z);
+
+                //    // Get user's forward direction (flattened to XZ plane)
+                //    Vector3 userForward = headTransform.forward;
+                //    userForward.y = 0;
+                //    userForward.Normalize();
+
+                //    // Calculate rotation to align with the longer dimension of the rectangle
+                //    float headingAngle = headTransform.rotation.eulerAngles.y;
+                //    Quaternion newRotation;
+
+                //    // Determine if we should align the long axis of the rectangle with user's forward direction
+                //    if (actualLength > actualWidth)
+                //    {
+                //        // Align length (long axis) with user's forward direction
+                //        newRotation = Quaternion.Euler(0, headingAngle, 0);
+                //        if (verbose) Debug.Log("Aligning LONG dimension with user's forward direction");
+                //    }
+                //    else
+                //    {
+                //        // Align width (short axis) with user's forward direction
+                //        // Rotate 90 degrees to put the long dimension along user's side-to-side axis
+                //        newRotation = Quaternion.Euler(0, headingAngle + 90f, 0);
+                //        if (verbose) Debug.Log("Aligning SHORT dimension with user's forward direction");
+                //    }
+
+                //    // Apply position and rotation
+                //    rm.trackingSpace.position = newPosition;
+                //    rm.trackingSpace.rotation = newRotation;
+
+                //    if (verbose) Debug.Log($"Positioned tracking space: {oldPosition} → {newPosition}");
+                //    if (verbose) Debug.Log($"Rotated tracking space: {oldRotation.eulerAngles} → {newRotation.eulerAngles}");
+                //    if (verbose) Debug.Log($"Using rectangle dimensions: width={actualWidth}m, length={actualLength}m");
+                //}
+
                 if (rm.trackingSpace != null && headTransform != null)
                 {
-                    Vector3 oldPosition = rm.trackingSpace.position;
-                    Quaternion oldRotation = rm.trackingSpace.rotation;
-
-                    // Position at head position
-                    Vector3 newPosition = new Vector3(headPosition.x, 0, headPosition.z);
-
-                    // Get user's forward direction (flattened to XZ plane)
-                    Vector3 userForward = headTransform.forward;
-                    userForward.y = 0;
-                    userForward.Normalize();
-
-                    // Calculate rotation to align with the longer dimension of the rectangle
-                    float headingAngle = headTransform.rotation.eulerAngles.y;
-                    Quaternion newRotation;
-
-                    // Determine if we should align the long axis of the rectangle with user's forward direction
-                    if (actualLength > actualWidth)
+                    // Use the centralized method if PersistentRDW is available
+                    PersistentRDW persistentRDW = FindObjectOfType<PersistentRDW>();
+                    if (persistentRDW != null)
                     {
-                        // Align length (long axis) with user's forward direction
-                        newRotation = Quaternion.Euler(0, headingAngle, 0);
-                        if (verbose) Debug.Log("Aligning LONG dimension with user's forward direction");
+                        Vector3 userForward = headTransform.forward;
+                        userForward.y = 0;
+                        userForward.Normalize();
+
+                        Vector3 newPosition = new Vector3(headPosition.x, 0, headPosition.z);
+
+                        persistentRDW.AlignTrackingSpaceWithRoad(newPosition, userForward, actualWidth, actualLength);
+                        if (verbose) Debug.Log("Used centralized alignment method");
                     }
                     else
                     {
-                        // Align width (short axis) with user's forward direction
-                        // Rotate 90 degrees to put the long dimension along user's side-to-side axis
-                        newRotation = Quaternion.Euler(0, headingAngle + 90f, 0);
-                        if (verbose) Debug.Log("Aligning SHORT dimension with user's forward direction");
+                        // Keep the original positioning code as fallback
+                        Vector3 oldPosition = rm.trackingSpace.position;
+                        Quaternion oldRotation = rm.trackingSpace.rotation;
+
+                        // Position at head position
+                        Vector3 newPosition = new Vector3(headPosition.x, 0, headPosition.z);
+
+                        // Get user's forward direction (flattened to XZ plane)
+                        Vector3 userForward = headTransform.forward;
+                        userForward.y = 0;
+                        userForward.Normalize();
+
+                        // Calculate rotation to align with the longer dimension of the rectangle
+                        float headingAngle = headTransform.rotation.eulerAngles.y;
+                        Quaternion newRotation = Quaternion.Euler(0, headingAngle, 0);
+
+                        if (verbose) Debug.Log("Aligning LONG dimension with user's forward direction");
+
+                        // Apply position and rotation
+                        rm.trackingSpace.position = newPosition;
+                        rm.trackingSpace.rotation = newRotation;
+
+                        if (verbose) Debug.Log($"Positioned tracking space: {oldPosition} → {newPosition}");
+                        if (verbose) Debug.Log($"Rotated tracking space: {oldRotation.eulerAngles} → {newRotation.eulerAngles}");
                     }
-
-                    // Apply position and rotation
-                    rm.trackingSpace.position = newPosition;
-                    rm.trackingSpace.rotation = newRotation;
-
-                    if (verbose) Debug.Log($"Positioned tracking space: {oldPosition} → {newPosition}");
-                    if (verbose) Debug.Log($"Rotated tracking space: {oldRotation.eulerAngles} → {newRotation.eulerAngles}");
-                    if (verbose) Debug.Log($"Using rectangle dimensions: width={actualWidth}m, length={actualLength}m");
                 }
 
                 // Regenerate tracking space visualization
@@ -296,8 +345,13 @@ public class TrackingSpaceHelper : MonoBehaviour
                 rm.UpdateCurrentUserState();
 
                 // Create visual markers at the corners
+                // Create visual markers at the corners
                 if (rm.trackingSpace != null && physicalSpaces != null && physicalSpaces.Count > 0)
                 {
+                    // Add this line to clear any existing corner markers
+                    ClearAllCornerMarkers();
+
+                    // Then create new markers
                     CreateCornerMarkers(rm.trackingSpace, physicalSpaces[0].trackingSpace);
                 }
                 // Add directional indicators to show alignment
@@ -353,44 +407,39 @@ public class TrackingSpaceHelper : MonoBehaviour
     // Helper method to create visual markers at tracking space corners
     private void CreateCornerMarkers(Transform trackingSpace, List<Vector2> corners)
     {
+        ClearAllCornerMarkers(); // Clear old markers first
+
         int index = 0;
         foreach (var corner in corners)
         {
             // Convert 2D point to 3D world position
             Vector3 cornerPos = trackingSpace.TransformPoint(new Vector3(corner.x, 0, corner.y));
 
-            // Create a marker at the corner
-            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            // Create a taller, more visible marker
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             marker.name = $"Corner_{index++}";
-            marker.transform.position = cornerPos + Vector3.up * 0.1f;
-            marker.transform.localScale = Vector3.one * 0.15f;
+            marker.tag = "CornerMarker"; // Add tag for easy finding
+            marker.transform.position = cornerPos + Vector3.up * 0.5f; // Raise it up
+            marker.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f); // Make it taller
 
             // Color based on index
             Color markerColor = index == 1 ? Color.blue : (index == 2 ? Color.green :
-                               (index == 3 ? Color.yellow : Color.magenta));
+                              (index == 3 ? Color.yellow : Color.magenta));
             marker.GetComponent<Renderer>().material.color = markerColor;
 
-            // Add text label
-            GameObject textObj = new GameObject($"Label_{index - 1}");
-            textObj.transform.position = cornerPos + Vector3.up * 0.3f;
-
-            // Add TextMesh component
-            TextMesh textMesh = textObj.AddComponent<TextMesh>();
-            textMesh.text = $"Corner {index - 1}\n({corner.x:F2}, {corner.y:F2})";
-            textMesh.fontSize = 48;
-            textMesh.characterSize = 0.05f;
-            textMesh.alignment = TextAlignment.Center;
-            textMesh.anchor = TextAnchor.MiddleCenter;
-            textMesh.color = Color.white;
-
-            // Set the parent
-            textObj.transform.SetParent(marker.transform);
-
-            // Destroy after 60 seconds
-            GameObject.Destroy(marker, 60f);
+            // Make markers last longer
+            // Destroy(marker, 300f); // 5 minutes instead of 1
         }
 
-        if (verbose) Debug.Log($"Created {corners.Count} corner markers");
+        // Create center marker to show origin
+        GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        centerMarker.name = "TrackingSpaceCenter";
+        centerMarker.tag = "CornerMarker";
+        centerMarker.transform.position = trackingSpace.position + Vector3.up * 0.1f;
+        centerMarker.transform.localScale = Vector3.one * 0.5f;
+        centerMarker.GetComponent<Renderer>().material.color = Color.red;
+
+        Debug.Log($"Created {corners.Count} enhanced corner markers");
     }
     public void VerifyTrackingSpaceDimensions()
     {
@@ -430,6 +479,88 @@ public class TrackingSpaceHelper : MonoBehaviour
             {
                 Debug.LogError("Tracking space dimensions are significantly wrong - attempting to regenerate");
                 InitializeTrackingSpace();
+            }
+        }
+    }
+    public void ClearAllCornerMarkers()
+    {
+        // Find all corner markers by tag
+        GameObject[] markers = GameObject.FindGameObjectsWithTag("CornerMarker");
+        foreach (var marker in markers)
+        {
+            Destroy(marker);
+        }
+        Debug.Log($"Cleared {markers.Length} corner markers");
+    }
+    // This method belongs in TrackingSpaceHelper.cs:
+    public void ForceTrackingSpaceDimensions(float newWidth, float newLength, bool applyImmediately = true)
+    {
+        Debug.Log($"TrackingSpaceHelper: Forcing tracking space dimensions to {newWidth}m × {newLength}m");
+
+        // Update the instance variables
+        this.width = newWidth;
+        this.length = newLength;
+
+        // Don't use any unit conversion
+        convertFromFeetToMeters = false;
+
+        if (applyImmediately)
+        {
+            // Generate the tracking space immediately
+            List<SingleSpace> physicalSpaces;
+            SingleSpace virtualSpace = null; // Initialize to null
+
+            TrackingSpaceGenerator.GenerateRectangleTrackingSpace(
+                0, // No obstacles 
+                out physicalSpaces,
+                newWidth,
+                newLength
+            );
+
+            if (physicalSpaces != null && physicalSpaces.Count > 0)
+            {
+                // Verify the dimensions
+                float minX = float.MaxValue, maxX = float.MinValue;
+                float minZ = float.MaxValue, maxZ = float.MinValue;
+
+                foreach (var point in physicalSpaces[0].trackingSpace)
+                {
+                    minX = Mathf.Min(minX, point.x);
+                    maxX = Mathf.Max(maxX, point.x);
+                    minZ = Mathf.Min(minZ, point.y); // y in 2D coords is z in 3D
+                    maxZ = Mathf.Max(maxZ, point.y);
+                }
+
+                float actualWidth = maxX - minX;
+                float actualLength = maxZ - minZ;
+
+                Debug.Log($"Generated tracking space with dimensions: {actualWidth}m × {actualLength}m");
+
+                // Update GlobalConfiguration with the new tracking space
+                if (globalConfig != null)
+                {
+                    globalConfig.physicalSpaces = physicalSpaces;
+
+                    // Only assign virtualSpace if not null
+                    if (virtualSpace != null)
+                    {
+                        globalConfig.virtualSpace = virtualSpace;
+                    }
+
+                    // Force visibility
+                    globalConfig.trackingSpaceVisible = true;
+
+                    // Notify that dimensions have been updated
+                    Debug.Log("Updated GlobalConfiguration with new tracking space dimensions");
+                }
+                else
+                {
+                    Debug.LogError("GlobalConfig reference is missing in TrackingSpaceHelper!");
+                }
+            }
+            else
+            {
+                Debug.LogError("Failed to generate physical spaces with specified dimensions");
             }
         }
     }

@@ -5,6 +5,13 @@ using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.XR.ARSubsystems;
+using UnityEngine.Serialization;
+using Photon.Realtime;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 //using static Cinemachine.Editor.CinemachineScreenComposerGuides;
 using static GlobalConfiguration;
 using static RedirectionManager;
@@ -1149,7 +1156,20 @@ public class GlobalConfiguration : MonoBehaviour
             }
         }
 
-        // Check if experiment is complete
+        // HUMAN STUDY MODIFICATION:
+        // Skip auto-completion check for HMD mode with free exploration
+        if (movementController == MovementController.HMD && freeExplorationMode)
+        {
+            // For human studies, don't auto-complete the experiment
+            // Only allow manual termination (via Q key)
+            if (Input.GetKeyDown(KeyCode.Q))
+            {
+                EndExperiment(1); // Manual termination
+            }
+            return; // Skip rest of experiment completion checks
+        }
+
+        // Check if experiment is complete (only for non-HMD or non-free exploration mode)
         bool ifExperimentEnd = true;
         bool ifInvalidAvatarExist = false;
 
@@ -1177,16 +1197,22 @@ public class GlobalConfiguration : MonoBehaviour
             }
         }
 
-        // End experiment if needed
+        // End experiment if needed (only for non-HMD or non-free exploration mode)
         if (ifInvalidAvatarExist)
         {
+            // Debug log the reason for ending
+            Debug.Log("Ending experiment because an avatar is invalid");
             EndExperiment(-1);
         }
         else if (ifExperimentEnd)
         {
+            // Debug log the reason for ending
+            Debug.Log("Ending experiment because all missions are complete");
             EndExperiment(0);
         }
     }
+
+
     [ContextMenu("EndExperiment")]
     public void EndExperimentMenu()
     {
@@ -1877,12 +1903,35 @@ public class GlobalConfiguration : MonoBehaviour
         if (realTrailList != null)
         {
             foreach (var t in realTrailList)
-                Destroy(t);
+            {
+                if (t != null)
+                {
+#if UNITY_EDITOR
+                    // Use DestroyImmediate with instanced check for scene objects
+                    if (PrefabUtility.IsPartOfPrefabAsset(t))
+                        Debug.LogWarning($"Cannot destroy prefab asset: {t.name}");
+                    else
+#endif
+                        Destroy(t);
+                }
+            }
         }
+
         if (avatarRepresentations != null)
         {
             foreach (var r in avatarRepresentations)
-                Destroy(r);
+            {
+                if (r != null)
+                {
+#if UNITY_EDITOR
+                    // Use DestroyImmediate with instanced check for scene objects
+                    if (PrefabUtility.IsPartOfPrefabAsset(r))
+                        Debug.LogWarning($"Cannot destroy prefab asset: {r.name}");
+                    else
+#endif
+                        Destroy(r);
+                }
+            }
         }
         realTrailList = new List<GameObject>();
         virtualSpaceTrailList = new List<GameObject>();
@@ -2113,97 +2162,179 @@ public class GlobalConfiguration : MonoBehaviour
     //endState of experiment, 0 indicates normal end, -1 indicates invalid data, 1 indicates end manually
     void EndExperiment(int endState)
     {
+        // Preserve references if needed
         if (experimentIterator < experimentSetups.Count)
         {
-            PreserveReferences(); // Add here
+            PreserveReferences();
         }
 
-        //HMD mode, press key R to be ready for the next trial
+        // HUMAN STUDY MODIFICATION: For HMD mode, only allow manual termination (Q key)
+        // This prevents auto-completion during human studies
+        if (movementController == MovementController.HMD)
+        {
+            // Only proceed if manually ended (endState = 1) or if freeExplorationMode is disabled
+            if (endState != 1 && freeExplorationMode)
+            {
+                Debug.Log("Preventing auto-completion during HMD mode with free exploration");
+                return;
+            }
+        }
+
+        Debug.Log($"Ending experiment with state: {endState} (0=normal, 1=manual, -1=invalid)");
+
+        // Reset readyToStart flag for HMD mode
         if (movementController == MovementController.HMD)
             readyToStart = false;
 
+        // Ensure experimentIterator is valid
+        if (experimentIterator >= experimentSetups.Count)
+        {
+            Debug.LogError("Invalid experimentIterator in EndExperiment. Aborting.");
+            return;
+        }
+
         ExperimentSetup setup = experimentSetups[experimentIterator];
 
+        // Clean up avatar components
         var avatarList = setup.avatars;
-        for (int id = 0; id < avatarList.Count; id++)
+        for (int id = 0; id < Mathf.Min(avatarList.Count, redirectedAvatars.Count); id++)
         {
+            if (redirectedAvatars[id] == null) continue;
+
             var vm = redirectedAvatars[id].GetComponent<VisualizationManager>();
             var rm = redirectedAvatars[id].GetComponent<RedirectionManager>();
 
-            // Disable Waypoint
-            rm.targetWaypoint.gameObject.SetActive(false);
-            vm.realWaypoint.gameObject.SetActive(false);
-            // Disabling Redirectors
-            rm.RemoveRedirector();
-            rm.RemoveResetter();
+            if (rm != null)
+            {
+                // Disable Waypoint safely
+                if (rm.targetWaypoint != null && rm.targetWaypoint.gameObject != null)
+                    rm.targetWaypoint.gameObject.SetActive(false);
+
+                // Disable redirector and resetter
+                rm.RemoveRedirector();
+                rm.RemoveResetter();
+            }
+
+            if (vm != null && vm.realWaypoint != null && vm.realWaypoint.gameObject != null)
+                vm.realWaypoint.gameObject.SetActive(false);
         }
 
-        if (passiveHaptics)
+        // Handle passive haptics
+        if (passiveHaptics && physicalTargets != null && physicalTargets.Count >= redirectedAvatars.Count)
         {
-            if (physicalTargets == null || physicalTargets.Count < redirectedAvatars.Count)
+            for (int id = 0; id < redirectedAvatars.Count; id++)
             {
-                Debug.LogError("physicalTargets == null || physicalTargets.Count < redirectedAvatars.Count!");
+                var rm = redirectedAvatars[id].GetComponent<RedirectionManager>();
+                if (rm == null) continue;
+
+                var posReal = Utilities.FlattenedPos2D(rm.currPosReal);
+                var dirReal = Utilities.FlattenedPos2D(rm.currDirReal);
+                var dist = (physicalTargetTransforms[id].position - posReal).magnitude;
+                var angle = Vector2.Angle(physicalTargetTransforms[id].forward, dirReal);
+                statisticsLogger.Event_Update_PassiveHaptics_Results(id, dist, angle);
             }
-            else
-            {
-                for (int id = 0; id < redirectedAvatars.Count; id++)
-                {
-                    var posReal = Utilities.FlattenedPos2D(redirectedAvatars[id].GetComponent<RedirectionManager>().currPosReal);
-                    var dirReal = Utilities.FlattenedPos2D(redirectedAvatars[id].GetComponent<RedirectionManager>().currDirReal);
-                    var dist = (physicalTargetTransforms[id].position - posReal).magnitude;
-                    var angle = Vector2.Angle(physicalTargetTransforms[id].forward, dirReal);
-                    statisticsLogger.Event_Update_PassiveHaptics_Results(id, dist, angle);
-                }
-            }
+        }
+        else if (passiveHaptics)
+        {
+            Debug.LogError("Passive haptics enabled but physical targets not properly set up");
         }
 
         avatarIsWalking = false;
 
         // Stop Logging
-        statisticsLogger.EndLogging();
-
-        // Gather Summary Statistics
-        statisticsLogger.experimentResults.Add(statisticsLogger.GetExperimentResultForSummaryStatistics(endState, GetExperimentDescriptor(setup)));
-
-        // Log Sampled Metrics
-        if (statisticsLogger.logSampleVariables)
+        if (statisticsLogger != null)
         {
-            List<Dictionary<string, List<float>>> oneDimensionalSamples;
-            List<Dictionary<string, List<Vector2>>> twoDimensionalSamples;
-            statisticsLogger.GetExperimentResultsForSampledVariables(out oneDimensionalSamples, out twoDimensionalSamples);
-            statisticsLogger.LogAllExperimentSamples(TrialIdToString(experimentIterator), oneDimensionalSamples, twoDimensionalSamples);
+            statisticsLogger.EndLogging();
+
+            // Only add to experiment results if this wasn't a manual termination during human study
+            if (!(movementController == MovementController.HMD && endState == 1 && freeExplorationMode))
+            {
+                // Gather Summary Statistics
+                statisticsLogger.experimentResults.Add(
+                    statisticsLogger.GetExperimentResultForSummaryStatistics(endState, GetExperimentDescriptor(setup))
+                );
+
+                // Log Sampled Metrics
+                if (statisticsLogger.logSampleVariables)
+                {
+                    List<Dictionary<string, List<float>>> oneDimensionalSamples;
+                    List<Dictionary<string, List<Vector2>>> twoDimensionalSamples;
+                    statisticsLogger.GetExperimentResultsForSampledVariables(
+                        out oneDimensionalSamples,
+                        out twoDimensionalSamples
+                    );
+                    statisticsLogger.LogAllExperimentSamples(
+                        TrialIdToString(experimentIterator),
+                        oneDimensionalSamples,
+                        twoDimensionalSamples
+                    );
+                }
+
+                // Save images
+                if (exportImage)
+                    statisticsLogger.LogExperimentPathPictures(experimentIterator);
+
+                // Create temporary files to indicate the stage of the experiment
+                try
+                {
+                    File.WriteAllText(
+                        statisticsLogger.Get_TMP_DERECTORY() + "/" +
+                        experimentSetupsListIterator + "-" + experimentSetupsList.Count + " " +
+                        experimentIterator + "-" + experimentSetups.Count + ".txt",
+                        ""
+                    );
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"Failed to write temp file: {e.Message}");
+                }
+            }
         }
 
-        //save images
-        if (exportImage)
-            statisticsLogger.LogExperimentPathPictures(experimentIterator);
-
-        //create temporary files to indicate the stage of the experiment
-        File.WriteAllText(statisticsLogger.Get_TMP_DERECTORY() + "/" + experimentSetupsListIterator + "-" + experimentSetupsList.Count + " " + experimentIterator + "-" + experimentSetups.Count + ".txt", "");
-
-        // Prepared for new experiment
+        // Prepare for new experiment
         experimentIterator++;
         experimentInProgress = false;
 
-        // Log All Summary Statistics To File
-        if (experimentIterator == experimentSetups.Count)
+        // If we've completed all experiments in the current setup
+        if (experimentIterator >= experimentSetups.Count)
         {
-            GetResultDirAndFileName(statisticsLogger.SUMMARY_STATISTICS_DIRECTORY, out string resultDir, out string fileName);
-            Debug.Log(string.Format("Save data to resultDir:{0}, fileName:{1}", resultDir, fileName));
-            statisticsLogger.LogExperimentSummaryStatisticsResultsSCSV(statisticsLogger.experimentResults, resultDir, fileName);
-            statisticsLogger.LogLightVersionCSV(statisticsLogger.experimentResults, resultDir, fileName + "_light");
+            // For human studies with free exploration, don't proceed to next experiment setup
+            if (movementController == MovementController.HMD && freeExplorationMode)
+            {
+                // Just reset the counter to allow continuous exploration
+                experimentIterator = 0;
+                experimentInProgress = false;
+                experimentComplete = false;
+                Debug.Log("Human study mode: Resetting experiment for continuous exploration");
+                return;
+            }
 
-            //initialize experiment results 
-            statisticsLogger.InitializeExperimentResults();
+            // For other modes, log results and move to next setup
+            if (statisticsLogger != null)
+            {
+                GetResultDirAndFileName(statisticsLogger.SUMMARY_STATISTICS_DIRECTORY, out string resultDir, out string fileName);
+                Debug.Log($"Save data to resultDir:{resultDir}, fileName:{fileName}");
+                statisticsLogger.LogExperimentSummaryStatisticsResultsSCSV(statisticsLogger.experimentResults, resultDir, fileName);
+                statisticsLogger.LogLightVersionCSV(statisticsLogger.experimentResults, resultDir, fileName + "_light");
+                statisticsLogger.InitializeExperimentResults();
+            }
 
             experimentSetupsListIterator++;
             if (experimentSetupsListIterator >= experimentSetupsList.Count)
             {
                 Debug.Log("Last Experiment Complete, experimentSetups.Count == " + experimentSetups.Count);
-                experimentComplete = true;//all trials end
+                experimentComplete = true; // All trials end
+
+                // For human studies, we still want to continue
+                if (movementController == MovementController.HMD)
+                {
+                    experimentComplete = false;
+                    Debug.Log("Human study mode: Continuing despite experiment completion");
+                }
             }
             else
-            {//handle next experiment setup
+            {
+                // Handle next experiment setup
                 experimentIterator = 0;
                 experimentSetups = experimentSetupsList[experimentSetupsListIterator];
             }

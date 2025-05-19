@@ -78,7 +78,7 @@
 
         private int randomIndex;
         // Add this to AITrafficCar.cs
-        private bool routeControlDisabled = false;
+        //private bool routeControlDisabled = false;
 
 
 

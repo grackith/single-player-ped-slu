@@ -1,9 +1,10 @@
-using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
+using System.Linq;
+using UnityEngine;
 using AvatarInfo = ExperimentSetup.AvatarInfo;
+using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
 
 public class VisualizationManager : MonoBehaviour
 {
@@ -801,6 +802,436 @@ public class VisualizationManager : MonoBehaviour
                 avatarBuffer.SetActive(false);
             }
         }
+    }
+    [ContextMenu("Inspect Tracking Space")]
+    public void InspectTrackingSpace()
+    {
+        Debug.Log("=== TRACKING SPACE INSPECTION ===");
+
+        if (allPlanes == null || allPlanes.Count == 0)
+        {
+            Debug.LogError("No tracking space planes found!");
+            return;
+        }
+
+        Debug.Log($"Found {allPlanes.Count} tracking space planes");
+
+        for (int i = 0; i < allPlanes.Count; i++)
+        {
+            var plane = allPlanes[i];
+            Debug.Log($"Plane {i}: {(plane != null ? plane.name : "NULL")} - Active: {(plane != null ? plane.activeInHierarchy : false)}");
+
+            if (plane != null)
+            {
+                Debug.Log($"  Position: {plane.transform.position}, Rotation: {plane.transform.eulerAngles}");
+
+                // Check mesh
+                MeshFilter meshFilter = plane.GetComponent<MeshFilter>();
+                if (meshFilter != null && meshFilter.mesh != null)
+                {
+                    Debug.Log($"  Mesh vertices: {meshFilter.mesh.vertexCount}");
+
+                    // Calculate bounds from vertices
+                    Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+                    Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+
+                    foreach (Vector3 vertex in meshFilter.mesh.vertices)
+                    {
+                        min = Vector3.Min(min, vertex);
+                        max = Vector3.Max(max, vertex);
+                    }
+
+                    Vector3 size = max - min;
+                    Debug.Log($"  Mesh bounds size: {size.x}m × {size.z}m");
+                }
+                else
+                {
+                    Debug.LogError("  No mesh or mesh filter found!");
+                }
+            }
+        }
+
+        // Check for GlobalConfiguration
+        if (generalManager != null && generalManager.physicalSpaces != null)
+        {
+            Debug.Log($"Physical spaces in GlobalConfiguration: {generalManager.physicalSpaces.Count}");
+
+            for (int i = 0; i < generalManager.physicalSpaces.Count; i++)
+            {
+                var space = generalManager.physicalSpaces[i];
+                if (space != null && space.trackingSpace != null)
+                {
+                    Debug.Log($"  Space {i} points: {space.trackingSpace.Count}");
+
+                    // Calculate dimensions from points
+                    float minX = float.MaxValue, maxX = float.MinValue;
+                    float minZ = float.MaxValue, maxZ = float.MinValue;
+
+                    foreach (var point in space.trackingSpace)
+                    {
+                        minX = Mathf.Min(minX, point.x);
+                        maxX = Mathf.Max(maxX, point.x);
+                        minZ = Mathf.Min(minZ, point.y); // y in 2D coords is z in 3D
+                        maxZ = Mathf.Max(maxZ, point.y);
+                    }
+
+                    float width = maxX - minX;
+                    float length = maxZ - minZ;
+                    Debug.Log($"  Space dimensions: {width}m × {length}m (area: {width * length}m²)");
+
+                    for (int j = 0; j < space.trackingSpace.Count; j++)
+                    {
+                        Debug.Log($"    Point {j}: ({space.trackingSpace[j].x}, {space.trackingSpace[j].y})");
+                    }
+                }
+            }
+        }
+
+        Debug.Log("=== INSPECTION COMPLETE ===");
+    }
+
+    public void ForceRefreshVisualization()
+    {
+        Debug.Log("Force refreshing visualization");
+
+        // Ensure we have proper references
+        EnsureInitialized();
+        if (generalManager == null || generalManager.physicalSpaces == null || generalManager.physicalSpaces.Count == 0)
+        {
+            Debug.LogError("Missing references for visualization refresh");
+            return;
+        }
+
+        // First, find the active RedirectionManager (might not be the one we have)
+        RedirectionManager activeManager = FindActiveRedirectionManager();
+        if (activeManager != null && activeManager != redirectionManager)
+        {
+            // Update our reference
+            redirectionManager = activeManager;
+            Debug.Log($"Updated redirection manager reference to {redirectionManager.name}");
+        }
+
+        // Clean up existing visualization
+        DestroyAll();
+
+        // Force regenerate from scratch
+        GenerateTrackingSpaceMesh(generalManager.physicalSpaces);
+
+        // Force visibility for both tracking space and buffer
+        ChangeTrackingSpaceVisibility(true);
+        SetBufferVisibility(generalManager.bufferVisible);
+
+        // Force update all other visualizations
+        UpdateVisualizations();
+
+        Debug.Log("Visualization refresh complete");
+
+        // Log tracking space size and orientation
+        if (generalManager.physicalSpaces.Count > 0 && generalManager.physicalSpaces[0].trackingSpace.Count > 0)
+        {
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+            foreach (var point in generalManager.physicalSpaces[0].trackingSpace)
+            {
+                minX = Mathf.Min(minX, point.x);
+                maxX = Mathf.Max(maxX, point.x);
+                minZ = Mathf.Min(minZ, point.y); // y in 2D coords is z in 3D
+                maxZ = Mathf.Max(maxZ, point.y);
+            }
+            float width = maxX - minX;
+            float length = maxZ - minZ;
+            Debug.Log($"Current tracking space dimensions: {width}m × {length}m");
+
+            // Log alignment information
+            if (redirectionManager != null && redirectionManager.trackingSpace != null)
+            {
+                Vector3 forward = redirectionManager.trackingSpace.forward;
+                float angle = Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
+
+                // Determine which dimension is aligned with forward
+                bool alignedWithX = Mathf.Abs(Vector3.Dot(forward, Vector3.right)) >
+                                   Mathf.Abs(Vector3.Dot(forward, Vector3.forward));
+
+                string forwardDimension;
+                if ((alignedWithX && width > length) || (!alignedWithX && length > width))
+                    forwardDimension = "LONG";
+                else
+                    forwardDimension = "SHORT";
+
+                Debug.Log($"Tracking space forward direction: {forward}, angle: {angle}°");
+                Debug.Log($"Forward direction is aligned with {forwardDimension} dimension");
+
+                // Create visual direction indicators
+                CreateDirectionIndicators();
+            }
+        }
+    }
+
+    private RedirectionManager FindActiveRedirectionManager()
+    {
+        // Try to find in Redirected Avatar
+        GameObject redirectedAvatar = GameObject.Find("Redirected Avatar");
+        if (redirectedAvatar != null)
+        {
+            RedirectionManager rm = redirectedAvatar.GetComponent<RedirectionManager>();
+            if (rm != null) return rm;
+        }
+
+        // Fallback to finding any RedirectionManager
+        return FindObjectOfType<RedirectionManager>();
+    }
+
+    private void CreateDirectionIndicators()
+    {
+        if (redirectionManager == null || redirectionManager.trackingSpace == null)
+            return;
+
+        Transform trackingSpace = redirectionManager.trackingSpace;
+
+        // Get dimensions from the tracking space bounds
+        float width = 5.0f;  // Default fallback
+        float length = 13.5f; // Default fallback
+
+        if (generalManager != null && generalManager.physicalSpaces.Count > 0)
+        {
+            // Calculate actual dimensions
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+
+            foreach (var point in generalManager.physicalSpaces[0].trackingSpace)
+            {
+                minX = Mathf.Min(minX, point.x);
+                maxX = Mathf.Max(maxX, point.x);
+                minZ = Mathf.Min(minZ, point.y); // y in 2D is z in 3D
+                maxZ = Mathf.Max(maxZ, point.y);
+            }
+
+            // Get actual dimensions
+            width = maxX - minX;
+            length = maxZ - minZ;
+
+            // Make sure width is the shorter dimension
+            if (width > length)
+            {
+                float temp = width;
+                width = length;
+                length = temp;
+            }
+        }
+
+        // Find existing indicators and destroy them
+        GameObject existingForward = GameObject.Find("ForwardDirection");
+        if (existingForward != null) Destroy(existingForward);
+
+        GameObject existingRight = GameObject.Find("RightDirection");
+        if (existingRight != null) Destroy(existingRight);
+
+        // Create forward direction indicator (blue) - for the LONG axis
+        GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        forwardMarker.name = "ForwardDirection";
+        forwardMarker.tag = "CornerMarker"; // Tag it for easy cleanup
+        forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * (length / 3f) + Vector3.up * 0.05f;
+        forwardMarker.transform.rotation = trackingSpace.rotation;
+        forwardMarker.transform.localScale = new Vector3(0.2f, 0.05f, length / 2f);
+        Material blueMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (blueMaterial.shader == null)
+            blueMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        blueMaterial.color = Color.blue;
+        forwardMarker.GetComponent<Renderer>().material = blueMaterial;
+
+        // Create right direction indicator (red) - for the SHORT axis
+        GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightMarker.name = "RightDirection";
+        rightMarker.tag = "CornerMarker"; // Tag it for easy cleanup
+        rightMarker.transform.position = trackingSpace.position + trackingSpace.right * (width / 3f) + Vector3.up * 0.05f;
+        rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
+        rightMarker.transform.localScale = new Vector3(0.2f, 0.05f, width / 2f);
+        Material redMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (redMaterial.shader == null)
+            redMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        redMaterial.color = Color.red;
+        rightMarker.GetComponent<Renderer>().material = redMaterial;
+
+        // Add a text label
+        GameObject labelObj = GameObject.Find("DirectionLabel");
+        if (labelObj != null) Destroy(labelObj);
+
+        labelObj = new GameObject("DirectionLabel");
+        labelObj.tag = "CornerMarker";
+        TextMesh textMesh = labelObj.AddComponent<TextMesh>();
+        textMesh.text = "BLUE = Forward (Long)\nRED = Right (Short)";
+        textMesh.fontSize = 72;
+        textMesh.characterSize = 0.03f;
+        textMesh.color = Color.white;
+        textMesh.anchor = TextAnchor.MiddleCenter;
+        textMesh.alignment = TextAlignment.Center;
+        labelObj.transform.position = trackingSpace.position + Vector3.up * 0.5f;
+
+        // Make text face the camera if possible
+        if (Camera.main != null)
+        {
+            Vector3 lookDir = Camera.main.transform.position - labelObj.transform.position;
+            lookDir.y = 0; // Keep it level
+            if (lookDir != Vector3.zero)
+                labelObj.transform.rotation = Quaternion.LookRotation(lookDir);
+        }
+        else
+        {
+            // Default rotation facing forward
+            labelObj.transform.rotation = trackingSpace.rotation;
+        }
+
+        Debug.Log($"Created direction indicators: BLUE = Long axis ({length:F2}m), RED = Short axis ({width:F2}m)");
+    }
+
+    // Helper method to clear corner markers
+    private void ClearCornerMarkers()
+    {
+        // Find all corner markers by tag
+        GameObject[] markers = GameObject.FindGameObjectsWithTag("CornerMarker");
+        int count = 0;
+
+        foreach (var marker in markers)
+        {
+            if (marker != null)
+            {
+                Destroy(marker);
+                count++;
+            }
+        }
+
+        // Also find by name as fallback (in case tag is not set)
+        GameObject[] cornersByName = GameObject.FindObjectsOfType<GameObject>()
+            .Where(go => go.name.StartsWith("Corner_") || go.name == "TrackingSpaceCenter")
+            .ToArray();
+
+        foreach (var marker in cornersByName)
+        {
+            if (marker != null && !markers.Contains(marker))
+            {
+                Destroy(marker);
+                count++;
+            }
+        }
+
+        // Also destroy direction indicators
+        GameObject[] directionMarkers = GameObject.FindObjectsOfType<GameObject>()
+            .Where(go => go.name == "ForwardDirection" || go.name == "RightDirection")
+            .ToArray();
+
+        foreach (var marker in directionMarkers)
+        {
+            if (marker != null)
+            {
+                Destroy(marker);
+                count++;
+            }
+        }
+
+        Debug.Log($"Cleared {count} corner and direction markers");
+    }
+
+    // Helper method to create visual alignment indicators
+    private void CreateAlignmentVisualizations()
+    {
+        if (redirectionManager == null || redirectionManager.trackingSpace == null)
+            return;
+
+        Transform trackingSpace = redirectionManager.trackingSpace;
+
+        // Get dimensions from the tracking space bounds
+        float width = 5.0f;  // Default fallback
+        float length = 13.5f; // Default fallback
+
+        if (generalManager != null && generalManager.physicalSpaces.Count > 0)
+        {
+            // Calculate actual dimensions
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+
+            foreach (var point in generalManager.physicalSpaces[0].trackingSpace)
+            {
+                minX = Mathf.Min(minX, point.x);
+                maxX = Mathf.Max(maxX, point.x);
+                minZ = Mathf.Min(minZ, point.y); // y in 2D is z in 3D
+                maxZ = Mathf.Max(maxZ, point.y);
+            }
+
+            // Get actual dimensions
+            float calculatedWidth = maxX - minX;
+            float calculatedLength = maxZ - minZ;
+
+            // Make sure width is the shorter dimension
+            if (calculatedWidth > calculatedLength)
+            {
+                width = calculatedLength;
+                length = calculatedWidth;
+            }
+            else
+            {
+                width = calculatedWidth;
+                length = calculatedLength;
+            }
+        }
+
+        // Create forward direction indicator (blue) - for the LONG axis
+        GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        forwardMarker.name = "ForwardDirection";
+        forwardMarker.tag = "CornerMarker"; // Tag it for easy cleanup
+        forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * (length / 3f) + Vector3.up * 0.05f;
+        forwardMarker.transform.rotation = trackingSpace.rotation;
+        forwardMarker.transform.localScale = new Vector3(0.2f, 0.05f, length / 2f);
+        Material blueMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (blueMaterial.shader == null)
+            blueMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        blueMaterial.color = Color.blue;
+        forwardMarker.GetComponent<Renderer>().material = blueMaterial;
+
+        // Create right direction indicator (red) - for the SHORT axis
+        GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightMarker.name = "RightDirection";
+        rightMarker.tag = "CornerMarker"; // Tag it for easy cleanup
+        rightMarker.transform.position = trackingSpace.position + trackingSpace.right * (width / 3f) + Vector3.up * 0.05f;
+        rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
+        rightMarker.transform.localScale = new Vector3(0.2f, 0.05f, width / 2f);
+        Material redMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (redMaterial.shader == null)
+            redMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        redMaterial.color = Color.red;
+        rightMarker.GetComponent<Renderer>().material = redMaterial;
+
+        // Add a text label for clarity
+        GameObject labelObj = new GameObject("DirectionLabel");
+        labelObj.tag = "CornerMarker";
+        TextMesh textMesh = labelObj.AddComponent<TextMesh>();
+        textMesh.text = "BLUE = Forward (Long)\nRED = Right (Short)";
+        textMesh.fontSize = 72;
+        textMesh.characterSize = 0.03f;
+        textMesh.color = Color.white;
+        textMesh.anchor = TextAnchor.MiddleCenter;
+        textMesh.alignment = TextAlignment.Center;
+        labelObj.transform.position = trackingSpace.position + Vector3.up * 0.5f;
+
+        // Make text face the camera if possible
+        if (Camera.main != null)
+        {
+            Vector3 lookDir = Camera.main.transform.position - labelObj.transform.position;
+            lookDir.y = 0; // Keep it level
+            if (lookDir != Vector3.zero)
+                labelObj.transform.rotation = Quaternion.LookRotation(lookDir);
+        }
+        else
+        {
+            // Default rotation facing forward
+            labelObj.transform.rotation = trackingSpace.rotation;
+        }
+
+        // Make them last longer - 2 minutes
+        Destroy(forwardMarker, 120f);
+        Destroy(rightMarker, 120f);
+        Destroy(labelObj, 120f);
+
+        Debug.Log($"Created alignment visualizations: BLUE = Long axis ({length:F2}m), RED = Short axis ({width:F2}m)");
     }
 
 }

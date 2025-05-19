@@ -1,5 +1,6 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
+using UnityEngine;
+using UnityEngine.XR.ARSubsystems;
 using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
 
 public class SimulatedWalker : MonoBehaviour
@@ -63,11 +64,45 @@ public class SimulatedWalker : MonoBehaviour
         if (redirectionManager == null || movementManager == null)
         {
             Debug.LogError($"SimulatedWalker missing critical components on {name}");
+            return; // Add early return to prevent null references
+        }
+
+        // For HMD mode
+        if (globalConfiguration != null &&
+            globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+        {
+            // Find parent Simulated User
+            Transform simUser = transform.parent;
+            if (simUser != null && simUser.name.Contains("Simulated User"))
+            {
+                // Make it invisible but keep it active
+                foreach (Renderer r in simUser.GetComponentsInChildren<Renderer>())
+                {
+                    r.enabled = false;
+                }
+
+                // Position it at the tracking origin initially if available
+                if (redirectionManager.trackingSpace != null)
+                {
+                    simUser.position = redirectionManager.trackingSpace.position;
+                }
+                else
+                {
+                    Debug.LogWarning("Cannot position Simulated User - trackingSpace is null");
+                }
+            }
         }
     }
 
     public void UpdateSimulatedWalker()
     {
+        // First, check if we're in VR mode and bail out
+        if (globalConfiguration != null &&
+            globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+        {
+            // Do nothing in VR mode - just follow the real user
+            return;
+        }
         // Add null checks
         if (globalConfiguration == null || redirectionManager == null || movementManager == null)
         {

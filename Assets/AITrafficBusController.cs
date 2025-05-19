@@ -22,7 +22,7 @@ public class AITrafficBusController : MonoBehaviour
     
 
     // Track current state
-    private int currentWaypointIndex = 0;
+    //private int currentWaypointIndex = 0;
     private bool isInitialized = false;
     private bool routeTransitionPending = false;
     private AITrafficWaypoint transitionTriggerWaypoint;

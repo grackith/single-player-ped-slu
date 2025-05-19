@@ -12,7 +12,7 @@ public class RouteConnectionPreserver : MonoBehaviour
     }
 
     public List<WaypointConnection> connections = new List<WaypointConnection>();
-    private bool connectionsRestored = false;
+    //private bool connectionsRestored = false;
 
     //public void SaveAllConnections()
     //{

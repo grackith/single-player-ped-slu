@@ -223,59 +223,21 @@ public class ScenarioManager : MonoBehaviour
             Debug.Log($"Updated RDW for scenario with start position: {virtualPos}");
         }
     }
+    // Add this helper method to ScenarioManager
+    private RedirectionManager FindRedirectionManager()
+    {
+        if (rdwGlobalConfiguration != null &&
+            rdwGlobalConfiguration.redirectedAvatars != null &&
+            rdwGlobalConfiguration.redirectedAvatars.Count > 0)
+        {
+            return rdwGlobalConfiguration.redirectedAvatars[0].GetComponent<RedirectionManager>();
+        }
 
-    // Call this from PositionPlayerForScenario
-    // Call this from PositionPlayerForScenario
-    //private void InitializeRedirectedWalking()
-    //{
-    //    Debug.Log("Starting RDW initialization");
-
-    //    // Find RDW root
-    //    GameObject rdwRoot = FindRDWRoot();
-
-    //    if (rdwRoot != null)
-    //    {
-    //        // Get GlobalConfiguration
-    //        rdwGlobalConfiguration = rdwRoot.GetComponent<GlobalConfiguration>();
-
-    //        // Make sure the RDW system is active
-    //        if (!rdwRoot.activeInHierarchy)
-    //        {
-    //            rdwRoot.SetActive(true);
-    //            Debug.Log("Activated RDW root GameObject");
-    //        }
-
-    //        // Since we removed RDWInitializationFix, we'll use our own initialization tracking
-    //        StartCoroutine(WaitForRDWInitialization());
-    //    }
-    //    else
-    //    {
-    //        Debug.LogError("Could not find RDW system!");
-    //    }
-    //}
-
-    //private IEnumerator WaitForRDWInitialization()
-    //{
-    //    // Wait for GlobalConfiguration to initialize
-    //    while (rdwGlobalConfiguration == null || !rdwGlobalConfiguration.enabled)
-    //    {
-    //        yield return null;
-    //    }
-
-    //    // Wait a bit more for full initialization
-    //    yield return new WaitForSeconds(0.5f);
-
-    //    // Now mark as initialized
-    //    isRDWInitialized = true;
-    //    Debug.Log("RDW system initialized (using direct approach)");
-
-    //    // Update references
-    //    UpdateRDWReferencesForScene();
-    //}
+        // Fallback to direct search
+        return FindObjectOfType<RedirectionManager>();
+    }
 
 
-
-    // Helper method to find RDW root
     private GameObject FindRDWRoot()
     {
         GameObject rdwRoot = GameObject.Find("RDW");
@@ -781,6 +743,7 @@ public class ScenarioManager : MonoBehaviour
     // Add to ScenarioManager.cs - Numpad controls
     // Add to ScenarioManager.cs Update method
     // Modify your ScenarioManager's Update method to handle both numpad and regular keys
+    // Modify your ScenarioManager's Update method with these alternative hotkeys
     private void Update()
     {
         // Only process inputs if not transitioning
@@ -853,25 +816,112 @@ public class ScenarioManager : MonoBehaviour
             }
         }
 
-        // In your existing Update() method, add these key controls:
-        // C key - Calibrate tracking space to physical space
+        // P key - Replace F5 - Reset tracking space to physical space
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            Debug.Log("P key pressed - Manually resetting tracking space alignment");
+            if (persistentRDW != null)
+            {
+                persistentRDW.CalibrateTrackingSpace();
+            }
+        }
+
+        // D key - Replace F6 - Show diagnostic information
+        // D key - Replace F6 - Show diagnostic info
+        if (Input.GetKeyDown(KeyCode.D))
+        {
+            Debug.Log("D key pressed - Displaying tracking space diagnostic info");
+
+            // First try to get from global configuration
+            RedirectionManager rm = null;
+
+            if (rdwGlobalConfiguration != null &&
+                rdwGlobalConfiguration.redirectedAvatars != null &&
+                rdwGlobalConfiguration.redirectedAvatars.Count > 0)
+            {
+                rm = rdwGlobalConfiguration.redirectedAvatars[0].GetComponent<RedirectionManager>();
+            }
+
+            // If that didn't work, try to find directly
+            if (rm == null)
+            {
+                rm = FindObjectOfType<RedirectionManager>();
+            }
+
+            // Log diagnostic info if we found a RedirectionManager
+            if (rm != null)
+            {
+                rm.LogTrackingSpaceInfo();
+            }
+            else if (persistentRDW != null)
+            {
+                Debug.Log("No RedirectionManager found, checking if PersistentRDW can provide info");
+                // Note: This requires you to add LogTrackingSpaceInfo to PersistentRDW 
+                // or have persistentRDW call it on its internal RedirectionManager
+            }
+            else
+            {
+                Debug.LogError("No RedirectionManager or PersistentRDW found for diagnostic info");
+            }
+        }
+
+        // V key - Replace F - Force visualization refresh
+        // V key - Replace F - Force visualization refresh
+        if (Input.GetKeyDown(KeyCode.V))
+        {
+            Debug.Log("V key pressed - Forcing visualization refresh");
+
+            // Find all visualization managers
+            VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
+            foreach (var vm in visualManagers)
+            {
+                if (vm != null)
+                {
+                    // Use the existing, comprehensive method
+                    vm.ForceRefreshVisualization();
+                }
+            }
+
+            // Also refresh tracking space helper if needed
+            TrackingSpaceHelper helper = FindObjectOfType<TrackingSpaceHelper>();
+            if (helper != null)
+            {
+                helper.ForceTrackingSpaceDimensions(5.0f, 13.5f, true);
+            }
+
+            // No need to duplicate functionality here since ForceRefreshVisualization is comprehensive
+        }
+
         // C key - Calibrate tracking space to physical space
         if (Input.GetKeyDown(KeyCode.C))
         {
-            Debug.Log("C key pressed - Calibrating tracking space");
+            Debug.Log("C key pressed - Performing FULL tracking space calibration");
 
             if (persistentRDW != null)
             {
-                // Call the calibration method
+                // First force the tracking space dimensions to the correct size
+                if (trackingSpaceHelper != null)
+                {
+                    // Ensure we have the correct dimensions set
+                    trackingSpaceHelper.width = 5.0f;   // Your exact width
+                    trackingSpaceHelper.length = 13.5f; // Your exact length
+                    trackingSpaceHelper.verbose = true;
+
+                    // Reinitialize with correct dimensions (takes effect before calibration)
+                    trackingSpaceHelper.InitializeTrackingSpace();
+                    Debug.Log("Reinitialized tracking space with correct dimensions: 5m × 13.5m");
+                }
+
+                // Call the enhanced calibration method
                 persistentRDW.CalibrateTrackingSpace();
 
-                // Force enable tracking space visualization
+                // Force visibility ON for all components
                 if (rdwGlobalConfiguration != null)
                 {
                     rdwGlobalConfiguration.trackingSpaceVisible = true;
                     Debug.Log("Forced tracking space visibility ON");
 
-                    // Also force visualization update for all redirected avatars
+                    // Also force visibility update for all redirected avatars
                     if (rdwGlobalConfiguration.redirectedAvatars != null)
                     {
                         foreach (var avatar in rdwGlobalConfiguration.redirectedAvatars)
@@ -888,18 +938,26 @@ public class ScenarioManager : MonoBehaviour
                     }
                 }
 
+                // Create persistent markers that will remain visible
+                persistentRDW.CreatePersistentCornerMarkers(5.0f, 13.5f);
+
                 // Create visual indicators at calibration point
                 if (Camera.main != null)
                 {
                     GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                     marker.name = "CalibrationPoint";
+                    //marker.tag = "CornerMarker";
                     marker.transform.position = new Vector3(Camera.main.transform.position.x, 0.01f, Camera.main.transform.position.z);
                     marker.transform.localScale = new Vector3(0.5f, 0.02f, 0.5f);
                     marker.GetComponent<Renderer>().material.color = Color.blue;
-                    GameObject.Destroy(marker, 20f); // Clean up after 20 seconds
                 }
             }
+            else
+            {
+                Debug.LogError("Cannot calibrate - PersistentRDW not found");
+            }
         }
+
         // R key - Start the redirected walking experience 
         if (Input.GetKeyDown(KeyCode.R))
         {
@@ -944,18 +1002,6 @@ public class ScenarioManager : MonoBehaviour
             Debug.Log("Tab key pressed - Toggling virtual view");
             // Similar to above, toggle between views
             // This might involve switching camera modes
-        }
-
-        // Number keys to switch user views
-        for (int i = 0; i <= 9; i++)
-        {
-            if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha0 + i)) ||
-                Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad0 + i)))
-            {
-                Debug.Log($"Key {i} pressed - Switching to user view {i}");
-                // Logic to switch to specific user view
-                // This would depend on your camera system implementation
-            }
         }
     }
 
@@ -1264,13 +1310,23 @@ public class ScenarioManager : MonoBehaviour
         currentScenarioIndex = index;
         Debug.Log($"Starting transition to scenario: {scenario.scenarioName}");
 
-        // 1. Make sure TrafficSystemManager is initialized and controller is active
+        // Start a timeout coroutine to prevent infinite transitions
+        StartCoroutine(TransitionTimeout(30f));
+
+        // CRITICAL: Clean up before scene change - clear markers and fix hierarchy
+        if (persistentRDW != null)
+        {
+            persistentRDW.ClearAllDirectionMarkers();
+            FixRedirectedAvatarHierarchy();
+        }
+
+        // 1. Traffic system initialization (keep existing logic)
         if (TrafficSystemManager.Instance != null)
         {
             TrafficSystemManager.Instance.EnsureTrafficControllerIsActive();
         }
 
-        // 2. Get the traffic controller and move cars to pool
+        // 2. Traffic controller handling (keep existing logic)
         AITrafficController controller = AITrafficController.Instance;
         if (controller != null)
         {
@@ -1285,11 +1341,10 @@ public class ScenarioManager : MonoBehaviour
             yield return new WaitForSeconds(0.5f);
         }
 
-        // 3. Fade out screen
+        // 3. Fade out screen (keep existing logic)
         yield return StartCoroutine(FadeScreen(true, fadeInOutDuration));
 
-        // 4. Load new scenario scene ADDITIVELY without unloading current scene
-        // IMPORTANT: Don't unload the current scene, just load the new one additively
+        // 4. Load new scenario scene additively (keep existing logic)
         if (!string.IsNullOrEmpty(scenario.sceneBuildName))
         {
             Debug.Log($"Loading scenario scene: {scenario.sceneBuildName} additively");
@@ -1327,22 +1382,29 @@ public class ScenarioManager : MonoBehaviour
             Debug.LogWarning("No scene name specified for this scenario!");
         }
 
-        // 5. Wait for a moment to ensure scene is fully loaded
+        // 5. Wait for scene to load (keep existing logic)
         yield return new WaitForSeconds(0.5f);
 
-        // NEW: Prepare RDW system BEFORE positioning the player
+        // 6. IMPROVED: Prepare tracking space with more robust error handling
         if (trackingSpaceHelper != null)
         {
-            // Set the correct rectangular dimensions - ensure length is greater than width
-            trackingSpaceHelper.width = 4.0f;  // Shorter dimension
-            trackingSpaceHelper.length = 13.5f; // Longer dimension
+            try
+            {
+                // Set the correct rectangular dimensions
+                trackingSpaceHelper.width = 5.0f;  // Your exact width
+                trackingSpaceHelper.length = 13.5f; // Your exact length
 
-            // Force re-initialization of tracking space with proper dimensions
-            Debug.Log("Reinitializing tracking space with correct dimensions (4.0m × 13.5m)");
-            trackingSpaceHelper.InitializeTrackingSpace();
+                // Force re-initialization of tracking space with proper dimensions
+                Debug.Log("Reinitializing tracking space with correct dimensions (5.0m × 13.5m)");
+                trackingSpaceHelper.InitializeTrackingSpace();
 
-            // Verify dimensions after initialization
-            trackingSpaceHelper.VerifyTrackingSpaceDimensions();
+                // Verify dimensions after initialization
+                trackingSpaceHelper.VerifyTrackingSpaceDimensions();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error initializing tracking space: {ex.Message}");
+            }
         }
         else
         {
@@ -1352,14 +1414,15 @@ public class ScenarioManager : MonoBehaviour
         // Wait for tracking space initialization to complete
         yield return new WaitForEndOfFrame();
 
-        // 6. Make sure traffic controller is still enabled
+        // 7-10. Traffic system setup (keep existing logic)
+        // [existing traffic system code - steps 6-10 in the original method]
         if (controller != null && !controller.enabled)
         {
             controller.enabled = true;
             Debug.Log("Re-enabled traffic controller after scene load");
         }
 
-        // 7. Ensure all traffic light managers are enabled
+        // Ensure all traffic light managers are enabled
         var lightManagers = FindObjectsOfType<AITrafficLightManager>();
         foreach (var manager in lightManagers)
         {
@@ -1371,19 +1434,19 @@ public class ScenarioManager : MonoBehaviour
             }
         }
 
-        // 8. Register all routes and spawn points in the scene
+        // Register all routes and spawn points in the scene
         if (controller != null)
         {
             controller.RegisterAllRoutesInScene();
             controller.InitializeSpawnPoints();
             Debug.Log("Registered all routes and spawn points");
 
-            // 9. Respawn traffic with new density
+            // Respawn traffic with new density
             Debug.Log($"Respawning traffic with density: {scenario.trafficDensity}");
             controller.RespawnTrafficAsInitial(scenario.trafficDensity);
         }
 
-        // 10. Set up bus if needed
+        // Set up bus if needed
         if (scenario.spawnBus && BusSpawnerSimple != null)
         {
             Debug.Log($"Setting up bus spawn with delay: {scenario.busSpawnDelay}");
@@ -1398,59 +1461,175 @@ public class ScenarioManager : MonoBehaviour
             }
         }
 
-        // 11. Position player if specified
+        // 11. Position player and IMPROVED RDW alignment
         if (scenario.playerStartPosition != null)
         {
+            // Position the player first
             PositionPlayerForScenario(scenario);
 
-            // Update RDW system for new scenario position
-            yield return new WaitForEndOfFrame(); // Give physics a frame to settle
+            // Give physics a frame to settle
+            yield return new WaitForEndOfFrame();
 
+            // IMPROVED: Use the centralized tracking space alignment
             if (persistentRDW != null)
             {
-                // Use the persistent RDW system to update the origin
-                persistentRDW.UpdateRedirectionOrigin(scenario.playerStartPosition);
-                Debug.Log("Updated RDW origin via PersistentRDW");
+                try
+                {
+                    // Get road direction from scenario
+                    Vector3 roadDirection = scenario.playerStartPosition.forward;
+                    roadDirection.y = 0;
+                    roadDirection.Normalize();
 
-                // NEW: Force the tracking space visualization ON
-                yield return new WaitForEndOfFrame();
-                ForceTrackingSpaceVisualization();
+                    // Use new centralized method for tracking space alignment
+                    persistentRDW.AlignTrackingSpaceWithRoad(
+                        scenario.playerStartPosition.position,
+                        roadDirection,
+                        5.0f,   // Width
+                        13.5f   // Length
+                    );
+
+                    Debug.Log("Used centralized tracking space alignment with road direction");
+
+                    // Fix hierarchy to ensure proper parent-child relationships
+                    FixRedirectedAvatarHierarchy();
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"Error aligning tracking space: {ex.Message}");
+
+                    // Fallback to basic calibration
+                    persistentRDW.CalibrateTrackingSpace();
+                }
             }
             else
             {
                 // Fallback to the old method if persistentRDW is not available
                 UpdateRDWForScenario(scenario);
-                Debug.Log("Updated RDW using fallback method");
+                Debug.Log("Used fallback RDW alignment method");
             }
         }
 
-        // 12. Hide researcher UI
+        // 12. Hide researcher UI (keep existing logic)
         if (researcherUI != null)
         {
             researcherUI.SetActive(false);
         }
 
-        // 13. Trigger scenario started event
+        // 13. Trigger scenario started event (keep existing logic)
         onScenarioStarted.Invoke();
 
-        // 14. Fade back in
+        // 14. Fade back in (keep existing logic)
         yield return StartCoroutine(FadeScreen(false, fadeInOutDuration));
 
+        // Replace the last part of TransitionToScenario with this:
+        // 15. IMPROVED: Final verification and cleanup
         isTransitioning = false;
         Debug.Log($"Transition to scenario: {scenario.scenarioName} complete");
 
-        // 15. Run diagnostic check after a short delay
+        // Final verification after a short delay
         yield return new WaitForSeconds(1.0f);
 
-        // NEW: Add additional tracking space dimension check
+        // Check tracking space dimensions one more time
         if (trackingSpaceHelper != null)
         {
             trackingSpaceHelper.VerifyTrackingSpaceDimensions();
         }
 
-        // Finally run traffic system diagnostics
-        yield return new WaitForSeconds(1.0f);
+        // Run traffic system diagnostics
+        yield return new WaitForSeconds(0.5f);
         DebugTrafficSystem();
+
+        // Fix any hierarchy issues one last time
+        FixRedirectedAvatarHierarchy();
+
+        // IMPORTANT FIX: For VR mode, flip the tracking space direction to fix inverse movement
+        if (rdwGlobalConfiguration != null &&
+            rdwGlobalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+        {
+            var rm = FindObjectOfType<RedirectionManager>();
+            if (rm != null && rm.trackingSpace != null)
+            {
+                // Flip the tracking space 180 degrees to correct the direction
+                rm.trackingSpace.Rotate(0, 180f, 0);
+                Debug.Log("Flipped tracking space 180° to correct VR direction");
+
+                // Update current state after rotation
+                rm.UpdateCurrentUserState();
+
+                // Force visualization update
+                if (rm.visualizationManager != null)
+                {
+                    rm.visualizationManager.ForceRefreshVisualization();
+                }
+            }
+        }
+
+        // Never update simulated user in VR mode
+        if (rdwGlobalConfiguration != null &&
+            rdwGlobalConfiguration.movementController != GlobalConfiguration.MovementController.HMD)
+        {
+            UpdateSimulatedUserPosition();
+        }
+    }
+
+    // Add this helper method to keep the Simulated User aligned with XR Origin if needed
+    private void UpdateSimulatedUserPosition()
+    {
+        GameObject xrOrigin = FindXROrigin();
+        GameObject simulatedUser = GameObject.Find("Simulated User");
+
+        if (xrOrigin != null && simulatedUser != null)
+        {
+            // Only update XZ position to match XR Origin
+            simulatedUser.transform.position = new Vector3(
+                xrOrigin.transform.position.x,
+                simulatedUser.transform.position.y, // Keep original height
+                xrOrigin.transform.position.z
+            );
+
+            // Make it face the same direction as XR Origin
+            Vector3 forward = xrOrigin.transform.forward;
+            forward.y = 0;
+            if (forward != Vector3.zero)
+            {
+                simulatedUser.transform.forward = forward.normalized;
+            }
+
+            Debug.Log("Updated Simulated User position to match XR Origin");
+        }
+    }
+
+    // Add this helper method to fix hierarchy issues
+    private void FixRedirectedAvatarHierarchy()
+    {
+        GameObject redirectedAvatar = GameObject.Find("Redirected Avatar");
+        if (redirectedAvatar == null) return;
+
+        // Find TrackingSpace and ensure it's a child of Redirected Avatar
+        Transform trackingSpace = GameObject.Find("TrackingSpace0")?.transform;
+        if (trackingSpace != null && trackingSpace.parent != redirectedAvatar.transform)
+        {
+            Debug.Log("Fixing TrackingSpace parent");
+            trackingSpace.SetParent(redirectedAvatar.transform);
+        }
+
+        // Find Body and ensure it's a child of Redirected Avatar
+        Transform body = GameObject.Find("Body")?.transform;
+        if (body != null && body.parent != redirectedAvatar.transform)
+        {
+            Debug.Log("Fixing Body parent");
+            body.SetParent(redirectedAvatar.transform);
+        }
+
+        // Find Simulated User and ensure it's a child of Redirected Avatar
+        Transform simulatedUser = GameObject.Find("Simulated User")?.transform;
+        if (simulatedUser != null && simulatedUser.parent != redirectedAvatar.transform)
+        {
+            Debug.Log("Fixing Simulated User parent");
+            simulatedUser.SetParent(redirectedAvatar.transform);
+        }
+
+        Debug.Log("Redirected Avatar hierarchy fixed");
     }
 
     // NEW: Add this helper method to ensure tracking space remains visible
@@ -1481,6 +1660,62 @@ public class ScenarioManager : MonoBehaviour
                 Debug.Log($"Forced tracking space visualization ON for {rm.name}");
             }
         }
+    }
+    private IEnumerator ResetTrackingSpaceAfterTransition(Transform playerStartPosition)
+    {
+        // Wait for a few frames to ensure everything is loaded
+        yield return new WaitForSeconds(0.5f);
+
+        Debug.Log("=== PERFORMING POST-TRANSITION TRACKING SPACE RESET ===");
+
+        // Instead of the complex alignment logic here, just call the centralized method
+        if (playerStartPosition != null && persistentRDW != null)
+        {
+            // Get the road direction from the player's start position
+            Vector3 roadDirection = playerStartPosition.forward;
+            roadDirection.y = 0; // Ensure it's flat
+            roadDirection.Normalize();
+
+            // Use the centralized method
+            persistentRDW.AlignTrackingSpaceWithRoad(playerStartPosition.position, roadDirection, 5.0f, 13.5f);
+            Debug.Log("Used centralized alignment method after transition");
+        }
+        else if (persistentRDW != null)
+        {
+            // No player start position, just calibrate
+            persistentRDW.CalibrateTrackingSpace();
+        }
+
+        // Wait another moment for physics to settle
+        yield return new WaitForSeconds(0.2f);
+
+        // Log final tracking space state
+        if (rdwGlobalConfiguration != null &&
+            rdwGlobalConfiguration.physicalSpaces != null &&
+            rdwGlobalConfiguration.physicalSpaces.Count > 0)
+        {
+            // Keep the dimension verification code
+            var space = rdwGlobalConfiguration.physicalSpaces[0];
+
+            // Calculate actual dimensions
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+
+            foreach (var point in space.trackingSpace)
+            {
+                minX = Mathf.Min(minX, point.x);
+                maxX = Mathf.Max(maxX, point.x);
+                minZ = Mathf.Min(minZ, point.y); // y in 2D is z in 3D
+                maxZ = Mathf.Max(maxZ, point.y);
+            }
+
+            float width = maxX - minX;
+            float length = maxZ - minZ;
+
+            Debug.Log($"FINAL tracking space dimensions: {width:F2}m × {length:F2}m");
+        }
+
+        Debug.Log("=== POST-TRANSITION RESET COMPLETE ===");
     }
 
     // NEW: Helper method to create visual markers showing tracking space orientation
@@ -1930,6 +2165,8 @@ public class ScenarioManager : MonoBehaviour
     {
         try
         {
+            Debug.Log("=== POSITIONING PLAYER FOR SCENARIO ===");
+
             if (scenario.playerStartPosition != null)
             {
                 GameObject xrOrigin = FindXROrigin();
@@ -1951,58 +2188,57 @@ public class ScenarioManager : MonoBehaviour
                     // Save original position for logging
                     Vector3 originalPosition = xrOrigin.transform.position;
 
-                    // Move XR Origin to target position
+                    // CRITICAL: Get the road direction from the scenario's start position
+                    Vector3 roadDirection = scenario.playerStartPosition.forward;
+                    roadDirection.y = 0; // Ensure it's flat
+                    roadDirection.Normalize();
+
+                    // Move XR Origin to target position and orient with road
                     xrOrigin.transform.position = targetPosition;
                     xrOrigin.transform.rotation = scenario.playerStartPosition.rotation;
 
                     Debug.Log($"Positioned player at scenario start point. Moved from {originalPosition} to {targetPosition}");
+                    Debug.Log($"Road direction at this point is: {roadDirection}");
 
-                    // Handle RDW system update with improved approach
-                    if (rdwGlobalConfiguration != null && rdwGlobalConfiguration.redirectedAvatars.Count > 0)
+                    // CRITICAL CHANGE: Use the centralized alignment function instead of doing it here
+                    if (persistentRDW != null)
                     {
-                        var redirectionManager = rdwGlobalConfiguration.redirectedAvatars[0].GetComponent<RedirectionManager>();
-                        if (redirectionManager != null)
+                        // This is your new centralized method that handles everything
+                        persistentRDW.AlignTrackingSpaceWithRoad(targetPosition, roadDirection, 5.0f, 13.5f);
+                        Debug.Log("Aligned tracking space using centralized method");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("PersistentRDW not found - falling back to legacy alignment");
+
+                        // Fallback if persistentRDW isn't available
+                        ClearVisualMarkers();
+
+                        // This part is simplified now
+                        if (rdwGlobalConfiguration != null && rdwGlobalConfiguration.redirectedAvatars.Count > 0)
                         {
-                            // SIMPLIFIED APPROACH: Just set tracking space directly at the new position
-                            // This makes the real position (relative to tracking space) zero
-                            redirectionManager.trackingSpace.position = targetPosition;
-
-                            // Align rotation with player's new rotation
-                            redirectionManager.trackingSpace.rotation = Quaternion.Euler(0, xrOrigin.transform.rotation.eulerAngles.y, 0);
-
-                            // Force update current state
-                            redirectionManager.UpdateCurrentUserState();
-
-                            // Verify alignment
-                            Vector3 realPosAfterUpdate = redirectionManager.GetPosReal(xrOrigin.transform.position);
-
-                            Debug.Log($"Reset tracking space to position {redirectionManager.trackingSpace.position}");
-                            Debug.Log($"Real position after update: {realPosAfterUpdate} (should be near zero)");
-
-                            // Update visualization if needed
-                            if (redirectionManager.visualizationManager != null)
+                            var redirectionManager = rdwGlobalConfiguration.redirectedAvatars[0].GetComponent<RedirectionManager>();
+                            if (redirectionManager != null)
                             {
-                                redirectionManager.visualizationManager.GenerateTrackingSpaceMesh(rdwGlobalConfiguration.physicalSpaces);
-                                redirectionManager.visualizationManager.ChangeTrackingSpaceVisibility(true);
-                            }
+                                // Set tracking space at the new position
+                                redirectionManager.trackingSpace.position = targetPosition;
 
-                            // Update target waypoint
-                            if (redirectionManager.targetWaypoint != null)
-                            {
-                                Vector3 forward = Utilities.FlattenedDir3D(xrOrigin.transform.forward);
-                                redirectionManager.targetWaypoint.position = targetPosition + forward * 3f;
-                                Debug.Log($"Positioned target waypoint at {redirectionManager.targetWaypoint.position}");
+                                // Set rotation to align with road
+                                float roadAngle = Mathf.Atan2(roadDirection.x, roadDirection.z) * Mathf.Rad2Deg;
+                                redirectionManager.trackingSpace.rotation = Quaternion.Euler(0, roadAngle, 0);
+
+                                // Force update current state
+                                redirectionManager.UpdateCurrentUserState();
+
+                                // Fallback to direct creation if persistentRDW isn't available
+                                CreateAlignmentMarkers(redirectionManager, 5.0f, 13.5f, roadDirection);
                             }
                         }
                         else
                         {
-                            Debug.LogWarning("RedirectionManager component not found on redirected avatar");
+                            // Last resort fallback
+                            UpdateRDWForScenario(scenario);
                         }
-                    }
-                    else
-                    {
-                        // Still call UpdateRDWForScenario as a fallback
-                        UpdateRDWForScenario(scenario);
                     }
                 }
                 else
@@ -2015,6 +2251,8 @@ public class ScenarioManager : MonoBehaviour
             {
                 Debug.Log("No player start position specified in scenario");
             }
+
+            Debug.Log("=== PLAYER POSITIONING COMPLETE ===");
             return true;
         }
         catch (System.Exception ex)
@@ -2022,6 +2260,213 @@ public class ScenarioManager : MonoBehaviour
             Debug.LogError($"Error positioning player: {ex.Message}");
             return false;
         }
+    }
+
+    // Helper method to clear visual markers if persistentRDW isn't available
+    private void ClearVisualMarkers()
+    {
+        // Find markers by name
+        string[] markerNames = new string[] {
+        "Corner_0", "Corner_1", "Corner_2", "Corner_3",
+        "TrackingSpaceCenter", "ForwardDirection", "RightDirection",
+        "DirectionLabel"
+    };
+
+        foreach (string name in markerNames)
+        {
+            GameObject obj = GameObject.Find(name);
+            if (obj != null)
+            {
+                Destroy(obj);
+            }
+        }
+
+        // Try by tag as well
+        try
+        {
+            GameObject[] taggedMarkers = GameObject.FindGameObjectsWithTag("CornerMarker");
+            foreach (var marker in taggedMarkers)
+            {
+                if (marker != null)
+                    Destroy(marker);
+            }
+        }
+        catch (System.Exception)
+        {
+            // Tag might not exist, that's ok
+        }
+
+        Debug.Log("Cleared existing visual markers");
+    }
+
+    // Helper method to create alignment markers directly if persistentRDW isn't available
+    private void CreateAlignmentMarkers(RedirectionManager rm, float width, float length, Vector3 roadDirection)
+    {
+        if (rm == null || rm.trackingSpace == null)
+            return;
+
+        Transform trackingSpace = rm.trackingSpace;
+
+        // Create corner markers at the four corners of the rectangle
+        Vector2[] corners = new Vector2[]
+        {
+        new Vector2(width/2, length/2),   // Front Right
+        new Vector2(-width/2, length/2),  // Front Left
+        new Vector2(-width/2, -length/2), // Back Left
+        new Vector2(width/2, -length/2)   // Back Right
+        };
+
+        Color[] cornerColors = new Color[]
+        {
+        Color.blue,    // 0: Front Right - Blue
+        Color.green,   // 1: Front Left - Green
+        Color.yellow,  // 2: Back Left - Yellow
+        Color.magenta  // 3: Back Right - Magenta
+        };
+
+        for (int i = 0; i < corners.Length; i++)
+        {
+            // Convert local space corner to world space
+            Vector3 worldCorner = trackingSpace.TransformPoint(
+                new Vector3(corners[i].x, 0, corners[i].y));
+
+            // Create the marker
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            marker.name = $"Corner_{i}";
+
+            // Try to tag it - handle if tag doesn't exist
+            try
+            {
+                marker.tag = "CornerMarker";
+            }
+            catch (System.Exception)
+            {
+                // Tag might not exist, that's ok
+            }
+
+            // Position and scale
+            marker.transform.position = worldCorner + Vector3.up * 0.5f;
+            marker.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f);
+
+            // Set color
+            Material mat = new Material(Shader.Find("Standard"));
+            mat.color = cornerColors[i];
+            marker.GetComponent<Renderer>().material = mat;
+        }
+
+        // Create center marker
+        GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        centerMarker.name = "TrackingSpaceCenter";
+        try { centerMarker.tag = "CornerMarker"; } catch { }
+        centerMarker.transform.position = trackingSpace.position + Vector3.up * 0.1f;
+        centerMarker.transform.localScale = Vector3.one * 0.3f;
+
+        Material centerMat = new Material(Shader.Find("Standard"));
+        centerMat.color = Color.red;
+        centerMarker.GetComponent<Renderer>().material = centerMat;
+
+        // Create direction indicators
+
+        // Forward (blue) - along LONG dimension
+        GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        forwardMarker.name = "ForwardDirection";
+        try { forwardMarker.tag = "CornerMarker"; } catch { }
+        forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * (length / 3) + Vector3.up * 0.05f;
+        forwardMarker.transform.rotation = trackingSpace.rotation;
+        forwardMarker.transform.localScale = new Vector3(0.2f, 0.05f, length / 2);
+
+        Material blueMat = new Material(Shader.Find("Standard"));
+        blueMat.color = Color.blue;
+        forwardMarker.GetComponent<Renderer>().material = blueMat;
+
+        // Right (red) - along SHORT dimension
+        GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightMarker.name = "RightDirection";
+        try { rightMarker.tag = "CornerMarker"; } catch { }
+        rightMarker.transform.position = trackingSpace.position + trackingSpace.right * (width / 3) + Vector3.up * 0.05f;
+        rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
+        rightMarker.transform.localScale = new Vector3(0.2f, 0.05f, width / 2);
+
+        Material redMat = new Material(Shader.Find("Standard"));
+        redMat.color = Color.red;
+        rightMarker.GetComponent<Renderer>().material = redMat;
+
+        // Add label
+        GameObject labelObj = new GameObject("DirectionLabel");
+        try { labelObj.tag = "CornerMarker"; } catch { }
+        TextMesh textMesh = labelObj.AddComponent<TextMesh>();
+        textMesh.text = "BLUE = Forward (Long)\nRED = Right (Short)";
+        textMesh.fontSize = 72;
+        textMesh.characterSize = 0.03f;
+        textMesh.color = Color.white;
+        textMesh.anchor = TextAnchor.MiddleCenter;
+        textMesh.alignment = TextAlignment.Center;
+        labelObj.transform.position = trackingSpace.position + Vector3.up * 0.5f;
+
+        // Make text face the camera if possible
+        if (Camera.main != null)
+        {
+            Vector3 lookDir = Camera.main.transform.position - labelObj.transform.position;
+            lookDir.y = 0; // Keep it level
+            if (lookDir != Vector3.zero)
+                labelObj.transform.rotation = Quaternion.LookRotation(lookDir);
+        }
+        else
+        {
+            labelObj.transform.rotation = trackingSpace.rotation;
+        }
+
+        Debug.Log("Created alignment markers");
+    }
+
+    // Helper method to create visual markers showing tracking space orientation
+    private void CreateTrackingSpaceAlignmentMarkers(RedirectionManager rm, Vector3 roadDirection)
+    {
+        if (rm == null || rm.trackingSpace == null || rdwGlobalConfiguration == null ||
+            rdwGlobalConfiguration.physicalSpaces == null || rdwGlobalConfiguration.physicalSpaces.Count == 0)
+            return;
+
+        var physicalSpace = rdwGlobalConfiguration.physicalSpaces[0];
+        float width = 0, length = 0;
+
+        // Calculate dimensions
+        if (physicalSpace.trackingSpace != null && physicalSpace.trackingSpace.Count >= 4)
+        {
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+
+            foreach (var point in physicalSpace.trackingSpace)
+            {
+                minX = Mathf.Min(minX, point.x);
+                maxX = Mathf.Max(maxX, point.x);
+                minZ = Mathf.Min(minZ, point.y); // y in 2D coords is z in 3D
+                maxZ = Mathf.Max(maxZ, point.y);
+            }
+
+            width = maxX - minX;
+            length = maxZ - minZ;
+        }
+
+        // Create directional arrows
+        GameObject forwardArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        forwardArrow.name = "ForwardDirection";
+        forwardArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.forward * (length / 4) + Vector3.up * 0.05f;
+        forwardArrow.transform.rotation = rm.trackingSpace.rotation;
+        forwardArrow.transform.localScale = new Vector3(0.1f, 0.05f, 1.0f);
+        forwardArrow.GetComponent<Renderer>().material.color = Color.blue;
+
+        GameObject rightArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightArrow.name = "RightDirection";
+        rightArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.right * (width / 4) + Vector3.up * 0.05f;
+        rightArrow.transform.rotation = Quaternion.Euler(0, rm.trackingSpace.rotation.eulerAngles.y + 90, 0);
+        rightArrow.transform.localScale = new Vector3(0.1f, 0.05f, 0.5f);
+        rightArrow.GetComponent<Renderer>().material.color = Color.red;
+
+        // Clean up after 1 minute
+        Destroy(forwardArrow, 60f);
+        Destroy(rightArrow, 60f);
+
+        Debug.Log($"Created tracking space direction indicators: Blue arrow = Forward (length: {length}m), Red arrow = Right (width: {width}m)");
     }
 
     // Step 8: Initialize traffic lights
@@ -2058,9 +2503,6 @@ public class ScenarioManager : MonoBehaviour
             return false;
         }
     }
-
-
-
 
 
     private IEnumerator SpawnCarsFromPool(AITrafficController controller, int desiredDensity)
@@ -2235,173 +2677,6 @@ public class ScenarioManager : MonoBehaviour
     }
 
 
-
-
-
-    //public void ForceAllCarsToMove()
-    //{
-    //    var allCars = FindObjectsOfType<AITrafficCar>();
-    //    Debug.Log($"Forcing {allCars.Length} cars to move");
-
-    //    foreach (var car in allCars)
-    //    {
-    //        if (car == null || !car.gameObject.activeInHierarchy) continue;
-
-    //        try
-    //        {
-    //            // CRITICAL: Check and fix missing waypoint route
-    //            if (car.waypointRoute == null)
-    //            {
-    //                // Find a compatible route nearby
-    //                var routes = FindObjectsOfType<AITrafficWaypointRoute>();
-    //                AITrafficWaypointRoute nearestRoute = null;
-    //                float closestDistance = float.MaxValue;
-
-    //                foreach (var route in routes)
-    //                {
-    //                    if (route == null || !route.isRegistered || route.waypointDataList.Count == 0)
-    //                        continue;
-
-    //                    // Check vehicle type compatibility
-    //                    bool typeMatched = false;
-    //                    foreach (var routeType in route.vehicleTypes)
-    //                    {
-    //                        if (routeType == car.vehicleType)
-    //                        {
-    //                            typeMatched = true;
-    //                            break;
-    //                        }
-    //                    }
-
-    //                    if (typeMatched)
-    //                    {
-    //                        // Find nearest waypoint
-    //                        float distance = Vector3.Distance(
-    //                            car.transform.position,
-    //                            route.waypointDataList[0]._transform.position);
-
-    //                        if (distance < closestDistance)
-    //                        {
-    //                            closestDistance = distance;
-    //                            nearestRoute = route;
-    //                        }
-    //                    }
-    //                }
-
-    //                // Assign the nearest compatible route
-    //                if (nearestRoute != null)
-    //                {
-    //                    Debug.Log($"Assigning route {nearestRoute.name} to car {car.name} that had no route");
-    //                    car.waypointRoute = nearestRoute;
-    //                    car.RegisterCar(nearestRoute);
-    //                }
-    //                else
-    //                {
-    //                    Debug.LogError($"No compatible route found for car {car.name} with vehicle type {car.vehicleType}!");
-    //                    continue; // Skip this car if no route found
-    //                }
-    //            }
-
-    //            // Make sure the car's transform has a DriveTarget child
-    //            Transform driveTarget = car.transform.Find("DriveTarget");
-    //            if (driveTarget == null)
-    //            {
-    //                driveTarget = new GameObject("DriveTarget").transform;
-    //                driveTarget.SetParent(car.transform);
-    //                driveTarget.localPosition = Vector3.zero;
-    //                Debug.Log($"Created missing DriveTarget for {car.name}");
-    //            }
-
-    //            // If car has a valid waypoint route, try to directly position DriveTarget
-    //            // toward the next waypoint to force initial movement
-    //            if (car.waypointRoute != null && car.waypointRoute.waypointDataList.Count > 0)
-    //            {
-    //                // Find the closest waypoint index
-    //                int closestWaypointIndex = 0;
-    //                float closestDistance = float.MaxValue;
-
-    //                for (int i = 0; i < car.waypointRoute.waypointDataList.Count; i++)
-    //                {
-    //                    var waypointTransform = car.waypointRoute.waypointDataList[i]._transform;
-    //                    if (waypointTransform == null) continue;
-
-    //                    float dist = Vector3.Distance(car.transform.position, waypointTransform.position);
-    //                    if (dist < closestDistance)
-    //                    {
-    //                        closestDistance = dist;
-    //                        closestWaypointIndex = i;
-    //                    }
-    //                }
-
-    //                // Set drive target position to the next waypoint (if available)
-    //                if (closestWaypointIndex + 1 < car.waypointRoute.waypointDataList.Count)
-    //                {
-    //                    var nextWaypointTransform = car.waypointRoute.waypointDataList[closestWaypointIndex + 1]._transform;
-    //                    if (nextWaypointTransform != null)
-    //                    {
-    //                        driveTarget.position = nextWaypointTransform.position;
-    //                        Debug.Log($"Positioned drive target for {car.name} towards next waypoint");
-    //                    }
-    //                }
-    //            }
-
-    //            // Fix for mismatched route references between car and controller
-    //            if (car.assignedIndex >= 0 && AITrafficController.Instance != null)
-    //            {
-    //                var controllerRoute = AITrafficController.Instance.GetCarRoute(car.assignedIndex);
-    //                if (controllerRoute != car.waypointRoute)
-    //                {
-    //                    Debug.Log($"Fixing mismatched route for {car.name}: Controller had {controllerRoute?.name}, Car has {car.waypointRoute.name}");
-    //                    AITrafficController.Instance.Set_WaypointRoute(car.assignedIndex, car.waypointRoute);
-
-    //                    // Make sure controller knows the route data
-    //                    if (car.waypointRoute.waypointDataList.Count > 0)
-    //                    {
-    //                        AITrafficController.Instance.Set_WaypointDataListCountArray(car.assignedIndex);
-
-    //                        // FIX: Change this part that was causing the error
-    //                        // Get the drive target as Vector3, not trying to get it as a Transform
-    //                        Vector3 controllerDriveTargetPos = AITrafficController.Instance.GetCarTargetPosition(car.assignedIndex);
-    //                        Vector3 driveTargetPos = driveTarget.position;
-
-    //                        if (Vector3.Distance(controllerDriveTargetPos, driveTargetPos) > 1.0f)
-    //                        {
-    //                            Debug.LogWarning($"Car {car.name} has mismatched drive target positions in controller!");
-    //                            // We can't directly update the controller's reference, so rebuild arrays
-    //                            AITrafficController.Instance.RebuildTransformArrays();
-    //                        }
-    //                    }
-    //                }
-    //            }
-
-    //            // Restart the car's movement
-    //            if (car.isDriving) car.StopDriving();
-
-    //            // Ensure it has a valid route
-    //            if (car.waypointRoute != null)
-    //            {
-    //                car.ReinitializeRouteConnection();
-    //                car.StartDriving();
-    //                //car.ForceWaypointPathUpdate();
-    //                Debug.Log($"Reset driving state for {car.name}");
-
-    //                // Add a short delay to allow controller to process
-    //                StartCoroutine(DelayedForceUpdatePath(car, 0.2f));
-    //            }
-    //        }
-    //        catch (System.Exception ex)
-    //        {
-    //            Debug.LogError($"Error forcing car {car.name} to move: {ex.Message}");
-    //        }
-    //    }
-
-    //    // Force controller to rebuild arrays and structures
-    //    if (AITrafficController.Instance != null)
-    //    {
-    //        AITrafficController.Instance.RebuildTransformArrays();
-    //        AITrafficController.Instance.RebuildInternalDataStructures();
-    //    }
-    //}
     public void ForceTrafficMovement(int density = 0)
     {
         Debug.Log("Emergency: Forcing traffic movement");
@@ -2993,6 +3268,8 @@ public class ScenarioManager : MonoBehaviour
         isTransitioning = false;
         Debug.Log("Return to researcher UI complete");
     }
+
+  
 
     /// <summary>
     /// Placeholder for screen fading - implement your own or use a screen fader component
