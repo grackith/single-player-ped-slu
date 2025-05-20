@@ -752,13 +752,21 @@ public class PersistentRDW : MonoBehaviour
         roadDirection.y = 0;
         roadDirection.Normalize();
 
+        // Step 5: Rotate tracking space to align with road direction
         float roadAngle = Mathf.Atan2(roadDirection.x, roadDirection.z) * Mathf.Rad2Deg;
-        // Add 180 degrees to flip direction for VR mode
-        if (globalConfig.movementController == GlobalConfiguration.MovementController.HMD)
+
+        // IMPORTANT: For VR mode, we need to determine if we should flip the direction
+        // The key is consistency - either always flip or never flip
+        bool shouldFlip = false; // Change this based on your testing
+
+        if (globalConfig != null &&
+            globalConfig.movementController == GlobalConfiguration.MovementController.HMD &&
+            shouldFlip)
         {
             roadAngle += 180f;
             Debug.Log("VR mode detected - flipping tracking space direction (adding 180° to road angle)");
         }
+
         trackingSpace.rotation = Quaternion.Euler(0, roadAngle, 0);
         Debug.Log($"Aligned tracking space with road: Angle={roadAngle}°, Direction={roadDirection}");
 

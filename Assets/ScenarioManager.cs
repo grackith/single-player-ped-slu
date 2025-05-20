@@ -2200,11 +2200,16 @@ public class ScenarioManager : MonoBehaviour
                     Debug.Log($"Positioned player at scenario start point. Moved from {originalPosition} to {targetPosition}");
                     Debug.Log($"Road direction at this point is: {roadDirection}");
 
-                    // CRITICAL CHANGE: Use the centralized alignment function instead of doing it here
                     if (persistentRDW != null)
                     {
-                        // This is your new centralized method that handles everything
-                        persistentRDW.AlignTrackingSpaceWithRoad(targetPosition, roadDirection, 5.0f, 13.5f);
+                        // Use the centralized method with your exact dimensions
+                        persistentRDW.AlignTrackingSpaceWithRoad(
+                            targetPosition,
+                            roadDirection,
+                            5.0f,   // Width
+                            13.5f   // Length
+                        );
+
                         Debug.Log("Aligned tracking space using centralized method");
                     }
                     else

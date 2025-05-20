@@ -750,6 +750,32 @@ public class RedirectionManager : MonoBehaviour
 
         // 4. Initialize the system
         Initialize();
+        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD && headTransform != null)
+        {
+            // Get the user's current forward direction
+            Vector3 userForward = headTransform.forward;
+            userForward.y = 0;
+            userForward.Normalize();
+
+            // Calculate the proper tracking space position
+            Vector3 trackingSpacePos = new Vector3(headTransform.position.x, 0, headTransform.position.z);
+
+            // Set tracking space position without modifying rotation
+            if (trackingSpace != null)
+            {
+                // Store original rotation
+                Quaternion originalRotation = trackingSpace.rotation;
+
+                // Update position
+                trackingSpace.position = trackingSpacePos;
+
+                // CRITICAL: DO NOT rotate tracking space 180 degrees - this likely causes the mirrored movement
+                float forwardAngle = Mathf.Atan2(userForward.x, userForward.z) * Mathf.Rad2Deg;
+                trackingSpace.rotation = Quaternion.Euler(0, forwardAngle, 0);
+
+                Debug.Log($"Set up tracking space at {trackingSpacePos} with forward angle {forwardAngle}°");
+            }
+        }
 
         // 5. Enable trail drawing if desired
         if (trailDrawer != null)
@@ -1117,15 +1143,15 @@ public class RedirectionManager : MonoBehaviour
             Debug.Log("Logged tracking space diagnostic information with F6");
         }
 
-        // Periodic automatic drift correction
+        // In RedirectionManager.Update() - Periodic automatic drift correction
         if (Time.frameCount % 300 == 0) // Every 5 seconds approximately at 60fps
         {
             // Check for tracking space drift issues
             if (headTransform != null && trackingSpace != null)
             {
                 Vector3 realPos = GetPosReal(headTransform.position);
-                // If real position is drifting away from center by more than 0.1m, automatically correct
-                if (realPos.magnitude > 0.1f)
+                // If real position is drifting away from center by more than 0.5m, automatically correct
+                if (realPos.magnitude > 0.5f)
                 {
                     Debug.LogWarning($"Tracking space drift detected: Real position {realPos.magnitude}m from center");
 
@@ -1134,8 +1160,14 @@ public class RedirectionManager : MonoBehaviour
                     {
                         // Tracking space drifted too far, reset it
                         Vector3 headPos = headTransform.position;
+                        // Preserve the original rotation of the tracking space
+                        Quaternion originalRotation = trackingSpace.rotation;
+
+                        // Update position only, not rotation
                         trackingSpace.position = new Vector3(headPos.x, 0, headPos.z);
-                        Debug.Log($"AUTO-CORRECTED tracking space position to {trackingSpace.position}");
+                        trackingSpace.rotation = originalRotation;
+
+                        Debug.Log($"AUTO-CORRECTED tracking space position to {trackingSpace.position} while preserving rotation {originalRotation.eulerAngles}");
                     }
                 }
             }
@@ -1149,15 +1181,14 @@ public class RedirectionManager : MonoBehaviour
         prevDir = Utilities.FlattenedDir3D(headTransform.forward);
         prevDirReal = GetDirReal(prevDir);
     }
+    // In RedirectionManager.cs - GetPosReal method
     public Vector3 GetPosReal(Vector3 pos)
     {
-        // The issue is here - for VR mode we need to invert the transformation
+        // For VR mode, we need to handle coordinate system differently
         if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
         {
-            // For VR, invert the result to fix coordinate system mismatch
-            Vector3 result = Utilities.GetRelativePosition(pos, trackingSpace.transform);
-            // No need to negate - the rotation fix in AlignTrackingSpaceWithRoad handles this
-            return result;
+            // Get the relative position without any inversion
+            return Utilities.GetRelativePosition(pos, trackingSpace.transform);
         }
         else
         {
@@ -1167,17 +1198,9 @@ public class RedirectionManager : MonoBehaviour
     }
     public Vector3 GetDirReal(Vector3 dir)
     {
-        // For VR, also make sure the direction transformation is consistent
-        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
-        {
-            // Use the same transformation approach for both position and direction
-            return Utilities.FlattenedDir3D(Utilities.GetRelativeDirection(dir, transform));
-        }
-        else
-        {
-            // Original implementation
-            return Utilities.FlattenedDir3D(Utilities.GetRelativeDirection(dir, transform));
-        }
+        // Make sure we use trackingSpace.transform consistently (not just transform)
+        // and handle transformation the same way for both position and direction
+        return Utilities.FlattenedDir3D(Utilities.GetRelativeDirection(dir, trackingSpace.transform));
     }
 
     void CalculateStateChanges()

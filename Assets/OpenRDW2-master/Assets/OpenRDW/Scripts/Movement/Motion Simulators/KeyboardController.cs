@@ -24,7 +24,9 @@ public class KeyboardController : MonoBehaviour {
         networkManager = globalConfiguration.GetComponentInChildren<NetworkManager>(true);
     }
 
-    public void MakeOneStepKeyboardMovement() {        
+    public void MakeOneStepKeyboardMovement() {
+        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+            return;
         if (!globalConfiguration.avatarIsWalking
             || globalConfiguration.movementController != GlobalConfiguration.MovementController.Keyboard
             || globalConfiguration.currentShownAvatarId != movementManager.avatarId

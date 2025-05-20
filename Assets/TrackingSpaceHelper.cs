@@ -70,12 +70,9 @@ public class TrackingSpaceHelper : MonoBehaviour
     {
         if (verbose) Debug.Log("=== TRACKING SPACE HELPER: INITIALIZATION STARTING ===");
 
-        // Add unit conversion if needed
-        float actualWidth = width;
-        float actualLength = length;
         // CRITICAL: Hard-code the exact dimensions needed for the physical space
-        actualWidth = 5.0f;   // Your exactly specified width
-        actualLength = 13.5f; // Your exactly specified length
+        float actualWidth = 5.0f;   // Your exactly specified width
+        float actualLength = 13.5f; // Your exactly specified length
 
         if (convertFromFeetToMeters)
         {
