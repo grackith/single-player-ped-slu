@@ -1,5 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;
+using System.IO; // Add this line
+using System.Linq; // This might also be helpful
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -135,12 +136,19 @@ public class PersistentRDW : MonoBehaviour
         {
             redirectionManager.headTransform = mainCamera.transform;
 
-            // Set appropriate redirector and resetter
-            redirectionManager.redirectorChoice = RedirectionManager.RedirectorChoice.S2C;
-            redirectionManager.resetterChoice = RedirectionManager.ResetterChoice.TwoOneTurn;
+            if (redirectionManager.redirectorChoice == RedirectionManager.RedirectorChoice.None)
+            {
+                // Only set a default if nothing is selected
+                redirectionManager.redirectorChoice = RedirectionManager.RedirectorChoice.DynamicAPF;
+                redirectionManager.UpdateRedirector(RedirectionManager.DecodeRedirector("Dynamic APF"));
+            }
 
-            redirectionManager.UpdateRedirector(typeof(S2CRedirector));
-            redirectionManager.UpdateResetter(typeof(TwoOneTurnResetter));
+            if (redirectionManager.resetterChoice == RedirectionManager.ResetterChoice.None)
+            {
+                // Only set a default if nothing is selected
+                redirectionManager.resetterChoice = RedirectionManager.ResetterChoice.FreezeTurn;
+                redirectionManager.UpdateResetter(RedirectionManager.DecodeResetter("Freeze Turn"));
+            }
 
             // Set experiment in progress on GlobalConfiguration if it exists
             if (globalConfig != null)
@@ -212,26 +220,7 @@ public class PersistentRDW : MonoBehaviour
         }
     }
 
-    // 1. First, add this method to the TrackingSpaceHelper class:
-
-
-
-    // 2. Modified PersistentRDW.CalibrateTrackingSpace method:
-
-    private RedirectionManager FindActiveRedirectionManager()
-    {
-        // First try to find in Redirected Avatar
-        GameObject redirectedAvatar = GameObject.Find("Redirected Avatar");
-        if (redirectedAvatar != null)
-        {
-            RedirectionManager rm = redirectedAvatar.GetComponent<RedirectionManager>();
-            if (rm != null) return rm;
-        }
-
-        // Fallback to finding any RedirectionManager
-        return FindObjectOfType<RedirectionManager>();
-    }
-
+    
     private void UpdateAllVisualizations()
     {
         // Find all visualization managers
@@ -697,108 +686,58 @@ public class PersistentRDW : MonoBehaviour
     {
         Debug.Log($"=== ALIGNING TRACKING SPACE WITH ROAD (w={width}m, l={length}m) ===");
 
-        if (redirectionManager == null || redirectionManager.trackingSpace == null)
+        // Find the RedirectionManager - use the helper method
+        RedirectionManager redirectionManager = FindActiveRedirectionManager();
+        if (redirectionManager == null)
         {
-            Debug.LogError("Cannot align tracking space - missing RedirectionManager or trackingSpace");
+            Debug.LogError("RedirectionManager not found!");
             return;
         }
 
-        Transform trackingSpace = redirectionManager.trackingSpace;
-
-        // Step 1: Clear existing markers first
-        ClearAllCornerMarkers();
-
-        // Step 2: Ensure correct dimensions in GlobalConfiguration
-        if (globalConfig != null)
+        if (redirectionManager.trackingSpace == null)
         {
-            TrackingSpaceHelper helper = FindObjectOfType<TrackingSpaceHelper>();
-            if (helper != null)
-            {
-                helper.ForceTrackingSpaceDimensions(width, length, true);
-                Debug.Log($"Used TrackingSpaceHelper to force dimensions to {width}m × {length}m");
-            }
-            else
-            {
-                // Directly generate the tracking space with correct dimensions
-                List<SingleSpace> physicalSpaces;
-                SingleSpace virtualSpace = null; // Initialize to null
-
-                TrackingSpaceGenerator.GenerateRectangleTrackingSpace(
-                    0, // No obstacles 
-                    out physicalSpaces,
-                    width,
-                    length
-                );
-
-                if (physicalSpaces != null && physicalSpaces.Count > 0)
-                {
-                    globalConfig.physicalSpaces = physicalSpaces;
-
-                    // Only assign virtualSpace if not null
-                    if (virtualSpace != null)
-                    {
-                        globalConfig.virtualSpace = virtualSpace;
-                    }
-
-                    Debug.Log("Directly generated tracking space with exact dimensions");
-                }
-            }
+            Debug.LogError("Tracking space transform not found!");
+            return;
         }
 
-        // Step 3: Position tracking space at specified position
-        trackingSpace.position = position;
+        // Ensure the physical space dimensions are correctly set
+        EnsurePhysicalSpaceDimensions(width, length);
 
-        // Step 4: Flatten and normalize road direction
-        roadDirection.y = 0;
-        roadDirection.Normalize();
+        // Calculate the tracking space position and rotation
+        // Position the tracking space at the user's position
+        Vector3 trackingSpacePos = new Vector3(position.x, 0, position.z);
 
-        // Step 5: Rotate tracking space to align with road direction
+        // Calculate rotation to align with road direction
         float roadAngle = Mathf.Atan2(roadDirection.x, roadDirection.z) * Mathf.Rad2Deg;
+        Quaternion trackingSpaceRot = Quaternion.Euler(0, roadAngle, 0);
 
-        // IMPORTANT: For VR mode, we need to determine if we should flip the direction
-        // The key is consistency - either always flip or never flip
-        bool shouldFlip = false; // Change this based on your testing
+        // Apply the position and rotation
+        redirectionManager.trackingSpace.position = trackingSpacePos;
+        redirectionManager.trackingSpace.rotation = trackingSpaceRot;
 
-        if (globalConfig != null &&
-            globalConfig.movementController == GlobalConfiguration.MovementController.HMD &&
-            shouldFlip)
-        {
-            roadAngle += 180f;
-            Debug.Log("VR mode detected - flipping tracking space direction (adding 180° to road angle)");
-        }
-
-        trackingSpace.rotation = Quaternion.Euler(0, roadAngle, 0);
-        Debug.Log($"Aligned tracking space with road: Angle={roadAngle}°, Direction={roadDirection}");
-
-        // Step 6: Force update current state
-        redirectionManager.UpdateCurrentUserState();
-
-        // Step 7: Regenerate visualization
+        // Update the visualization
         if (redirectionManager.visualizationManager != null)
         {
-            // First destroy all existing visuals
             redirectionManager.visualizationManager.DestroyAll();
-
-            // Regenerate from scratch
             redirectionManager.visualizationManager.GenerateTrackingSpaceMesh(globalConfig.physicalSpaces);
-
-            // Force visibility
             redirectionManager.visualizationManager.ChangeTrackingSpaceVisibility(true);
-
-            // Force a full refresh
-            redirectionManager.visualizationManager.ForceRefreshVisualization();
-
-            Debug.Log("Regenerated tracking space visualization");
         }
 
-        // Step 8: Create visual indicators
-        CreateDirectionIndicators(trackingSpace, width, length, roadDirection);
+        // Create visual indicators for easier debugging
+        CreateDirectionIndicators(redirectionManager.trackingSpace, width, length, roadDirection);
 
-        // Step 9: Create persistent corner markers
-        CreatePersistentCornerMarkers(width, length);
+        // Log success
+        Debug.Log($"Tracking space aligned with road. Position: {trackingSpacePos}, Rotation: {roadAngle}°");
+        Debug.Log($"Road direction vector: {roadDirection}");
 
-        Debug.Log($"=== TRACKING SPACE ALIGNMENT COMPLETE ===");
+        // Verify the real position is now centered
+        if (redirectionManager.headTransform != null)
+        {
+            Vector3 realPos = redirectionManager.GetPosReal(redirectionManager.headTransform.position);
+            Debug.Log($"Real position after alignment: {realPos} (should be near zero)");
+        }
     }
+
     private void CreateDirectionIndicators(Transform trackingSpace, float width, float length, Vector3 roadDirection = default)
     {
         // Create forward direction indicator (blue) - along LONG dimension
@@ -939,5 +878,149 @@ public class PersistentRDW : MonoBehaviour
         Debug.Log($"Redirector: {redirectionManager.redirector?.GetType().Name}");
         Debug.Log($"Resetter: {redirectionManager.resetter?.GetType().Name}");
         Debug.Log("==================================");
+    }
+
+    private RedirectionManager FindActiveRedirectionManager()
+    {
+        // First try to find in Redirected Avatar
+        GameObject redirectedAvatar = GameObject.Find("Redirected Avatar");
+        if (redirectedAvatar != null)
+        {
+            RedirectionManager rm = redirectedAvatar.GetComponent<RedirectionManager>();
+            if (rm != null) return rm;
+        }
+
+        // If not found or null, use our cached reference
+        if (redirectionManager != null)
+            return redirectionManager;
+
+        // Final fallback - find any RedirectionManager
+        return FindObjectOfType<RedirectionManager>();
+    }
+
+    private void EnsurePhysicalSpaceDimensions(float width, float length)
+    {
+        if (globalConfig == null || globalConfig.physicalSpaces == null || globalConfig.physicalSpaces.Count == 0)
+        {
+            Debug.LogError("Global configuration or physical spaces missing!");
+            return;
+        }
+
+        // Create a rectangle with the specified dimensions
+        List<Vector2> trackingSpacePoints = new List<Vector2>
+    {
+        new Vector2(width/2, length/2),   // Front Right
+        new Vector2(-width/2, length/2),  // Front Left  
+        new Vector2(-width/2, -length/2), // Back Left
+        new Vector2(width/2, -length/2)   // Back Right
+    };
+
+        // Update the physical space dimensions
+        globalConfig.physicalSpaces[0].trackingSpace = trackingSpacePoints;
+
+        Debug.Log($"Physical space dimensions set to {width}m × {length}m");
+    }
+
+    // Add this as a public method in the PersistentRDW class
+    public void AlignWith5x13_5Rectangle()
+    {
+        Debug.Log("Aligning tracking space with standard 5.0m × 13.5m rectangle");
+
+        // Find player head position
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            Debug.LogError("Main camera not found!");
+            return;
+        }
+
+        Vector3 headPosition = mainCamera.transform.position;
+        Vector3 forward = mainCamera.transform.forward;
+        forward.y = 0;
+        forward.Normalize();
+
+        // Call the alignment method with the specific dimensions
+        AlignTrackingSpaceWithRoad(headPosition, forward, 5.0f, 13.5f);
+    }
+
+    // Optional: Method to align based on your text file
+    public void AlignTrackingSpaceWithCustomFile(string filePath)
+    {
+        Debug.Log($"Aligning tracking space based on file: {filePath}");
+
+        // Load the file
+        if (!File.Exists(filePath))
+        {
+            Debug.LogError($"Tracking space file not found: {filePath}");
+            return;
+        }
+
+        // Parse dimensions from file
+        float width = 5.0f;  // Default fallback
+        float length = 13.5f; // Default fallback
+
+        try
+        {
+            string[] lines = File.ReadAllLines(filePath);
+            // Parse rectangle from lines (assuming format as shown)
+            if (lines.Length >= 6)
+            {
+                // Parse rectangle coordinates (adjust parsing based on your file format)
+                // For your file format, we need to parse the second section (after the //)
+                int startLine = 0;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].Trim() == "//")
+                    {
+                        startLine = i + 1;
+                        break;
+                    }
+                }
+
+                if (startLine > 0 && startLine + 3 < lines.Length)
+                {
+                    Vector2 corner1 = ParseVector2(lines[startLine]);
+                    Vector2 corner3 = ParseVector2(lines[startLine + 2]);
+
+                    // Calculate dimensions
+                    width = Mathf.Abs(corner3.x - corner1.x);
+                    length = Mathf.Abs(corner3.y - corner1.y);
+
+                    Debug.Log($"Parsed dimensions from file: {width}m × {length}m");
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error parsing tracking space file: {e.Message}");
+        }
+
+        // Find player and align with parsed dimensions
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            Debug.LogError("Main camera not found!");
+            return;
+        }
+
+        Vector3 headPosition = mainCamera.transform.position;
+        Vector3 forward = mainCamera.transform.forward;
+        forward.y = 0;
+        forward.Normalize();
+
+        AlignTrackingSpaceWithRoad(headPosition, forward, width, length);
+    }
+
+    private Vector2 ParseVector2(string line)
+    {
+        string[] parts = line.Split(',');
+        if (parts.Length >= 2)
+        {
+            if (float.TryParse(parts[0], out float x) && float.TryParse(parts[1], out float y))
+            {
+                return new Vector2(x, y);
+            }
+        }
+        return Vector2.zero;
     }
 }

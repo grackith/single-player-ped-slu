@@ -133,7 +133,7 @@ public class VisualizationManager : MonoBehaviour
 
         Debug.Log("VisualizationManager: Ordered initialization complete");
     }
-    private void EnsureTrackingSpaces()
+    public void EnsureTrackingSpaces()
     {
         if (generalManager == null || generalManager.physicalSpaces == null || generalManager.physicalSpaces.Count == 0)
         {

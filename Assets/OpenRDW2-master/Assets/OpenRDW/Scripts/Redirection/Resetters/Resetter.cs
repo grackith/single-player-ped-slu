@@ -50,7 +50,7 @@ public abstract class Resetter : MonoBehaviour
         {
             Transform root = transform.Find("Simulated User").Find("Head");
             resetPanel = root.Find("ResetPanel").gameObject;
-            resetPanel.SetActive(true);
+            resetPanel.active = true;
             resetPanel.transform.parent = redirectionManager.headTransform;
             resetMsg = resetPanel.transform.Find("Text").GetComponent<Text>();
             arrow = resetPanel.transform.Find("Arrow").transform;

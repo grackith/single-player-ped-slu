@@ -349,7 +349,7 @@ public class TrackingSpaceHelper : MonoBehaviour
                     ClearAllCornerMarkers();
 
                     // Then create new markers
-                    CreateCornerMarkers(rm.trackingSpace, physicalSpaces[0].trackingSpace);
+                    //CreateCornerMarkers(rm.trackingSpace, physicalSpaces[0].trackingSpace);
                 }
                 // Add directional indicators to show alignment
                 if (rm.trackingSpace != null)
@@ -402,42 +402,42 @@ public class TrackingSpaceHelper : MonoBehaviour
     }
 
     // Helper method to create visual markers at tracking space corners
-    private void CreateCornerMarkers(Transform trackingSpace, List<Vector2> corners)
-    {
-        ClearAllCornerMarkers(); // Clear old markers first
+    //private void CreateCornerMarkers(Transform trackingSpace, List<Vector2> corners)
+    //{
+    //    ClearAllCornerMarkers(); // Clear old markers first
 
-        int index = 0;
-        foreach (var corner in corners)
-        {
-            // Convert 2D point to 3D world position
-            Vector3 cornerPos = trackingSpace.TransformPoint(new Vector3(corner.x, 0, corner.y));
+    //    int index = 0;
+    //    foreach (var corner in corners)
+    //    {
+    //        // Convert 2D point to 3D world position
+    //        Vector3 cornerPos = trackingSpace.TransformPoint(new Vector3(corner.x, 0, corner.y));
 
-            // Create a taller, more visible marker
-            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            marker.name = $"Corner_{index++}";
-            marker.tag = "CornerMarker"; // Add tag for easy finding
-            marker.transform.position = cornerPos + Vector3.up * 0.5f; // Raise it up
-            marker.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f); // Make it taller
+    //        // Create a taller, more visible marker
+    //        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+    //        marker.name = $"Corner_{index++}";
+    //        marker.tag = "CornerMarker"; // Add tag for easy finding
+    //        marker.transform.position = cornerPos + Vector3.up * 0.5f; // Raise it up
+    //        marker.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f); // Make it taller
 
-            // Color based on index
-            Color markerColor = index == 1 ? Color.blue : (index == 2 ? Color.green :
-                              (index == 3 ? Color.yellow : Color.magenta));
-            marker.GetComponent<Renderer>().material.color = markerColor;
+    //        // Color based on index
+    //        Color markerColor = index == 1 ? Color.blue : (index == 2 ? Color.green :
+    //                          (index == 3 ? Color.yellow : Color.magenta));
+    //        marker.GetComponent<Renderer>().material.color = markerColor;
 
-            // Make markers last longer
-            // Destroy(marker, 300f); // 5 minutes instead of 1
-        }
+    //        // Make markers last longer
+    //        // Destroy(marker, 300f); // 5 minutes instead of 1
+    //    }
 
-        // Create center marker to show origin
-        GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        centerMarker.name = "TrackingSpaceCenter";
-        centerMarker.tag = "CornerMarker";
-        centerMarker.transform.position = trackingSpace.position + Vector3.up * 0.1f;
-        centerMarker.transform.localScale = Vector3.one * 0.5f;
-        centerMarker.GetComponent<Renderer>().material.color = Color.red;
+    //    // Create center marker to show origin
+    //    GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+    //    centerMarker.name = "TrackingSpaceCenter";
+    //    centerMarker.tag = "CornerMarker";
+    //    centerMarker.transform.position = trackingSpace.position + Vector3.up * 0.1f;
+    //    centerMarker.transform.localScale = Vector3.one * 0.5f;
+    //    centerMarker.GetComponent<Renderer>().material.color = Color.red;
 
-        Debug.Log($"Created {corners.Count} enhanced corner markers");
-    }
+    //    Debug.Log($"Created {corners.Count} enhanced corner markers");
+    //}
     public void VerifyTrackingSpaceDimensions()
     {
         if (globalConfig == null || globalConfig.physicalSpaces == null ||

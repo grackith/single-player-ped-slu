@@ -124,8 +124,10 @@ public class RedirectionManager : MonoBehaviour
 
         movementManager = this.gameObject.GetComponent<MovementManager>();
 
-        GetRedirector();
-        GetResetter();
+        // IMPORTANT: Make sure to properly create the configured redirector/resetter 
+        // INSTEAD of getting existing ones which might be null/default
+        UpdateRedirector(redirectorType);  // Use the type we just converted from the Inspector choice
+        UpdateResetter(resetterType);      // Use the type we just converted from the Inspector choice
 
         trailDrawer = GetComponent<TrailDrawer>();
         simulatedWalker = simulatedHead.GetComponent<SimulatedWalker>();
@@ -253,15 +255,21 @@ public class RedirectionManager : MonoBehaviour
             // Make sure tracking space exists
             if (trackingSpace == null)
             {
-                trackingSpace = transform.Find("TrackingSpace0");
-                if (trackingSpace == null)
+                // Fix hierarchy issues
+                Transform existingTrackingSpace = transform.Find("TrackingSpace0");
+                if (existingTrackingSpace == null)
                 {
                     GameObject trackingSpaceObj = new GameObject("TrackingSpace0");
                     trackingSpaceObj.transform.SetParent(transform);
                     trackingSpaceObj.transform.localPosition = Vector3.zero;
                     trackingSpaceObj.transform.localRotation = Quaternion.identity;
                     trackingSpace = trackingSpaceObj.transform;
-                    Debug.Log("Created new tracking space: TrackingSpace0");
+                    Debug.Log("Created TrackingSpace0 under Redirected Avatar");
+                }
+                else
+                {
+                    trackingSpace = existingTrackingSpace;
+                    Debug.Log("Using existing TrackingSpace0");
                 }
             }
 
@@ -294,12 +302,12 @@ public class RedirectionManager : MonoBehaviour
                 // Set rotation based on head direction
                 Quaternion newRotation = Quaternion.Euler(0, headTransform.rotation.eulerAngles.y, 0);
 
-                // IMPORTANT: For VR mode, rotate 180 degrees to fix inverse movement issue
-                if (isVRMode)
-                {
-                    newRotation = Quaternion.Euler(0, headTransform.rotation.eulerAngles.y + 180f, 0);
-                    Debug.Log("VR mode: Adding 180° rotation to fix inverse movement");
-                }
+                //// IMPORTANT: For VR mode, rotate 180 degrees to fix inverse movement issue
+                //if (isVRMode)
+                //{
+                //    newRotation = Quaternion.Euler(0, headTransform.rotation.eulerAngles.y + 180f, 0);
+                //    Debug.Log("VR mode: Adding 180° rotation to fix inverse movement");
+                //}
 
                 trackingSpace.rotation = newRotation;
 
@@ -735,13 +743,17 @@ public class RedirectionManager : MonoBehaviour
         // Log current state before changes
         Debug.Log($"Before setup: Redirector={redirectorChoice}, Resetter={resetterChoice}");
 
-        // Force direct assignment
-        redirectorChoice = RedirectorChoice.S2C;
-        resetterChoice = ResetterChoice.TwoOneTurn;
+        if (redirectorChoice == RedirectorChoice.None)
+        {
+            redirectorChoice = RedirectorChoice.DynamicAPF;
+            UpdateRedirector(typeof(DynamicAPF_Redirector)); // Use the actual class name here
+        }
 
-        // Explicitly ensure components are updated
-        UpdateRedirector(typeof(S2CRedirector));
-        UpdateResetter(typeof(TwoOneTurnResetter));
+        if (resetterChoice == ResetterChoice.None)
+        {
+            resetterChoice = ResetterChoice.FreezeTurn;
+            UpdateResetter(typeof(FreezeTurnResetter)); // Use the actual class name here
+        }
 
         // Verify the components are correct
         Redirector actualRedirector = gameObject.GetComponent<Redirector>();
@@ -1027,21 +1039,21 @@ public class RedirectionManager : MonoBehaviour
         }
     }
 
-    void GetRedirector()
-    {
-        redirector = this.gameObject.GetComponent<Redirector>();
-        if (redirector == null)
-            this.gameObject.AddComponent<NullRedirector>();
-        redirector = this.gameObject.GetComponent<Redirector>();
-    }
+    //void GetRedirector()
+    //{
+    //    redirector = this.gameObject.GetComponent<Redirector>();
+    //    if (redirector == null)
+    //        this.gameObject.AddComponent<NullRedirector>();
+    //    redirector = this.gameObject.GetComponent<Redirector>();
+    //}
 
-    void GetResetter()
-    {
-        resetter = this.gameObject.GetComponent<Resetter>();
-        if (resetter == null)
-            this.gameObject.AddComponent<NullResetter>();
-        resetter = this.gameObject.GetComponent<Resetter>();
-    }
+    //void GetResetter()
+    //{
+    //    resetter = this.gameObject.GetComponent<Resetter>();
+    //    if (resetter == null)
+    //        this.gameObject.AddComponent<NullResetter>();
+    //    resetter = this.gameObject.GetComponent<Resetter>();
+    //}
 
 
     void GetTrailDrawer()

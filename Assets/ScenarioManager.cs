@@ -869,27 +869,30 @@ public class ScenarioManager : MonoBehaviour
         // V key - Replace F - Force visualization refresh
         if (Input.GetKeyDown(KeyCode.V))
         {
-            Debug.Log("V key pressed - Forcing visualization refresh");
+            Debug.Log("V key pressed - Toggling tracking space visibility");
 
-            // Find all visualization managers
-            VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
-            foreach (var vm in visualManagers)
+            if (persistentRDW != null)
             {
-                if (vm != null)
+                persistentRDW.ToggleTrackingSpaceVisualization();
+            }
+            else
+            {
+                // Fallback if persistentRDW is not available
+                VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
+                foreach (var vm in visualManagers)
                 {
-                    // Use the existing, comprehensive method
-                    vm.ForceRefreshVisualization();
+                    if (vm != null)
+                    {
+                        // Get current state and toggle it
+                        bool isVisible = false;
+                        if (vm.allPlanes != null && vm.allPlanes.Count > 0)
+                        {
+                            isVisible = vm.allPlanes[0].activeSelf;
+                        }
+                        vm.ChangeTrackingSpaceVisibility(!isVisible);
+                    }
                 }
             }
-
-            // Also refresh tracking space helper if needed
-            TrackingSpaceHelper helper = FindObjectOfType<TrackingSpaceHelper>();
-            if (helper != null)
-            {
-                helper.ForceTrackingSpaceDimensions(5.0f, 13.5f, true);
-            }
-
-            // No need to duplicate functionality here since ForceRefreshVisualization is comprehensive
         }
 
         // C key - Calibrate tracking space to physical space
@@ -973,13 +976,10 @@ public class ScenarioManager : MonoBehaviour
         }
 
         // ~ (tilde) key - Toggle physical space overview
-        if (Input.GetKeyDown(KeyCode.BackQuote))
+        if (Input.GetKeyDown(KeyCode.S))
         {
-            Debug.Log("~ key pressed - Toggling physical space view");
-            if (persistentRDW != null)
-            {
-                persistentRDW.ToggleTrackingSpaceVisualization();
-            }
+            Debug.Log("S key pressed - Forcing full visualization refresh");
+            StartCoroutine(SafeVisualizationRefresh());
         }
 
         // Q key - End current experiment
@@ -1002,6 +1002,177 @@ public class ScenarioManager : MonoBehaviour
             Debug.Log("Tab key pressed - Toggling virtual view");
             // Similar to above, toggle between views
             // This might involve switching camera modes
+        }
+    }
+
+    private IEnumerator SafeVisualizationRefresh()
+    {
+        // Find all visualization managers
+        VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
+
+        if (visualManagers.Length == 0)
+        {
+            Debug.LogWarning("No VisualizationManager found!");
+            yield break;
+        }
+
+        foreach (var vm in visualManagers)
+        {
+            if (vm != null)
+            {
+                // First ensure tracking space is visible - outside try/catch
+                vm.ChangeTrackingSpaceVisibility(true);
+
+                // Wait a frame to let this take effect
+                yield return null;
+
+                // Now process refresh in smaller steps - outside try/catch
+                yield return StartCoroutine(SafeRefreshVisualization(vm));
+            }
+        }
+
+        // Also refresh tracking space helper if needed
+        TrackingSpaceHelper helper = FindObjectOfType<TrackingSpaceHelper>();
+        if (helper != null)
+        {
+            try
+            {
+                helper.ForceTrackingSpaceDimensions(5.0f, 13.5f, true);
+                Debug.Log("Successfully updated tracking space dimensions");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error refreshing tracking space dimensions: {ex.Message}");
+            }
+        }
+
+        Debug.Log("Visualization refresh completed safely");
+    }
+
+    // Fixed SafeRefreshVisualization method
+    private IEnumerator SafeRefreshVisualization(VisualizationManager vm)
+    {
+        try
+        {
+            // Step 1: Ensure initialization
+            vm.EnsureInitialized();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error ensuring initialization: {ex.Message}");
+        }
+        yield return null;
+
+        try
+        {
+            // Step 2: Ensure tracking spaces
+            vm.EnsureTrackingSpaces();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error ensuring tracking spaces: {ex.Message}");
+        }
+        yield return null;
+
+        try
+        {
+            // Step 3: Update tracking space visibility first
+            vm.ChangeTrackingSpaceVisibility(true);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error changing tracking space visibility: {ex.Message}");
+        }
+        yield return null;
+
+        // Step 4: Create direction indicators 
+        StartCoroutine(SafeCreateDirectionIndicators(vm));
+
+        Debug.Log("Completed safe visualization refresh");
+    }
+
+    // Fixed SafeCreateDirectionIndicators method
+    private IEnumerator SafeCreateDirectionIndicators(VisualizationManager vm)
+    {
+        if (vm.redirectionManager == null || vm.redirectionManager.trackingSpace == null)
+        {
+            Debug.LogWarning("Missing redirection manager or tracking space");
+            yield break;
+        }
+
+        Transform trackingSpace = vm.redirectionManager.trackingSpace;
+
+        // Clear existing indicators
+        GameObject existingForward = GameObject.Find("ForwardDirection");
+        if (existingForward != null)
+        {
+            try
+            {
+                Destroy(existingForward);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error destroying existing forward marker: {ex.Message}");
+            }
+        }
+
+        GameObject existingRight = GameObject.Find("RightDirection");
+        if (existingRight != null)
+        {
+            try
+            {
+                Destroy(existingRight);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error destroying existing right marker: {ex.Message}");
+            }
+        }
+
+        yield return null; // Wait a frame
+
+        try
+        {
+            // Create forward direction indicator (blue)
+            GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            forwardMarker.name = "ForwardDirection";
+            forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * 4.5f + Vector3.up * 0.05f;
+            forwardMarker.transform.rotation = trackingSpace.rotation;
+            forwardMarker.transform.localScale = new Vector3(0.2f, 0.05f, 6.0f);
+
+            Material blueMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (blueMaterial.shader == null)
+                blueMaterial = new Material(Shader.Find("Standard"));
+            blueMaterial.color = Color.blue;
+            forwardMarker.GetComponent<Renderer>().material = blueMaterial;
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error creating forward direction indicator: {ex.Message}");
+        }
+
+        yield return null; // Wait a frame
+
+        try
+        {
+            // Create right direction indicator (red)
+            GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            rightMarker.name = "RightDirection";
+            rightMarker.transform.position = trackingSpace.position + trackingSpace.right * 1.5f + Vector3.up * 0.05f;
+            rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
+            rightMarker.transform.localScale = new Vector3(0.2f, 0.05f, 2.5f);
+
+            Material redMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (redMaterial.shader == null)
+                redMaterial = new Material(Shader.Find("Standard"));
+            redMaterial.color = Color.red;
+            rightMarker.GetComponent<Renderer>().material = redMaterial;
+
+            Debug.Log("Created direction indicators successfully");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error creating right direction indicator: {ex.Message}");
         }
     }
 
