@@ -962,7 +962,7 @@ public class VisualizationManager : MonoBehaviour
                 Debug.Log($"Forward direction is aligned with {forwardDimension} dimension");
 
                 // Create visual direction indicators
-                CreateDirectionIndicators();
+                //CreateDirectionIndicators();
             }
         }
     }

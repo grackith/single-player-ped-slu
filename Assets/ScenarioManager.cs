@@ -1086,7 +1086,7 @@ public class ScenarioManager : MonoBehaviour
         yield return null;
 
         // Step 4: Create direction indicators 
-        StartCoroutine(SafeCreateDirectionIndicators(vm));
+        //StartCoroutine(SafeCreateDirectionIndicators(vm));
 
         Debug.Log("Completed safe visualization refresh");
     }

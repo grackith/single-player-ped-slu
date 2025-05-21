@@ -609,13 +609,13 @@ public class PersistentRDW : MonoBehaviour
         centerMarker.transform.position = trackingSpace.position + Vector3.up * 0.1f;
         centerMarker.transform.localScale = Vector3.one * 0.3f;
 
-        Material centerMat = new Material(Shader.Find("Standard"));
+        Material centerMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         centerMat.color = Color.red;
         centerMarker.GetComponent<Renderer>().material = centerMat;
         DontDestroyOnLoad(centerMarker);
 
         // Create direction indicators
-        CreateDirectionIndicators(trackingSpace, width, length);
+        //CreateDirectionIndicators(trackingSpace, width, length);
 
         Debug.Log("Persistent corner markers created successfully");
     }
