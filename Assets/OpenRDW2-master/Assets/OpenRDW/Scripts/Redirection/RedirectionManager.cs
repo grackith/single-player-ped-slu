@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 
 public class RedirectionManager : MonoBehaviour
 {
@@ -132,7 +133,7 @@ public class RedirectionManager : MonoBehaviour
         networkManager = globalConfiguration?.GetComponentInChildren<NetworkManager>(true);
 
         body = transform.Find("Body");
-        trackingSpace = transform.Find("TrackingSpace0");
+        trackingSpace = transform.Find("Tracking Space");
         simulatedHead = GetSimulatedAvatarHead();
 
         movementManager = this.gameObject.GetComponent<MovementManager>();
@@ -195,6 +196,9 @@ public class RedirectionManager : MonoBehaviour
 
         // Force correct physical space dimensions (before any VR setup)
         SetCorrectPhysicalSpaceDimensions();
+
+        // NEW: Set up tracking space reference
+        SetupTrackingSpaceReference();
 
         // For VR mode, set up tracking space correctly
         if (globalConfiguration != null &&
@@ -300,27 +304,36 @@ public class RedirectionManager : MonoBehaviour
             globalConfiguration.freeExplorationMode = true;
         }
 
+        // CRITICAL: Ensure we have head transform before calibration
+        if (headTransform == null)
+        {
+            SetupHMDHeadTransform();
+        }
+
         // CRITICAL: Calibrate tracking space to current position (OpenRDW style)
         CalibratePhysicalSpaceReference();
 
-        // Set up redirector and resetter if needed
+        // Set up redirector and resetter AFTER calibration
         if (redirectorChoice == RedirectorChoice.None)
         {
             redirectorChoice = RedirectorChoice.DynamicAPF;
-            UpdateRedirector(typeof(DynamicAPF_Redirector));
         }
 
         if (resetterChoice == ResetterChoice.None)
         {
             resetterChoice = ResetterChoice.FreezeTurn;
-            UpdateResetter(typeof(FreezeTurnResetter));
         }
+
+        // Update the redirector/resetter with proper references
+        UpdateRedirector();
 
         // Enable visualization
         if (visualizationManager != null)
         {
             visualizationManager.ChangeTrackingSpaceVisibility(true);
         }
+
+        Debug.Log("HMD experiment setup complete - RDW should now be active");
     }
 
     private void EndExperiment()
@@ -381,17 +394,13 @@ public class RedirectionManager : MonoBehaviour
             return;
         }
 
-        Debug.Log("=== CALIBRATING PHYSICAL SPACE REFERENCE (OpenRDW Style) ===");
+        Debug.Log("=== SIMPLE CALIBRATION (OpenRDW Style) ===");
 
-        // CRITICAL: Set tracking space so that user's current position becomes (0,0,0) in real space
-        // This is the OpenRDW way - tracking space position = current head position
-        trackingSpace.position = new Vector3(
-            headTransform.position.x,
-            0,
-            headTransform.position.z
-        );
+        // SIMPLE APPROACH: Just set tracking space to current head position
+        // Don't force Y to 0, let it be wherever the head currently is
+        trackingSpace.position = headTransform.position;
 
-        // Align tracking space with user's facing direction
+        // Align with current facing direction (only Y rotation)
         Vector3 flatForward = Utilities.FlattenedDir3D(headTransform.forward);
         float yawAngle = Mathf.Atan2(flatForward.x, flatForward.z) * Mathf.Rad2Deg;
         trackingSpace.rotation = Quaternion.Euler(0, yawAngle, 0);
@@ -399,22 +408,11 @@ public class RedirectionManager : MonoBehaviour
         physicalSpaceCalibrated = true;
         trackingSpaceInitialized = true;
 
-        Debug.Log($"Physical space calibrated - Tracking space position: {trackingSpace.position}");
-        Debug.Log($"Tracking space rotation: {trackingSpace.rotation.eulerAngles}");
+        Debug.Log($"Simple calibration complete - Tracking space at: {trackingSpace.position}");
 
-        // Verify real position is now zero
+        // The real position should now be near zero
         Vector3 verifyRealPos = GetPosReal(headTransform.position);
-        Debug.Log($"Verification - Real position: {verifyRealPos} (should be near zero)");
-
-        // Generate visualization
-        if (visualizationManager != null && globalConfiguration != null)
-        {
-            visualizationManager.DestroyAll();
-            visualizationManager.GenerateTrackingSpaceMesh(globalConfiguration.physicalSpaces);
-            visualizationManager.ChangeTrackingSpaceVisibility(true);
-        }
-
-        Debug.Log("=== PHYSICAL SPACE CALIBRATION COMPLETE ===");
+        Debug.Log($"Verification - Real position: {verifyRealPos}");
     }
 
     // Your ResetTrackingSpaceAlignment method (for manual reset if needed)
@@ -480,7 +478,11 @@ public class RedirectionManager : MonoBehaviour
         {
             Debug.Log("Creating physical spaces with correct dimensions");
 
-            globalConfiguration.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
+            // FIXED: Only set to Rectangle if user hasn't chosen FilePath
+            if (globalConfiguration.trackingSpaceChoice != GlobalConfiguration.TrackingSpaceChoice.FilePath)
+            {
+                globalConfiguration.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
+            }
 
             List<SingleSpace> physicalSpaces;
             SingleSpace virtualSpace = null;
@@ -497,7 +499,6 @@ public class RedirectionManager : MonoBehaviour
             {
                 globalConfiguration.virtualSpace = virtualSpace;
             }
-
             Debug.Log($"Created physical space: {physicalWidth}m × {physicalLength}m");
         }
     }
@@ -542,6 +543,113 @@ public class RedirectionManager : MonoBehaviour
     }
 
     //make one step redirection: redirect or reset
+    //public void MakeOneStepRedirection()
+    //{
+    //    FixHeadTransform();
+    //    UpdateCurrentUserState();
+    //    visualizationManager.realWaypoint.position = Utilities.GetRelativePosition(targetWaypoint.position, trackingSpace.transform);
+
+    //    //invalidData
+    //    if (movementManager.ifInvalid)
+    //        return;
+    //    //do not redirect other avatar's transform during networking mode
+    //    if (globalConfiguration.networkingMode && movementManager.avatarId != networkManager.avatarId)
+    //        return;
+
+    //    if (currPos.Equals(prevPos))
+    //    {
+    //        //used in auto simulation mode and there are unfinished waypoints
+    //        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.AutoPilot && !movementManager.ifMissionComplete)
+    //        {
+    //            //accumulated time for standing on the same position
+    //            samePosTime += 1.0f / globalConfiguration.targetFPS;
+    //        }
+    //    }
+    //    else
+    //    {
+    //        samePosTime = 0;//clear accumulated time
+    //    }
+
+    //    CalculateStateChanges();
+
+    //    if (globalConfiguration.synchronizedReset)
+    //    {
+    //        if (resetSign)
+    //        {
+    //            resetSign = false;
+    //            OnResetTrigger();
+    //        }
+    //        if (inReset)
+    //        {
+    //            if (EndResetCountDown > 0)
+    //            { // reset already finished 
+    //                bool othersInReset = false;
+    //                foreach (var us in globalConfiguration.redirectedAvatars)
+    //                {
+    //                    if (us.GetComponent<RedirectionManager>().inReset && us.GetComponent<RedirectionManager>().EndResetCountDown == 0)
+    //                    {
+    //                        othersInReset = true;
+    //                        break;
+    //                    }
+    //                }
+    //                if (!othersInReset || redirectorChoice != RedirectorChoice.SeparateSpace)
+    //                { // end reset
+    //                    inReset = false;
+    //                    if (redirector != null)
+    //                    {
+    //                        redirector.ClearGains();
+    //                        redirector.InjectRedirection();
+    //                    }
+    //                    EndResetCountDown = EndResetCountDown > 0 ? EndResetCountDown - 1 : 0;
+    //                }
+    //            }
+    //            else
+    //            { // in reset
+    //                if (resetter != null)
+    //                {
+    //                    resetter.InjectResetting();
+    //                }
+    //            }
+    //        }
+    //        else
+    //        {
+    //            if (redirector != null)
+    //            {
+    //                redirector.ClearGains();
+    //                redirector.InjectRedirection();
+    //            }
+    //            EndResetCountDown = EndResetCountDown > 0 ? EndResetCountDown - 1 : 0;
+    //        }
+    //    }
+    //    else
+    //    {
+    //        if (resetter != null && !inReset && resetter.IsResetRequired() && EndResetCountDown == 0)
+    //        {
+    //            OnResetTrigger();
+    //        }
+    //        if (inReset)
+    //        {
+    //            if (resetter != null)
+    //            {
+    //                resetter.InjectResetting();
+    //            }
+    //        }
+    //        else
+    //        {
+    //            if (redirector != null)
+    //            {
+    //                redirector.ClearGains();
+    //                redirector.InjectRedirection();
+    //            }
+    //            EndResetCountDown = EndResetCountDown > 0 ? EndResetCountDown - 1 : 0;
+    //        }
+    //    }
+
+    //    UpdatePreviousUserState();
+    //    UpdateBodyPose();
+    //}
+
+
     public void MakeOneStepRedirection()
     {
         // CRITICAL: Don't process redirection if waiting for ready signal (OpenRDW standard)
@@ -737,13 +845,79 @@ public class RedirectionManager : MonoBehaviour
     void SetReferenceForRedirector()
     {
         if (redirector != null)
+        {
             redirector.redirectionManager = this;
+            Debug.Log($"Set redirectionManager reference on redirector: {redirector.GetType().Name}");
+
+            // Verify that this RedirectionManager has the required references
+            if (headTransform == null)
+            {
+                Debug.LogError("RedirectionManager.headTransform is null! Redirector will fail.");
+                // Try to find it
+                SetupHMDHeadTransform();
+            }
+
+            if (trackingSpace == null)
+            {
+                Debug.LogError("RedirectionManager.trackingSpace is null! Redirector will fail.");
+            }
+
+            Debug.Log($"RedirectionManager references - headTransform: {headTransform?.name}, trackingSpace: {trackingSpace?.name}");
+        }
+        else
+        {
+            Debug.LogError("Redirector is null in SetReferenceForRedirector");
+        }
     }
 
     void SetReferenceForResetter()
     {
         if (resetter != null)
+        {
             resetter.redirectionManager = this;
+            Debug.Log($"Set redirectionManager reference on resetter: {resetter.GetType().Name}");
+
+            // Verify that this RedirectionManager has the required references
+            if (headTransform == null)
+            {
+                Debug.LogError("RedirectionManager.headTransform is null! Resetter will fail.");
+                SetupHMDHeadTransform();
+            }
+
+            if (trackingSpace == null)
+            {
+                Debug.LogError("RedirectionManager.trackingSpace is null! Resetter will fail.");
+            }
+
+            Debug.Log($"RedirectionManager references - headTransform: {headTransform?.name}, trackingSpace: {trackingSpace?.name}");
+        }
+        else
+        {
+            Debug.LogError("Resetter is null in SetReferenceForResetter");
+        }
+    }
+
+    public bool IsRDWReady()
+    {
+        // Check if the experiment has been started with 'R' key
+        bool ready = experimentStarted && !waitingForReadySignal;
+
+        // Also verify we have essential references
+        bool hasReferences = (headTransform != null && trackingSpace != null);
+
+        if (!ready)
+        {
+            // Don't spam the console, just return false silently
+            return false;
+        }
+
+        if (!hasReferences)
+        {
+            Debug.LogWarning("RDW not ready - missing essential references");
+            return false;
+        }
+
+        return true;
     }
 
     //modify these three functions when adding a new redirector
@@ -1062,15 +1236,124 @@ public class RedirectionManager : MonoBehaviour
         redirector = null;
     }
 
-    public void UpdateRedirector(System.Type redirectorType)
+    public void UpdateRedirector()
     {
+        Debug.Log("UpdateRedirector called - Setting up redirector and resetter components");
+
+        // CRITICAL: Ensure head transform is set before creating components
+        if (headTransform == null)
+        {
+            Debug.LogError("headTransform is null - attempting to find XR camera");
+            SetupHMDHeadTransform();
+
+            if (headTransform == null)
+            {
+                Debug.LogError("Still no headTransform after setup attempt!");
+                return;
+            }
+        }
+
+        // Ensure tracking space exists
+        if (trackingSpace == null)
+        {
+            Debug.LogError("trackingSpace is null - attempting to create");
+            SetupTrackingSpaceReference();
+
+            if (trackingSpace == null)
+            {
+                Debug.LogError("Still no trackingSpace after setup attempt!");
+                return;
+            }
+        }
+
+        // Use YOUR enum system, not the OpenRDW enums
+        Debug.Log($"Setting up redirector: {redirectorChoice}, resetter: {resetterChoice}");
+
+        // Remove any existing components
         RemoveRedirector();
+        RemoveResetter();
+
+        // Add and configure the appropriate redirector using YOUR enum
+        System.Type redirectorType = GetRedirectorType(redirectorChoice);
         if (redirectorType != null)
         {
             redirector = (Redirector)gameObject.AddComponent(redirectorType);
             SetReferenceForRedirector();
+            Debug.Log($"Added redirector component: {redirectorType.Name}");
+        }
+
+        // Add and configure the appropriate resetter using YOUR enum
+        System.Type resetterType = GetResetterType(resetterChoice);
+        if (resetterType != null)
+        {
+            resetter = (Resetter)gameObject.AddComponent(resetterType);
+            SetReferenceForResetter();
+
+            // Initialize the resetter after setting references
+            if (resetter != null)
+            {
+                resetter.Initialize();
+                Debug.Log($"Added and initialized resetter component: {resetterType.Name}");
+            }
+        }
+
+        Debug.Log("UpdateRedirector completed successfully");
+    }
+
+    private System.Type GetRedirectorType(RedirectorChoice choice)
+    {
+        switch (choice)
+        {
+            case RedirectorChoice.None:
+                return typeof(NullRedirector);
+            case RedirectorChoice.S2C:
+                return typeof(S2CRedirector);
+            case RedirectorChoice.S2O:
+                return typeof(S2ORedirector);
+            case RedirectorChoice.Zigzag:
+                return typeof(ZigZagRedirector);
+            case RedirectorChoice.ThomasAPF:
+                return typeof(ThomasAPF_Redirector);
+            case RedirectorChoice.MessingerAPF:
+                return typeof(MessingerAPF_Redirector);
+            case RedirectorChoice.DynamicAPF:
+                return typeof(DynamicAPF_Redirector);
+            case RedirectorChoice.DeepLearning:
+                return typeof(DeepLearning_Redirector);
+            case RedirectorChoice.PassiveHapticAPF:
+                return typeof(PassiveHapticAPF_Redirector);
+            case RedirectorChoice.SeparateSpace:
+                return typeof(SeparateSpace_Redirector);
+            default:
+                return typeof(NullRedirector);
         }
     }
+
+    private System.Type GetResetterType(ResetterChoice choice)
+    {
+        switch (choice)
+        {
+            case ResetterChoice.None:
+                return typeof(NullResetter);
+            case ResetterChoice.FreezeTurn:
+                return typeof(FreezeTurnResetter);
+            case ResetterChoice.TwoOneTurn:
+                return typeof(TwoOneTurnResetter);
+            case ResetterChoice.MR2C:
+                return typeof(MR2C_Resetter);
+            case ResetterChoice.R2G:
+                return typeof(R2G_Resetter);
+            case ResetterChoice.SFR2G:
+                return typeof(SFR2G_Resetter);
+            case ResetterChoice.SeparateSpace:
+                return typeof(SeparateSpace_Resetter);
+            default:
+                return typeof(NullResetter);
+        }
+    }
+
+
+
 
     public void RemoveResetter()
     {
@@ -1307,6 +1590,42 @@ public class RedirectionManager : MonoBehaviour
         Debug.Log("==================================");
     }
 
+    // In your RedirectionManager Start() or calibration method:
+    private void SetupTrackingSpaceReference()
+    {
+        // Find or create the tracking space
+        if (trackingSpace == null)
+        {
+            trackingSpace = transform.Find("Tracking Space");
+
+            if (trackingSpace == null)
+            {
+                Debug.Log("Creating Tracking Space GameObject");
+                GameObject trackingSpaceGO = new GameObject("Tracking Space");
+                trackingSpaceGO.transform.SetParent(transform);
+                trackingSpace = trackingSpaceGO.transform;
+            }
+        }
+
+        // Position tracking space (will be properly calibrated later when 'R' is pressed)
+        if (headTransform != null)
+        {
+            Vector3 initialPosition = headTransform.position;
+            initialPosition.y = 0; // Put at floor level initially
+            trackingSpace.position = initialPosition;
+            trackingSpace.rotation = Quaternion.identity;
+
+            Debug.Log($"Initial tracking space setup at: {trackingSpace.position}");
+        }
+        else
+        {
+            // Default position if no head transform yet
+            trackingSpace.position = Vector3.zero;
+            trackingSpace.rotation = Quaternion.identity;
+            Debug.Log("Tracking space set to origin (no head transform available yet)");
+        }
+    }
+
     private void EnsureReferencesForRealUser()
     {
         // Debug starting state
@@ -1317,7 +1636,7 @@ public class RedirectionManager : MonoBehaviour
             body = transform.Find("Body");
 
         if (trackingSpace == null)
-            trackingSpace = transform.Find("TrackingSpace0");
+            trackingSpace = transform.Find("Tracking Space");
 
         if (simulatedHead == null && transform.Find("Simulated User") != null)
             simulatedHead = transform.Find("Simulated User").Find("Head");
@@ -1380,55 +1699,48 @@ public class RedirectionManager : MonoBehaviour
         {
             Debug.LogWarning("Physical space not calibrated - performing calibration first");
             CalibratePhysicalSpaceReference();
+        }
+
+        Debug.Log($"=== MOVING PLAYER TO SCENARIO START: {newVirtualPosition} ===");
+
+        // Get current real position in physical space (this stays the same)
+        Vector3 currentRealPos = GetPosReal(headTransform.position);
+
+        // Find XR Origin
+        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+        if (xrOrigin == null)
+        {
+            Debug.LogError("XR Origin not found for scenario positioning!");
             return;
         }
 
-        Debug.Log($"Updating virtual position for scenario: {newVirtualPosition}");
+        // CRITICAL: Calculate where XR Origin needs to be so the player appears at the scenario start
+        Vector3 desiredXROriginPos = newVirtualPosition - currentRealPos;
 
-        // CRITICAL: In OpenRDW, tracking space NEVER moves after calibration!
-        // Only the XR Origin moves to create virtual world transitions
+        // Keep the same height relationship
+        desiredXROriginPos.y = newVirtualPosition.y - (headTransform.position.y - xrOrigin.transform.position.y);
 
-        // Get current real position in physical space (this should stay the same)
-        Vector3 currentRealPos = GetPosReal(headTransform.position);
+        // Move XR Origin to position player at scenario start
+        xrOrigin.transform.position = desiredXROriginPos;
 
-        // CORRECT: Move XR Origin to place user at desired virtual location
-        // while keeping their physical position in the room the same
-        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
-        if (xrOrigin != null)
-        {
-            // Calculate where XR Origin should be positioned
-            Vector3 desiredXROriginPos = newVirtualPosition - currentRealPos;
-            desiredXROriginPos.y = xrOrigin.transform.position.y; // Keep current Y
+        // Set rotation to match scenario direction
+        forwardDirection.y = 0;
+        forwardDirection.Normalize();
+        float scenarioAngle = Mathf.Atan2(forwardDirection.x, forwardDirection.z) * Mathf.Rad2Deg;
+        xrOrigin.transform.rotation = Quaternion.Euler(0, scenarioAngle, 0);
 
-            // Update XR Origin position (this moves the virtual world, not the tracking space)
-            xrOrigin.transform.position = desiredXROriginPos;
+        Debug.Log($"XR Origin moved to: {desiredXROriginPos}");
+        Debug.Log($"Player should now be at: {newVirtualPosition}");
+        Debug.Log($"Actual head position: {headTransform.position}");
 
-            // Update XR Origin rotation for scenario direction
-            Vector3 flatForward = forwardDirection;
-            flatForward.y = 0;
-            flatForward.Normalize();
-
-            float scenarioAngle = Mathf.Atan2(flatForward.x, flatForward.z) * Mathf.Rad2Deg;
-            xrOrigin.transform.rotation = Quaternion.Euler(0, scenarioAngle, 0);
-
-            Debug.Log($"Updated XR Origin - Position: {desiredXROriginPos}, Rotation: {scenarioAngle}°");
-            Debug.Log($"Tracking space remains at: {trackingSpace.position} (NEVER MOVED)");
-        }
-        else
-        {
-            Debug.LogError("Could not find XR Origin for scenario transition!");
-        }
+        // IMPORTANT: Tracking space never moves after calibration!
+        Debug.Log($"Tracking space remains at: {trackingSpace.position}");
 
         // Update current state
         UpdateCurrentUserState();
-
-        // Update visualization if available
-        if (visualizationManager != null)
-        {
-            // Don't regenerate tracking space - it should never move
-            visualizationManager.ChangeTrackingSpaceVisibility(true);
-        }
     }
+
+    
 
     // REMOVE any method that automatically corrects drift by moving tracking space
     // The CheckAndCorrectPhysicalSpaceDrift method should be DELETED or modified to NOT move tracking space
@@ -1518,6 +1830,42 @@ public class RedirectionManager : MonoBehaviour
             resetterChoice = ResetterChoice.FreezeTurn;
             UpdateResetter(typeof(FreezeTurnResetter));
         }
+    }
+    // Add this method to your RedirectionManager.cs to maintain compatibility
+
+    public void UpdateRedirector(System.Type redirectorType)
+    {
+        Debug.Log($"UpdateRedirector called with specific type: {redirectorType?.Name}");
+
+        // Convert the System.Type back to your enum
+        if (redirectorType == typeof(NullRedirector))
+            redirectorChoice = RedirectorChoice.None;
+        else if (redirectorType == typeof(S2CRedirector))
+            redirectorChoice = RedirectorChoice.S2C;
+        else if (redirectorType == typeof(S2ORedirector))
+            redirectorChoice = RedirectorChoice.S2O;
+        else if (redirectorType == typeof(ZigZagRedirector))
+            redirectorChoice = RedirectorChoice.Zigzag;
+        else if (redirectorType == typeof(ThomasAPF_Redirector))
+            redirectorChoice = RedirectorChoice.ThomasAPF;
+        else if (redirectorType == typeof(MessingerAPF_Redirector))
+            redirectorChoice = RedirectorChoice.MessingerAPF;
+        else if (redirectorType == typeof(DynamicAPF_Redirector))
+            redirectorChoice = RedirectorChoice.DynamicAPF;
+        else if (redirectorType == typeof(DeepLearning_Redirector))
+            redirectorChoice = RedirectorChoice.DeepLearning;
+        else if (redirectorType == typeof(PassiveHapticAPF_Redirector))
+            redirectorChoice = RedirectorChoice.PassiveHapticAPF;
+        else if (redirectorType == typeof(SeparateSpace_Redirector))
+            redirectorChoice = RedirectorChoice.SeparateSpace;
+        else
+        {
+            Debug.LogWarning($"Unknown redirector type: {redirectorType?.Name}, defaulting to None");
+            redirectorChoice = RedirectorChoice.None;
+        }
+
+        // Now call the main UpdateRedirector method
+        UpdateRedirector();
     }
 
     // Update your StartRDWExperiment method in RedirectionManager:

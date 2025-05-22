@@ -31,50 +31,222 @@ public abstract class Resetter : MonoBehaviour
     [HideInInspector]
     public Vector2 targetDir; // the target direction we want user to face when the reset ends
 
-    private void Awake()
+    // Also update the Awake method in your Resetter.cs base class:
+
+    void Awake()
     {
-        redirectionManager = GetComponent<RedirectionManager>();
+        globalConfiguration = GetComponentInParent<GlobalConfiguration>();
+
+        // Only set redirectionManager if it's not already set
+        if (redirectionManager == null)
+        {
+            redirectionManager = GetComponent<RedirectionManager>();
+        }
+
         movementManager = GetComponent<MovementManager>();
+        visualizationManager = GetComponent<VisualizationManager>();
+
+        // Debug logging to help diagnose issues
+        Debug.Log($"Resetter.Awake() - redirectionManager: {redirectionManager?.name}");
+        if (redirectionManager != null)
+        {
+            Debug.Log($"  headTransform: {redirectionManager.headTransform?.name}");
+            Debug.Log($"  trackingSpace: {redirectionManager.trackingSpace?.name}");
+        }
         targetDir = new Vector2(1, 0);
         targetPos = Vector2.zero;
     }
 
+
     // Manually update arrow's position and direction and perform the endreset test
+    // Find the UpdatePanel method in Resetter.cs (around line 73) and replace it with:
+
     public void UpdatePanel()
     {
+        // Load the orange panel texture if not already loaded
         if (orangePanelTexture == null)
         {
             orangePanelTexture = Resources.Load<Texture>("OPR_Round");
         }
+
         if (resetPanel == null)
         {
-            Transform root = transform.Find("Simulated User").Find("Head");
-            resetPanel = root.Find("ResetPanel").gameObject;
-            resetPanel.active = true;
-            resetPanel.transform.parent = redirectionManager.headTransform;
-            resetMsg = resetPanel.transform.Find("Text").GetComponent<Text>();
-            arrow = resetPanel.transform.Find("Arrow").transform;
-            arrowMap = resetPanel.transform.Find("ArrMap").transform;
-            arrowMap.GetComponent<RawImage>().texture = orangePanelTexture;
-            resetMsg.text = "Please align the black arrow\nwith the white arrow";
-            resetPanel.transform.localPosition = new Vector3(0, 0, 100000f);
-            resetPanel.transform.localEulerAngles = new Vector3(0, 0, 0);
+            // YOUR IMPLEMENTATION: Try to find the reset panel in the VR setup first
+            Transform xrCamera = FindXRCamera();
+            if (xrCamera != null)
+            {
+                // Look for reset panel under the XR camera
+                Transform panelUnderCamera = xrCamera.Find("ResetPanel");
+                if (panelUnderCamera != null)
+                {
+                    resetPanel = panelUnderCamera.gameObject;
+                    Debug.Log("Found ResetPanel under XR Camera");
+                }
+            }
+
+            // Fallback: try to find it in the simulated user (if enabled)
+            if (resetPanel == null)
+            {
+                Transform simulatedHead = redirectionManager?.simulatedHead;
+                if (simulatedHead != null && simulatedHead.gameObject.activeInHierarchy)
+                {
+                    Transform panelUnderSimulated = simulatedHead.Find("ResetPanel");
+                    if (panelUnderSimulated != null)
+                    {
+                        resetPanel = panelUnderSimulated.gameObject;
+                        Debug.Log("Found ResetPanel under Simulated Head");
+                    }
+                }
+            }
+
+            // ORIGINAL IMPLEMENTATION: Fallback to the original method if still not found
+            if (resetPanel == null)
+            {
+                try
+                {
+                    Transform root = transform.Find("Simulated Avatar").Find("Head");
+                    Transform resetPanelTransform = root.Find("ResetPanel");
+                    if (resetPanelTransform != null)
+                    {
+                        resetPanel = resetPanelTransform.gameObject;
+                        Debug.Log("Found ResetPanel using original method (Simulated Avatar/Head)");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"Original method failed to find ResetPanel: {ex.Message}");
+                }
+            }
+
+            // If still not found, create a warning and return
+            if (resetPanel == null)
+            {
+                Debug.LogWarning("ResetPanel not found. Make sure it's a child of the Main Camera in XR Rig or under Simulated Avatar/Head");
+                return;
+            }
+
+            // ORIGINAL IMPLEMENTATION: Initialize the panel components (only do this once when first found)
+            try
+            {
+                resetPanel.SetActive(true); // Use SetActive instead of .active (deprecated)
+
+                // Set parent to the head transform
+                if (redirectionManager?.headTransform != null)
+                {
+                    resetPanel.transform.SetParent(redirectionManager.headTransform, false);
+                }
+
+                // Initialize the UI components
+                resetMsg = resetPanel.transform.Find("Text").GetComponent<Text>();
+                arrow = resetPanel.transform.Find("Arrow").transform;
+                arrowMap = resetPanel.transform.Find("ArrMap").transform;
+
+                if (arrowMap != null && orangePanelTexture != null)
+                {
+                    arrowMap.GetComponent<RawImage>().texture = orangePanelTexture;
+                }
+
+                if (resetMsg != null)
+                {
+                    resetMsg.text = "Please align the black arrow\nwith the white arrow";
+                }
+
+                // Position far away initially
+                resetPanel.transform.localPosition = new Vector3(0, 0, 100000f);
+                resetPanel.transform.localEulerAngles = new Vector3(0, 0, 0);
+
+                Debug.Log("ResetPanel components initialized successfully");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to initialize ResetPanel components: {ex.Message}");
+                return;
+            }
         }
-        if (redirectionManager.inReset)
+
+        // YOUR IMPLEMENTATION: Update the panel's parent if needed (but only if not in reset mode)
+        if (resetPanel != null && redirectionManager?.headTransform != null && !redirectionManager.inReset)
         {
+            Transform currentParent = resetPanel.transform.parent;
+            Transform targetParent = redirectionManager.headTransform;
+
+            // Only update parent if it's not already correct
+            if (currentParent != targetParent)
+            {
+                resetPanel.transform.SetParent(targetParent, false);
+                Debug.Log($"Reset panel parent updated to: {targetParent.name}");
+            }
+        }
+
+        // ORIGINAL IMPLEMENTATION: Handle reset mode functionality
+        if (redirectionManager != null && redirectionManager.inReset)
+        {
+            // Position the panel in front of the user during reset
             resetPanel.transform.localPosition = new Vector3(0, 0, 0.5f);
+
+            // Calculate arrow position and rotation based on user's real position vs target
             Vector2 realPos = Utilities.FlattenedPos2D(redirectionManager.currPosReal);
             Vector2 realDir = Utilities.FlattenedDir2D(redirectionManager.currDirReal);
             Vector2 distanceVector = realPos - targetPos;
-            arrow.localPosition = new Vector3((distanceVector.x * targetDir.y - distanceVector.y * targetDir.x) * 60f, 50f + (distanceVector.x * targetDir.x + distanceVector.y * targetDir.y) * 60f, 0);
-            float deltaAngle = Utilities.GetSignedAngle(realDir, targetDir);
-            arrow.localRotation = Quaternion.Euler(0, 0, deltaAngle);
-            if (distanceVector.magnitude < 0.2f &&
-                arrow.localRotation.eulerAngles.magnitude < 8.0f)
-            { // both position and direction satisfy the requirements, end reset
-                redirectionManager.OnResetEnd();
+
+            if (arrow != null)
+            {
+                arrow.localPosition = new Vector3(
+                    (distanceVector.x * targetDir.y - distanceVector.y * targetDir.x) * 60f,
+                    50f + (distanceVector.x * targetDir.x + distanceVector.y * targetDir.y) * 60f,
+                    0);
+
+                float deltaAngle = Utilities.GetSignedAngle(realDir, targetDir);
+                arrow.localRotation = Quaternion.Euler(0, 0, deltaAngle);
+
+                // Check if reset is complete
+                if (distanceVector.magnitude < 0.2f && arrow.localRotation.eulerAngles.magnitude < 8.0f)
+                {
+                    // Both position and direction satisfy the requirements, end reset
+                    redirectionManager.OnResetEnd();
+                }
             }
         }
+        else if (resetPanel != null)
+        {
+            // YOUR IMPLEMENTATION: When not in reset mode, position normally
+            resetPanel.transform.localPosition = new Vector3(0, 0, 2f); // 2 meters in front
+            resetPanel.transform.localRotation = Quaternion.identity;
+
+            // Make sure it's active when needed
+            if (!resetPanel.activeInHierarchy)
+            {
+                resetPanel.SetActive(true);
+            }
+        }
+    }
+
+    // Add this helper method to find the XR camera:
+    private Transform FindXRCamera()
+    {
+        // Try to find the XR camera
+        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+        if (xrOrigin != null)
+        {
+            Transform cameraOffset = xrOrigin.transform.Find("Camera Offset");
+            if (cameraOffset != null)
+            {
+                Transform mainCamera = cameraOffset.Find("Main Camera");
+                if (mainCamera != null)
+                {
+                    return mainCamera;
+                }
+            }
+
+            // Fallback: search for any camera in the XR rig
+            Camera cam = xrOrigin.GetComponentInChildren<Camera>();
+            if (cam != null)
+            {
+                return cam.transform;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

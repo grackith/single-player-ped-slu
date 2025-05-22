@@ -550,7 +550,7 @@ public class PersistentRDW : MonoBehaviour
         if (redirectedAvatar == null) return;
 
         // Find TrackingSpace and ensure it's a child of Redirected Avatar
-        Transform trackingSpace = GameObject.Find("TrackingSpace0")?.transform;
+        Transform trackingSpace = GameObject.Find("Tracking Space")?.transform;
         if (trackingSpace != null && trackingSpace.parent != redirectedAvatar.transform)
         {
             Debug.Log("Fixing TrackingSpace parent");
@@ -1125,48 +1125,48 @@ public class PersistentRDW : MonoBehaviour
     void Update()
     {
         // Existing drift check code...
-        if (redirectionManager != null &&
-            redirectionManager.headTransform != null &&
-            Time.time > lastDriftCheckTime + driftCheckInterval)
-        {
-            lastDriftCheckTime = Time.time;
+        //if (redirectionManager != null &&
+        //    redirectionManager.headTransform != null &&
+        //    Time.time > lastDriftCheckTime + driftCheckInterval)
+        //{
+        //    lastDriftCheckTime = Time.time;
 
-            Vector3 realPos = redirectionManager.GetPosReal(redirectionManager.headTransform.position);
-            float driftMagnitude = realPos.magnitude;
+        //    Vector3 realPos = redirectionManager.GetPosReal(redirectionManager.headTransform.position);
+        //    float driftMagnitude = realPos.magnitude;
 
-            // Log periodic checks
-            if (Time.frameCount % 600 == 0)
-            {
-                Debug.Log($"Tracking space check: Real position {driftMagnitude:F2}m from center");
-            }
+        //    // Log periodic checks
+        //    if (Time.frameCount % 600 == 0)
+        //    {
+        //        Debug.Log($"Tracking space check: Real position {driftMagnitude:F2}m from center");
+        //    }
 
-            // Auto-correct significant drift, but preserve physical space calibration
-            if (driftMagnitude > maxAllowedDrift)
-            {
-                Debug.LogWarning($"Drift detected: {driftMagnitude:F2}m! Correcting while preserving physical space");
+        //    // Auto-correct significant drift, but preserve physical space calibration
+        //    if (driftMagnitude > maxAllowedDrift)
+        //    {
+        //        Debug.LogWarning($"Drift detected: {driftMagnitude:F2}m! Correcting while preserving physical space");
 
-                if (isPhysicalSpaceInitialized && preservePhysicalSpaceCalibration)
-                {
-                    // Gentle correction that preserves physical space orientation
-                    Quaternion preservedRotation = redirectionManager.trackingSpace.rotation;
+        //        if (isPhysicalSpaceInitialized && preservePhysicalSpaceCalibration)
+        //        {
+        //            // Gentle correction that preserves physical space orientation
+        //            Quaternion preservedRotation = redirectionManager.trackingSpace.rotation;
 
-                    redirectionManager.trackingSpace.position = new Vector3(
-                        redirectionManager.headTransform.position.x,
-                        0,
-                        redirectionManager.headTransform.position.z
-                    );
+        //            redirectionManager.trackingSpace.position = new Vector3(
+        //                redirectionManager.headTransform.position.x,
+        //                0,
+        //                redirectionManager.headTransform.position.z
+        //            );
 
-                    redirectionManager.trackingSpace.rotation = preservedRotation;
+        //            redirectionManager.trackingSpace.rotation = preservedRotation;
 
-                    Debug.Log("Applied gentle drift correction");
-                }
-                else
-                {
-                    // Full recalibration if physical space not established
-                    CalibrateTrackingSpace();
-                }
-            }
-        }
+        //            Debug.Log("Applied gentle drift correction");
+        //        }
+        //        else
+        //        {
+        //            // Full recalibration if physical space not established
+        //            CalibrateTrackingSpace();
+        //        }
+        //    }
+        //}
 
         // Add emergency key for resetting physical space (use with extreme caution)
         if (Input.GetKeyDown(KeyCode.F12))

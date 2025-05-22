@@ -23,7 +23,7 @@ public class TrackingSpaceInitializer : MonoBehaviour
         else
         {
             // Look for existing TrackingSpace0
-            trackingSpace = GameObject.Find("TrackingSpace0")?.transform;
+            trackingSpace = GameObject.Find("Tracking Space")?.transform;
 
             if (trackingSpace == null)
             {
@@ -31,14 +31,14 @@ public class TrackingSpaceInitializer : MonoBehaviour
                 RedirectionManager rm = FindObjectOfType<RedirectionManager>();
                 if (rm != null)
                 {
-                    trackingSpace = rm.transform.Find("TrackingSpace0");
+                    trackingSpace = rm.transform.Find("Tracking Space");
                 }
 
                 // If still not found, create a new one
                 if (trackingSpace == null)
                 {
                     Debug.Log("Creating new TrackingSpace0 as no existing one was found");
-                    GameObject newTrackingSpace = new GameObject("TrackingSpace0");
+                    GameObject newTrackingSpace = new GameObject("Tracking Space");
 
                     // Parent it to the RedirectionManager if possible
                     if (rm != null)
@@ -79,7 +79,7 @@ public class TrackingSpaceInitializer : MonoBehaviour
         }
 
         // Find existing one
-        trackingSpace = GameObject.Find("TrackingSpace0")?.transform;
+        trackingSpace = GameObject.Find("Tracking Space")?.transform;
         if (trackingSpace != null)
         {
             persistentTrackingSpace = trackingSpace;
@@ -88,7 +88,7 @@ public class TrackingSpaceInitializer : MonoBehaviour
         }
 
         // Create new one
-        GameObject newTrackingSpace = new GameObject("TrackingSpace0");
+        GameObject newTrackingSpace = new GameObject("Tracking Space");
         trackingSpace = newTrackingSpace.transform;
         persistentTrackingSpace = trackingSpace;
 
@@ -123,12 +123,12 @@ public class TrackingSpaceInitializer : MonoBehaviour
             if (trackingSpace == null)
             {
                 // Try to find it as a child of RedirectionManager
-                trackingSpace = redirectionManager.transform.Find("TrackingSpace0");
+                trackingSpace = redirectionManager.transform.Find("Tracking Space");
 
                 // If still not found, look in scene hierarchy
                 if (trackingSpace == null)
                 {
-                    trackingSpace = GameObject.Find("TrackingSpace0")?.transform;
+                    trackingSpace = GameObject.Find("Tracking Space")?.transform;
 
                     // If still not found, try searching the entire scene
                     if (trackingSpace == null)

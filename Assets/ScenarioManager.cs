@@ -81,6 +81,11 @@ public class ScenarioManager : MonoBehaviour
     private RouteConnectionPreserver routePreserver;
     private bool isRDWInitialized = false;
 
+    [Header("Data Collection Debug")]
+    public VRResearchDataCollector dataCollector;
+    //public DataExportHelper dataExportHelper;
+    public bool enableDataDebugControls = true;
+
     // Singleton instance
     private static ScenarioManager _instance;
     public static ScenarioManager Instance
@@ -433,6 +438,45 @@ public class ScenarioManager : MonoBehaviour
         // Launch the scenario
         StartCoroutine(TransitionToScenario(targetScenario, scenarioIndex));
     }
+
+    // Add this method to ScenarioManager class
+    private void PositionVRPlayerAtStart(Vector3 startPosition, Vector3 forwardDirection)
+    {
+        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+        if (xrOrigin == null)
+        {
+            Debug.LogError("XR Origin not found! Cannot position VR player.");
+            return;
+        }
+
+        // Get the camera (head) position relative to XR Origin
+        Camera mainCamera = xrOrigin.GetComponentInChildren<Camera>();
+        if (mainCamera == null)
+        {
+            Debug.LogError("Main camera not found in XR Origin!");
+            return;
+        }
+
+        // Calculate offset between XR Origin and camera
+        Vector3 cameraOffset = mainCamera.transform.position - xrOrigin.transform.position;
+        cameraOffset.y = 0; // Only consider horizontal offset
+
+        // Position XR Origin so camera ends up at start position
+        Vector3 targetXROriginPos = startPosition - cameraOffset;
+        targetXROriginPos.y = startPosition.y - (mainCamera.transform.position.y - xrOrigin.transform.position.y);
+
+        xrOrigin.transform.position = targetXROriginPos;
+
+        // Set rotation
+        forwardDirection.y = 0;
+        forwardDirection.Normalize();
+        float angle = Mathf.Atan2(forwardDirection.x, forwardDirection.z) * Mathf.Rad2Deg;
+        xrOrigin.transform.rotation = Quaternion.Euler(0, angle, 0);
+
+        Debug.Log($"VR Player positioned: XR Origin at {targetXROriginPos}, Head should be at {startPosition}");
+    }
+
+  
     // Add this to your ScenarioManager.cs to run during scenario transition
     public void RefreshScenarioRouteConnections()
     {
@@ -845,6 +889,168 @@ public class ScenarioManager : MonoBehaviour
         {
             DebugTrafficSystem();
         }
+
+        // NEW: Data collection debug controls
+        if (enableDataDebugControls)
+        {
+            // L key - Toggle data recording (Like "Log")
+            if (Input.GetKeyDown(KeyCode.L))
+            {
+                ToggleDataRecording();
+            }
+
+            // K key - Save data immediately (Like "Keep data")
+            else if (Input.GetKeyDown(KeyCode.K))
+            {
+                ForceDataSave();
+            }
+
+            // J key - Show data info (like "Just info")
+            else if (Input.GetKeyDown(KeyCode.J))
+            {
+                ShowDataCollectionInfo();
+            }
+
+            // I key - Export data (like "Into export")
+            else if (Input.GetKeyDown(KeyCode.I))
+            {
+                //ExportCollectedData();
+            }
+        }
+    }
+
+    private void ToggleDataRecording()
+    {
+        if (dataCollector == null)
+        {
+            dataCollector = FindObjectOfType<VRResearchDataCollector>();
+        }
+
+        if (dataCollector != null)
+        {
+            // Use reflection to check if recording since isRecording might be private
+            var isRecordingField = dataCollector.GetType().GetField("isRecording",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            if (isRecordingField != null)
+            {
+                bool isRecording = (bool)isRecordingField.GetValue(dataCollector);
+
+                if (isRecording)
+                {
+                    dataCollector.StopRecording();
+                    Debug.Log("DATA DEBUG: Recording stopped manually");
+                }
+                else
+                {
+                    dataCollector.StartRecording();
+                    Debug.Log("DATA DEBUG: Recording started manually");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError("DATA DEBUG: No VRResearchDataCollector found!");
+        }
+    }
+
+    private void ForceDataSave()
+    {
+        if (dataCollector == null)
+        {
+            dataCollector = FindObjectOfType<VRResearchDataCollector>();
+        }
+
+        if (dataCollector != null)
+        {
+            // Call the save method using reflection since it might be private
+            var saveMethod = dataCollector.GetType().GetMethod("SaveAllData",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            if (saveMethod != null)
+            {
+                saveMethod.Invoke(dataCollector, null);
+                Debug.Log("DATA DEBUG: Forced data save completed");
+            }
+        }
+        else
+        {
+            Debug.LogError("DATA DEBUG: No VRResearchDataCollector found!");
+        }
+    }
+
+    private void ShowDataCollectionInfo()
+    {
+        if (dataCollector == null)
+        {
+            dataCollector = FindObjectOfType<VRResearchDataCollector>();
+        }
+
+        if (dataCollector != null)
+        {
+            // Use reflection to get private fields
+            var type = dataCollector.GetType();
+            var isRecordingField = type.GetField("isRecording", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var dataPointsField = type.GetField("dataPointsCollected", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var filesWrittenField = type.GetField("filesWritten", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var savePathField = type.GetField("saveFolderPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            bool isRecording = isRecordingField != null ? (bool)isRecordingField.GetValue(dataCollector) : false;
+            int dataPoints = dataPointsField != null ? (int)dataPointsField.GetValue(dataCollector) : 0;
+            int filesWritten = filesWrittenField != null ? (int)filesWrittenField.GetValue(dataCollector) : 0;
+            string savePath = savePathField != null ? (string)savePathField.GetValue(dataCollector) : "Unknown";
+
+            Debug.Log("=== DATA COLLECTION INFO ===");
+            Debug.Log($"Recording Active: {isRecording}");
+            Debug.Log($"Data Points Collected: {dataPoints}");
+            Debug.Log($"Files Written: {filesWritten}");
+            Debug.Log($"Current Scenario: {currentScenarioIndex}");
+            Debug.Log($"Save Path: {savePath}");
+
+            // Also write debug log
+            var debugMethod = dataCollector.GetType().GetMethod("WriteDebugLog",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (debugMethod != null)
+            {
+                debugMethod.Invoke(dataCollector, null);
+            }
+
+            Debug.Log("=== END DATA INFO ===");
+        }
+        else
+        {
+            Debug.LogError("DATA DEBUG: No VRResearchDataCollector found!");
+        }
+    }
+
+    //private void ExportCollectedData()
+    //{
+    //    if (dataExportHelper == null)
+    //    {
+    //        dataExportHelper = FindObjectOfType<DataExportHelper>();
+    //    }
+
+    //    if (dataExportHelper != null)
+    //    {
+    //        dataExportHelper.ExportAllData();
+    //        Debug.Log("DATA DEBUG: Export initiated");
+    //    }
+    //    else
+    //    {
+    //        Debug.Log("DATA DEBUG: No DataExportHelper found - data is already saved in accessible location");
+    //        ShowDataCollectionInfo(); // Show where files are instead
+    //    }
+    //}
+
+    // Also add this documentation method for easy reference:
+    private void LogDataDebugControls()
+    {
+        Debug.Log("=== DATA DEBUG CONTROLS ===");
+        Debug.Log("L key - Toggle recording on/off");
+        Debug.Log("K key - Force save current data");
+        Debug.Log("J key - Show data collection info");
+        Debug.Log("I key - Export data (if DataExportHelper available)");
+        Debug.Log("===========================");
     }
 
     private void StartRDWExperiment()
@@ -1422,6 +1628,7 @@ public class ScenarioManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         // 6. UPDATED: Handle player positioning using the new RedirectionManager method
+        // 6. UPDATED: Handle player positioning using the new RedirectionManager method
         if (scenario.playerStartPosition != null)
         {
             // CRITICAL: Use the new UpdateVirtualPositionForScenario method
@@ -1437,13 +1644,22 @@ public class ScenarioManager : MonoBehaviour
             }
             else if (rm != null && !rm.physicalSpaceCalibrated)
             {
-                Debug.LogWarning("Physical space not calibrated! User needs to press 'R' first.");
-                // Show a message to the user
+                Debug.LogWarning("Physical space not calibrated! User needs to press 'R' first. This warning is triggeredd after a scenario transition an before pressing R");
+                // For now, use direct positioning as fallback
+                PositionVRPlayerAtStart(
+                    scenario.playerStartPosition.position,
+                    scenario.playerStartPosition.forward
+                );
                 Debug.Log("PLEASE PRESS 'R' TO CALIBRATE PHYSICAL SPACE BEFORE STARTING SCENARIOS");
             }
             else
             {
                 Debug.LogError("No RedirectionManager found for positioning!");
+                // Fallback to direct positioning
+                PositionVRPlayerAtStart(
+                    scenario.playerStartPosition.position,
+                    scenario.playerStartPosition.forward
+                );
             }
 
             yield return new WaitForEndOfFrame();
@@ -1516,6 +1732,35 @@ public class ScenarioManager : MonoBehaviour
         DebugTrafficSystem();
     }
 
+    private IEnumerator PositionPlayerWithRDW(Scenario scenario)
+    {
+        Debug.Log($"Positioning player with RDW to: {scenario.playerStartPosition.position}");
+
+        // Find the RedirectionManager
+        var redirectionManager = FindObjectOfType<RedirectionManager>();
+        if (redirectionManager == null)
+        {
+            Debug.LogError("No RedirectionManager found for scenario positioning!");
+            yield break;
+        }
+
+        // Make sure RDW is initialized
+        if (!redirectionManager.physicalSpaceCalibrated)
+        {
+            Debug.Log("RDW not calibrated - performing calibration first");
+            redirectionManager.CalibratePhysicalSpaceReference();
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        // Use RDW to move player to scenario start position
+        redirectionManager.UpdateVirtualPositionForScenario(
+            scenario.playerStartPosition.position,
+            scenario.playerStartPosition.forward
+        );
+
+        Debug.Log("Player positioned for scenario using RDW");
+    }
+
 
     // Add this helper method to keep the Simulated User aligned with XR Origin if needed
     private void UpdateSimulatedUserPosition()
@@ -1551,7 +1796,7 @@ public class ScenarioManager : MonoBehaviour
         if (redirectedAvatar == null) return;
 
         // Find TrackingSpace and ensure it's a child of Redirected Avatar
-        Transform trackingSpace = GameObject.Find("TrackingSpace0")?.transform;
+        Transform trackingSpace = GameObject.Find("Tracking Space")?.transform;
         if (trackingSpace != null && trackingSpace.parent != redirectedAvatar.transform)
         {
             Debug.Log("Fixing TrackingSpace parent");

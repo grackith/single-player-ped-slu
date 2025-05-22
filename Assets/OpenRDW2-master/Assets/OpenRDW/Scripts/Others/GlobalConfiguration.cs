@@ -992,6 +992,71 @@ public class GlobalConfiguration : MonoBehaviour
     }
 
     //large cycle
+    //public void MakeOneStepCycle()
+    //{
+    //    //experiment is finished
+    //    if (experimentIterator >= experimentSetups.Count)
+    //        return;
+    //    if (networkingMode && !readyToStart)
+    //        return;
+
+    //    UpdateSimulatedTime();
+    //    MakeOneStepMovement();
+    //    MakeOneStepRedirection();
+
+    //    for (var id = 0; id < redirectedAvatars.Count; id++)
+    //    {
+    //        var mm = redirectedAvatars[id].GetComponent<MovementManager>();
+    //        var rm = redirectedAvatars[id].GetComponent<RedirectionManager>();
+    //        var vm = redirectedAvatars[id].GetComponent<VisualizationManager>();
+    //        vm.UpdateVisualizations();
+
+    //        //draw real trails in overview mode
+    //        if (drawRealTrail)
+    //            TrailDrawer.UpdateTrailPoints(realTrailPoints[id], rm.trackingSpace.transform, realTrailList[id].GetComponent<MeshFilter>().mesh,
+    //                Utilities.FlattenedPos3D(rm.headTransform.position, TrailDrawer.PATH_HEIGHT), trailVisualTime);
+    //        if (drawVirtualTrail)
+    //            TrailDrawer.UpdateTrailPoints(virtualSpaceTrailPoints[id], transform, virtualSpaceTrailList[id].GetComponent<MeshFilter>().mesh,
+    //            Utilities.FlattenedPos3D(rm.headTransform.position, TrailDrawer.PATH_HEIGHT), trailVisualTime);
+
+    //        var prePos = avatarRepresentations[id].transform.position;
+    //        avatarRepresentations[id].transform.localPosition = new Vector3(rm.currPosReal.x, avatarRepresentations[id].transform.localPosition.y, rm.currPosReal.z);
+    //        avatarRepresentations[id].transform.localRotation = Quaternion.LookRotation(rm.currDirReal, Vector3.up);
+    //    }
+
+    //    //if this experiment trial finished
+    //    bool ifExperimentEnd = true;
+    //    for (int i = 0; i < redirectedAvatars.Count; i++)
+    //    {
+    //        var us = redirectedAvatars[i];
+    //        if (!us.GetComponent<MovementManager>().ifMissionComplete)
+    //        {
+    //            ifExperimentEnd = false;
+    //            break;
+    //        }
+    //    }
+
+    //    bool ifInvalidAvatarExist = false;
+    //    for (int i = 0; i < redirectedAvatars.Count; i++)
+    //    {
+    //        var us = redirectedAvatars[i];
+    //        if (us.GetComponent<MovementManager>().ifInvalid)
+    //        {
+    //            ifInvalidAvatarExist = true;
+    //            Debug.Log("ifInvalid: " + i);
+    //            break;
+    //        }
+    //    }
+
+    //    if (ifInvalidAvatarExist)
+    //    {
+    //        EndExperiment(-1);
+    //    }
+    //    else if (ifExperimentEnd)
+    //    {
+    //        EndExperiment(0);
+    //    }
+    //}
     public void MakeOneStepCycle()
     {
         // Check if experiment is finished or waiting for network
@@ -999,6 +1064,12 @@ public class GlobalConfiguration : MonoBehaviour
             return;
         if (networkingMode && !readyToStart)
             return;
+
+        // CRITICAL: Don't run redirection until 'R' is pressed in HMD mode
+        if (movementController == MovementController.HMD && !readyToStart)
+        {
+            return; // Wait for 'R' key press
+        }
 
         // Add null checks
         if (redirectedAvatars == null || redirectedAvatars.Count == 0)
@@ -1274,6 +1345,19 @@ public class GlobalConfiguration : MonoBehaviour
 
         GenerateTrackingSpace(redirectedAvatars.Count, out physicalSpaces, out virtualSpace);
 
+        // Debug: Check if physical spaces were created
+        if (physicalSpaces == null)
+        {
+            Debug.LogError("Physical spaces is NULL after GenerateTrackingSpace!");
+        }
+        else
+        {
+            Debug.Log($"Physical spaces count: {physicalSpaces.Count}");
+            for (int i = 0; i < physicalSpaces.Count; i++)
+            {
+                Debug.Log($"Physical space {i}: {physicalSpaces[i].trackingSpace.Count} points, {physicalSpaces[i].initialPoses.Count} initial poses");
+            }
+        }
         // FIX: Handle missing initial poses
         if (physicalSpaces == null || physicalSpaces.Count == 0)
         {

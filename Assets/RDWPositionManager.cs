@@ -53,7 +53,7 @@ public class RDWPositionManager : MonoBehaviour
         }
 
         // Reset TrackingSpace0 if it exists
-        Transform trackingSpace = parent.Find("TrackingSpace0");
+        Transform trackingSpace = parent.Find("Tracking Space");
         if (trackingSpace != null)
         {
             trackingSpace.localPosition = Vector3.zero;

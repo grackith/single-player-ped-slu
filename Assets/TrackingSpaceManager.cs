@@ -108,31 +108,26 @@ public class TrackingSpaceManager : MonoBehaviour
             if (globalConfig.physicalSpaces == null || globalConfig.physicalSpaces.Count == 0)
             {
                 globalConfig.physicalSpaces = new List<SingleSpace>();
-
                 // Create rectangle points in counter-clockwise order (OpenRDW standard)
                 List<Vector2> trackingSpacePoints = new List<Vector2>
-                {
-                    new Vector2(physicalWidth/2, physicalLength/2),   // Front Right
-                    new Vector2(-physicalWidth/2, physicalLength/2),  // Front Left
-                    new Vector2(-physicalWidth/2, -physicalLength/2), // Back Left
-                    new Vector2(physicalWidth/2, -physicalLength/2)   // Back Right
-                };
-
+            {
+                new Vector2(physicalWidth/2, physicalLength/2),   // Front Right
+                new Vector2(-physicalWidth/2, physicalLength/2),  // Front Left
+                new Vector2(-physicalWidth/2, -physicalLength/2), // Back Left
+                new Vector2(physicalWidth/2, -physicalLength/2)   // Back Right
+            };
                 // Create initial pose at center
                 List<InitialPose> initialPoses = new List<InitialPose>
-                {
-                    new InitialPose(Vector2.zero, Vector2.up)
-                };
-
+            {
+                new InitialPose(Vector2.zero, Vector2.up)
+            };
                 // Create physical space with no obstacles
                 SingleSpace physicalSpace = new SingleSpace(
                     trackingSpacePoints,
                     new List<List<Vector2>>(), // No obstacles
                     initialPoses
                 );
-
                 globalConfig.physicalSpaces.Add(physicalSpace);
-
                 Debug.Log($"TrackingSpaceManager: Created OpenRDW physical space: {physicalWidth}m × {physicalLength}m");
             }
             else
@@ -141,21 +136,23 @@ public class TrackingSpaceManager : MonoBehaviour
                 if (globalConfig.physicalSpaces.Count > 0)
                 {
                     List<Vector2> trackingSpacePoints = new List<Vector2>
-                    {
-                        new Vector2(physicalWidth/2, physicalLength/2),   // Front Right
-                        new Vector2(-physicalWidth/2, physicalLength/2),  // Front Left
-                        new Vector2(-physicalWidth/2, -physicalLength/2), // Back Left
-                        new Vector2(physicalWidth/2, -physicalLength/2)   // Back Right
-                    };
-
+                {
+                    new Vector2(physicalWidth/2, physicalLength/2),   // Front Right
+                    new Vector2(-physicalWidth/2, physicalLength/2),  // Front Left
+                    new Vector2(-physicalWidth/2, -physicalLength/2), // Back Left
+                    new Vector2(physicalWidth/2, -physicalLength/2)   // Back Right
+                };
                     globalConfig.physicalSpaces[0].trackingSpace = trackingSpacePoints;
                     Debug.Log($"TrackingSpaceManager: Updated physical space dimensions to {physicalWidth}m × {physicalLength}m");
                 }
             }
 
-            // Set tracking space choice
-            globalConfig.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
-            globalConfig.squareWidth = physicalWidth;
+            // FIXED: Only set tracking space choice if user hasn't chosen FilePath
+            if (globalConfig.trackingSpaceChoice != GlobalConfiguration.TrackingSpaceChoice.FilePath)
+            {
+                globalConfig.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
+                globalConfig.squareWidth = physicalWidth;
+            }
         }
     }
 

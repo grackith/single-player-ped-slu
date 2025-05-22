@@ -220,7 +220,7 @@ public class TrackingSpaceHelper : MonoBehaviour
                     if (verbose) Debug.LogWarning($"RedirectionManager {rm.name} has no tracking space assigned!");
 
                     // Try to find existing tracking space
-                    Transform existingTrackingSpace = rm.transform.Find("TrackingSpace0");
+                    Transform existingTrackingSpace = rm.transform.Find("Tracking Space");
                     if (existingTrackingSpace != null)
                     {
                         rm.trackingSpace = existingTrackingSpace;
@@ -229,7 +229,7 @@ public class TrackingSpaceHelper : MonoBehaviour
                     else
                     {
                         // Create new tracking space
-                        GameObject trackingSpaceObj = new GameObject("TrackingSpace0");
+                        GameObject trackingSpaceObj = new GameObject("Tracking Space");
                         trackingSpaceObj.transform.SetParent(rm.transform);
                         rm.trackingSpace = trackingSpaceObj.transform;
                         if (verbose) Debug.Log($"Created new tracking space for {rm.name}");

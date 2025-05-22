@@ -20,9 +20,23 @@ public abstract class Redirector : MonoBehaviour
     void Awake()
     {
         globalConfiguration = GetComponentInParent<GlobalConfiguration>();
-        redirectionManager = GetComponent<RedirectionManager>();
+
+        // Only set redirectionManager if it's not already set
+        if (redirectionManager == null)
+        {
+            redirectionManager = GetComponent<RedirectionManager>();
+        }
+
         movementManager = GetComponent<MovementManager>();
         visualizationManager = GetComponent<VisualizationManager>();
+
+        // Debug logging to help diagnose issues
+        Debug.Log($"Redirector.Awake() - redirectionManager: {redirectionManager?.name}");
+        if (redirectionManager != null)
+        {
+            Debug.Log($"  headTransform: {redirectionManager.headTransform?.name}");
+            Debug.Log($"  trackingSpace: {redirectionManager.trackingSpace?.name}");
+        }
     }
 
     /// <summary>

@@ -138,22 +138,22 @@ public class VisualizationManager : MonoBehaviour
         if (generalManager == null || generalManager.physicalSpaces == null || generalManager.physicalSpaces.Count == 0)
         {
             Debug.Log("VisualizationManager: Creating tracking spaces since they don't exist yet");
-
             if (generalManager != null)
             {
-                // Generate a default tracking space
-                generalManager.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
-                generalManager.squareWidth = 4.0f;
+                // FIXED: Only set to Rectangle if user hasn't chosen FilePath
+                if (generalManager.trackingSpaceChoice != GlobalConfiguration.TrackingSpaceChoice.FilePath)
+                {
+                    generalManager.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
+                    generalManager.squareWidth = 4.0f;
+                }
 
                 generalManager.GenerateTrackingSpace(
                     generalManager.avatarNum,
                     out var physicalSpaces,
                     out var virtualSpace
                 );
-
                 generalManager.physicalSpaces = physicalSpaces;
                 generalManager.virtualSpace = virtualSpace;
-
                 Debug.Log($"VisualizationManager: Created {physicalSpaces.Count} physical spaces");
             }
         }

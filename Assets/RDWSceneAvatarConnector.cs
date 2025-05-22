@@ -306,7 +306,7 @@ public class RDWSceneAvatarConnector : MonoBehaviour
             else
             {
                 // Find it under the avatar
-                var trackingSpace = existingRedirectedAvatar.transform.Find("TrackingSpace0");
+                var trackingSpace = existingRedirectedAvatar.transform.Find("Tracking Space");
                 if (trackingSpace != null)
                 {
                     rm.trackingSpace = trackingSpace;
