@@ -12,6 +12,10 @@ public class RedirectionManager : MonoBehaviour
     public enum RedirectorChoice { None, S2C, S2O, Zigzag, ThomasAPF, MessingerAPF, DynamicAPF, DeepLearning, PassiveHapticAPF, SeparateSpace };
     public enum ResetterChoice { None, TwoOneTurn, FreezeTurn, MR2C, R2G, SFR2G, SeparateSpace };
 
+    [Header("Physical Space Settings")]
+    public float physicalWidth = 8.4f;  // Your exact width 
+    public float physicalLength = 14.0f; // Your exact length
+
     [HideInInspector]
     public float gt; // translation gain
     [HideInInspector]
@@ -24,8 +28,6 @@ public class RedirectionManager : MonoBehaviour
     public bool isWalking; // if the avatar is walking
     private const float MOVEMENT_THRESHOLD = 0.2f; // meters per second 
     private const float ROTATION_THRESHOLD = 15f; // degrees per second
-    private bool isSetupComplete = false;
-
 
     [Tooltip("The game object that is being physically tracked (probably user's head)")]
     public Transform headTransform;
@@ -42,6 +44,10 @@ public class RedirectionManager : MonoBehaviour
     [HideInInspector]
     public System.Type resetterType = null;
 
+    // OpenRDW Compatibility - CRITICAL ADDITION
+    [Header("OpenRDW Integration")]
+    public bool waitingForReadySignal = true;
+    private bool experimentStarted = false;
 
     //record the time standing on the same position
     private float samePosTime;
@@ -109,6 +115,12 @@ public class RedirectionManager : MonoBehaviour
 
     private NetworkManager networkManager;
 
+    // Physical Space Stability
+    [Header("Physical Space Stability")]
+    public bool maintainPhysicalSpaceAlignment = true;
+    public bool physicalSpaceCalibrated = false;
+    private bool trackingSpaceInitialized = false;
+
     void Awake()
     {
         redirectorType = RedirectorChoiceToRedirector(redirectorChoice);
@@ -116,7 +128,7 @@ public class RedirectionManager : MonoBehaviour
 
         globalConfiguration = GetComponentInParent<GlobalConfiguration>();
         visualizationManager = GetComponent<VisualizationManager>();
-        networkManager = globalConfiguration.GetComponentInChildren<NetworkManager>(true);
+        networkManager = globalConfiguration?.GetComponentInChildren<NetworkManager>(true);
 
         body = transform.Find("Body");
         trackingSpace = transform.Find("TrackingSpace0");
@@ -124,27 +136,31 @@ public class RedirectionManager : MonoBehaviour
 
         movementManager = this.gameObject.GetComponent<MovementManager>();
 
-        // IMPORTANT: Make sure to properly create the configured redirector/resetter 
-        // INSTEAD of getting existing ones which might be null/default
-        UpdateRedirector(redirectorType);  // Use the type we just converted from the Inspector choice
-        UpdateResetter(resetterType);      // Use the type we just converted from the Inspector choice
+        // Update redirector and resetter
+        UpdateRedirector(redirectorType);
+        UpdateResetter(resetterType);
 
         trailDrawer = GetComponent<TrailDrawer>();
-        simulatedWalker = simulatedHead.GetComponent<SimulatedWalker>();
-        keyboardController = simulatedHead.GetComponent<KeyboardController>();
 
-        bodyHeadFollower = body.GetComponent<HeadFollower>();
+        if (simulatedHead != null)
+        {
+            simulatedWalker = simulatedHead.GetComponent<SimulatedWalker>();
+            keyboardController = simulatedHead.GetComponent<KeyboardController>();
+        }
+
+        if (body != null)
+            bodyHeadFollower = body.GetComponent<HeadFollower>();
 
         SetReferenceForResetter();
 
-        if (globalConfiguration.movementController != GlobalConfiguration.MovementController.HMD)
+        // CRITICAL: Set up head transform for HMD mode
+        if (globalConfiguration != null && globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+        {
+            SetupHMDHeadTransform();
+        }
+        else if (simulatedHead != null)
         {
             headTransform = simulatedHead;
-        }
-        else
-        {
-            // hide avatar body
-            // body.gameObject.SetActive(false);
         }
 
         // Resetter needs ResetTrigger to be initialized before initializing itself
@@ -157,224 +173,234 @@ public class RedirectionManager : MonoBehaviour
         isWalking = false;
         touchWaypoint = false;
 
-        // Add this to the Awake() method after existing initialization
-        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
-        {
-            // Find XR Origin at root level
-            GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
-            if (xrOrigin != null)
-            {
-                // Try to find the main camera within XR Origin
-                Transform mainCamera = xrOrigin.transform.Find("Camera Offset/Main Camera");
-                if (mainCamera != null)
-                {
-                    headTransform = mainCamera;
-                    Debug.Log("Successfully found and assigned XR camera as head transform");
-                }
-                else
-                {
-                    // Try alternative paths if your XR setup is different
-                    // This searches all children recursively for a camera
-                    Camera cam = xrOrigin.GetComponentInChildren<Camera>();
-                    if (cam != null)
-                    {
-                        headTransform = cam.transform;
-                        Debug.Log("Found camera in XR Origin children");
-                    }
-                    else
-                    {
-                        Debug.LogError("Could not find camera in XR Origin. Please assign headTransform manually in inspector.");
-                    }
-                }
-            }
-            else
-            {
-                Debug.LogError("Could not find 'XR Origin Hands (XR Rig)' in scene. Make sure the name matches exactly.");
-            }
-        }
-
-        // Make sure we have a target waypoint (add this line here)
+        // Make sure we have a target waypoint
         GetTargetWaypoint();
-
-        // If in HMD mode with free exploration, set up automatically
-        if (globalConfiguration != null &&
-            globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD &&
-            globalConfiguration.freeExplorationMode)
-        {
-            // Optionally call SetupForHMDFreeExploration() here if you want automatic setup
-            // SetupForHMDFreeExploration();
-        }
     }
 
-    // Add this to RedirectionManager
     void Start()
     {
-        // First, ensure references are properly set up
+        // Ensure physical spaces exist with correct dimensions
+        EnsurePhysicalSpacesExist();
+
+        // Set up references
         EnsureReferencesForRealUser();
 
-        // First, ensure physical spaces exist
+        // For VR mode, set up tracking space correctly
         if (globalConfiguration != null &&
-            (globalConfiguration.physicalSpaces == null || globalConfiguration.physicalSpaces.Count == 0))
+            globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
         {
-            Debug.Log("Creating default physical spaces in RedirectionManager.Start");
-
-            // Force generation with specific dimensions
-            globalConfiguration.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
-            globalConfiguration.squareWidth = 5.0f; // Width
-
-            // Generate the space with length 13.5m
-            List<SingleSpace> physicalSpaces;
-            SingleSpace virtualSpace = null; // Initialize to null
-
-            TrackingSpaceGenerator.GenerateRectangleTrackingSpace(
-                0, // No obstacles
-                out physicalSpaces,
-                5.0f, // Width 
-                13.5f // Length
-            );
-
-            // Assign to global configuration
-            globalConfiguration.physicalSpaces = physicalSpaces;
-
-            // Only assign virtualSpace if not null
-            if (virtualSpace != null)
-            {
-                globalConfiguration.virtualSpace = virtualSpace;
-            }
-
-            Debug.Log($"Created default physical space: 5.0m × 13.5m");
+            // Wait a frame for everything to initialize
+            StartCoroutine(DelayedVRSetup());
         }
 
-        // Check if we're in VR (HMD) mode
-        bool isVRMode = (globalConfiguration != null &&
-                        globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD);
-
-        // If in VR mode or free exploration mode, set up the tracking space
-        if (globalConfiguration != null && (globalConfiguration.freeExplorationMode || isVRMode))
-        {
-            // Make sure tracking space exists
-            if (trackingSpace == null)
-            {
-                // Fix hierarchy issues
-                Transform existingTrackingSpace = transform.Find("TrackingSpace0");
-                if (existingTrackingSpace == null)
-                {
-                    GameObject trackingSpaceObj = new GameObject("TrackingSpace0");
-                    trackingSpaceObj.transform.SetParent(transform);
-                    trackingSpaceObj.transform.localPosition = Vector3.zero;
-                    trackingSpaceObj.transform.localRotation = Quaternion.identity;
-                    trackingSpace = trackingSpaceObj.transform;
-                    Debug.Log("Created TrackingSpace0 under Redirected Avatar");
-                }
-                else
-                {
-                    trackingSpace = existingTrackingSpace;
-                    Debug.Log("Using existing TrackingSpace0");
-                }
-            }
-
-            // Make sure head transform is assigned
-            if (headTransform == null)
-            {
-                GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
-                if (xrOrigin != null)
-                {
-                    Camera cam = xrOrigin.GetComponentInChildren<Camera>();
-                    if (cam != null)
-                    {
-                        headTransform = cam.transform;
-                        Debug.Log("Found and assigned head transform in Start");
-                    }
-                }
-            }
-
-            // CORRECTED POSITIONING: The tracking space position should be set so that
-            // the user's REAL position relative to tracking space equals ZERO initially
-            if (headTransform != null)
-            {
-                // Before updating, store the old position for logging
-                Vector3 oldTrackingSpacePos = trackingSpace.position;
-
-                // This creates a tracking space centered exactly at the avatar's current position
-                Vector3 newPosition = new Vector3(headTransform.position.x, 0, headTransform.position.z);
-                trackingSpace.position = newPosition;
-
-                // Set rotation based on head direction
-                Quaternion newRotation = Quaternion.Euler(0, headTransform.rotation.eulerAngles.y, 0);
-
-                //// IMPORTANT: For VR mode, rotate 180 degrees to fix inverse movement issue
-                //if (isVRMode)
-                //{
-                //    newRotation = Quaternion.Euler(0, headTransform.rotation.eulerAngles.y + 180f, 0);
-                //    Debug.Log("VR mode: Adding 180° rotation to fix inverse movement");
-                //}
-
-                trackingSpace.rotation = newRotation;
-
-                Debug.Log($"Updated tracking space position: {oldTrackingSpacePos} → {newPosition}");
-                Debug.Log($"Tracking space rotation: {trackingSpace.rotation.eulerAngles}");
-
-                // Debug positions immediately
-                Vector3 realPos = GetPosReal(headTransform.position);
-                Debug.Log($"Initial real position should be ZERO: {realPos}");
-
-                // Update visualization if available
-                if (visualizationManager != null)
-                {
-                    // Force regeneration of visualization
-                    visualizationManager.DestroyAll();
-                    visualizationManager.GenerateTrackingSpaceMesh(globalConfiguration.physicalSpaces);
-                    visualizationManager.ChangeTrackingSpaceVisibility(true);
-                    Debug.Log("Regenerated tracking space visualization");
-                }
-            }
-
-            // VR-specific setup
-            if (isVRMode)
-            {
-                // If the simulated user is active, make it invisible but keep it for calculations
-                Transform simUser = transform.Find("Simulated User");
-                if (simUser != null)
-                {
-                    // Make it invisible but keep it
-                    foreach (Renderer r in simUser.GetComponentsInChildren<Renderer>())
-                    {
-                        r.enabled = false;
-                    }
-                    Debug.Log("Made Simulated User invisible for VR mode");
-                }
-
-                // Make sure the Target Waypoint is positioned correctly
-                if (targetWaypoint != null && headTransform != null)
-                {
-                    Vector3 forward = Utilities.FlattenedDir3D(headTransform.forward);
-                    targetWaypoint.position = Utilities.FlattenedPos3D(headTransform.position) + forward * 3f;
-                    Debug.Log($"Positioned target waypoint 3m in front of VR user");
-                }
-
-                // Make sure the tracking space visualization is visible for easier debugging
-                if (visualizationManager != null)
-                {
-                    visualizationManager.ChangeTrackingSpaceVisibility(true);
-                    globalConfiguration.trackingSpaceVisible = true;
-                }
-            }
-
-            // General setup for both VR and free exploration
-            if (!isSetupComplete)
-            {
-                // Use existing setup method
-                SetupForHMDFreeExploration();
-                isSetupComplete = true;
-            }
-        }
+        // Force correct physical space dimensions
+        SetCorrectPhysicalSpaceDimensions();
 
         // Initialize the system
         Initialize();
+
+        // For HMD mode, wait for 'R' key (OpenRDW standard)
+        if (globalConfiguration != null && globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+        {
+            Debug.Log("HMD Mode: Press 'R' key to start the experiment");
+            waitingForReadySignal = true;
+            experimentStarted = false;
+        }
+        else
+        {
+            waitingForReadySignal = false;
+            experimentStarted = true;
+        }
     }
 
+    private IEnumerator DelayedVRSetup()
+    {
+        yield return new WaitForEndOfFrame();
 
-    // Add this to RedirectionManager
+        // Make sure we have the XR camera as head transform
+        EnsureXRCameraReference();
+
+        // Initial setup but don't calibrate until 'R' is pressed
+        if (headTransform != null && trackingSpace != null)
+        {
+            // Just basic positioning for now
+            trackingSpace.position = Vector3.zero;
+            trackingSpace.rotation = Quaternion.identity;
+        }
+    }
+
+    void Update()
+    {
+        HandleInputs();
+        UpdateDynamicWaypointForHMD();
+    }
+
+    private void HandleInputs()
+    {
+        // OpenRDW Standard: 'R' key starts HMD experiments
+        if (Input.GetKeyDown(KeyCode.R) && waitingForReadySignal)
+        {
+            StartHMDExperiment();
+        }
+
+        // OpenRDW Standard: 'Q' key ends experiments
+        if (Input.GetKeyDown(KeyCode.Q) && experimentStarted)
+        {
+            EndExperiment();
+        }
+
+        // Your existing keyboard shortcuts
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            ResetTrackingSpaceAlignment();
+            Debug.Log("Manually reset tracking space alignment with F5");
+        }
+
+        if (Input.GetKeyDown(KeyCode.F6))
+        {
+            LogTrackingSpaceInfo();
+            Debug.Log("Logged tracking space diagnostic information with F6");
+        }
+
+        // Toggle tracking space visualization
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            ToggleTrackingSpaceVisualization();
+        }
+    }
+
+    private void StartHMDExperiment()
+    {
+        Debug.Log("'R' key pressed - Starting HMD experiment and calibrating physical space");
+        waitingForReadySignal = false;
+        experimentStarted = true;
+
+        // Set global configuration ready state
+        if (globalConfiguration != null)
+        {
+            globalConfiguration.readyToStart = true;
+            globalConfiguration.experimentInProgress = true;
+            globalConfiguration.freeExplorationMode = true;
+        }
+
+        // CRITICAL: Calibrate tracking space to current position (OpenRDW style)
+        CalibratePhysicalSpaceReference();
+
+        // Set up redirector and resetter if needed
+        if (redirectorChoice == RedirectorChoice.None)
+        {
+            redirectorChoice = RedirectorChoice.DynamicAPF;
+            UpdateRedirector(typeof(DynamicAPF_Redirector));
+        }
+
+        if (resetterChoice == ResetterChoice.None)
+        {
+            resetterChoice = ResetterChoice.FreezeTurn;
+            UpdateResetter(typeof(FreezeTurnResetter));
+        }
+
+        // Enable visualization
+        if (visualizationManager != null)
+        {
+            visualizationManager.ChangeTrackingSpaceVisibility(true);
+        }
+    }
+
+    private void EndExperiment()
+    {
+        Debug.Log("'Q' key pressed - Ending experiment");
+        experimentStarted = false;
+        waitingForReadySignal = true;
+
+        if (globalConfiguration != null)
+        {
+            globalConfiguration.experimentInProgress = false;
+            globalConfiguration.readyToStart = false;
+        }
+
+        Debug.Log("Experiment ended - Press 'R' to restart");
+    }
+
+    private void SetupHMDHeadTransform()
+    {
+        // Find XR Origin and main camera
+        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+        if (xrOrigin != null)
+        {
+            // Try to find the main camera within XR Origin
+            Transform mainCamera = xrOrigin.transform.Find("Camera Offset/Main Camera");
+            if (mainCamera != null)
+            {
+                headTransform = mainCamera;
+                Debug.Log("Successfully found and assigned XR camera as head transform");
+            }
+            else
+            {
+                // Try alternative paths if your XR setup is different
+                Camera cam = xrOrigin.GetComponentInChildren<Camera>();
+                if (cam != null)
+                {
+                    headTransform = cam.transform;
+                    Debug.Log("Found camera in XR Origin children");
+                }
+                else
+                {
+                    Debug.LogError("Could not find camera in XR Origin. Please assign headTransform manually in inspector.");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError("Could not find 'XR Origin Hands (XR Rig)' in scene. Make sure the name matches exactly.");
+        }
+    }
+
+    // CRITICAL FIX: OpenRDW-style calibration that never moves again
+    public void CalibratePhysicalSpaceReference()
+    {
+        if (headTransform == null || trackingSpace == null)
+        {
+            Debug.LogError("Cannot calibrate physical space - missing references");
+            return;
+        }
+
+        Debug.Log("=== CALIBRATING PHYSICAL SPACE REFERENCE (OpenRDW Style) ===");
+
+        // CRITICAL: Set tracking space so that user's current position becomes (0,0,0) in real space
+        // This is the OpenRDW way - tracking space position = current head position
+        trackingSpace.position = new Vector3(
+            headTransform.position.x,
+            0,
+            headTransform.position.z
+        );
+
+        // Align tracking space with user's facing direction
+        Vector3 flatForward = Utilities.FlattenedDir3D(headTransform.forward);
+        float yawAngle = Mathf.Atan2(flatForward.x, flatForward.z) * Mathf.Rad2Deg;
+        trackingSpace.rotation = Quaternion.Euler(0, yawAngle, 0);
+
+        physicalSpaceCalibrated = true;
+        trackingSpaceInitialized = true;
+
+        Debug.Log($"Physical space calibrated - Tracking space position: {trackingSpace.position}");
+        Debug.Log($"Tracking space rotation: {trackingSpace.rotation.eulerAngles}");
+
+        // Verify real position is now zero
+        Vector3 verifyRealPos = GetPosReal(headTransform.position);
+        Debug.Log($"Verification - Real position: {verifyRealPos} (should be near zero)");
+
+        // Generate visualization
+        if (visualizationManager != null && globalConfiguration != null)
+        {
+            visualizationManager.DestroyAll();
+            visualizationManager.GenerateTrackingSpaceMesh(globalConfiguration.physicalSpaces);
+            visualizationManager.ChangeTrackingSpaceVisibility(true);
+        }
+
+        Debug.Log("=== PHYSICAL SPACE CALIBRATION COMPLETE ===");
+    }
+
+    // Your ResetTrackingSpaceAlignment method (for manual reset if needed)
     public void ResetTrackingSpaceAlignment()
     {
         if (headTransform == null)
@@ -413,8 +439,6 @@ public class RedirectionManager : MonoBehaviour
         // Force repositioning of visual elements
         if (visualizationManager != null)
         {
-            // Use a coroutine to update visualization after a short delay
-            // (sometimes immediate updates don't work properly)
             StartCoroutine(UpdateVisualizationAfterDelay(0.1f));
         }
     }
@@ -432,8 +456,280 @@ public class RedirectionManager : MonoBehaviour
         }
     }
 
+    private void EnsurePhysicalSpacesExist()
+    {
+        if (globalConfiguration != null &&
+            (globalConfiguration.physicalSpaces == null || globalConfiguration.physicalSpaces.Count == 0))
+        {
+            Debug.Log("Creating physical spaces with correct dimensions");
 
-    //modify these trhee functions when adding a new redirector
+            globalConfiguration.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
+
+            List<SingleSpace> physicalSpaces;
+            SingleSpace virtualSpace = null;
+
+            TrackingSpaceGenerator.GenerateRectangleTrackingSpace(
+                0, // No obstacles
+                out physicalSpaces,
+                physicalWidth,  // Use consistent width
+                physicalLength  // Use consistent length
+            );
+
+            globalConfiguration.physicalSpaces = physicalSpaces;
+            if (virtualSpace != null)
+            {
+                globalConfiguration.virtualSpace = virtualSpace;
+            }
+
+            Debug.Log($"Created physical space: {physicalWidth}m × {physicalLength}m");
+        }
+    }
+
+    private void SetCorrectPhysicalSpaceDimensions()
+    {
+        if (globalConfiguration != null &&
+            globalConfiguration.physicalSpaces != null &&
+            globalConfiguration.physicalSpaces.Count > 0)
+        {
+            // Create rectangle with YOUR exact dimensions
+            List<Vector2> trackingSpacePoints = new List<Vector2>
+            {
+                new Vector2(physicalWidth/2, physicalLength/2),   // Front Right
+                new Vector2(-physicalWidth/2, physicalLength/2),  // Front Left
+                new Vector2(-physicalWidth/2, -physicalLength/2), // Back Left
+                new Vector2(physicalWidth/2, -physicalLength/2)   // Back Right
+            };
+
+            // Update the physical space dimensions
+            globalConfiguration.physicalSpaces[0].trackingSpace = trackingSpacePoints;
+
+            Debug.Log($"Set physical space dimensions to {physicalWidth}m × {physicalLength}m");
+        }
+    }
+
+    private void EnsureXRCameraReference()
+    {
+        if (headTransform == null || headTransform.GetComponent<Camera>() == null)
+        {
+            GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+            if (xrOrigin != null)
+            {
+                Camera cam = xrOrigin.GetComponentInChildren<Camera>();
+                if (cam != null)
+                {
+                    headTransform = cam.transform;
+                    Debug.Log("Found and assigned XR camera as head transform");
+                }
+            }
+        }
+    }
+
+    //make one step redirection: redirect or reset
+    public void MakeOneStepRedirection()
+    {
+        // CRITICAL: Don't process redirection if waiting for ready signal (OpenRDW standard)
+        if (waitingForReadySignal || !experimentStarted)
+        {
+            return;
+        }
+
+        // Check targetWaypoint
+        if (targetWaypoint == null)
+        {
+            GetTargetWaypoint();
+            if (targetWaypoint == null)
+            {
+                Debug.LogError("Failed to create target waypoint, aborting redirection");
+                return;
+            }
+        }
+
+        // IMPORTANT: In VR mode, never call FixHeadTransform as it might reset to simulatedHead
+        if (globalConfiguration.movementController != GlobalConfiguration.MovementController.HMD)
+        {
+            FixHeadTransform(); // Only use this for simulation mode
+        }
+        else
+        {
+            // For VR, ensure we're using the XR camera
+            if (headTransform == null || headTransform.GetComponent<Camera>() == null)
+            {
+                SetupHMDHeadTransform();
+            }
+        }
+
+        UpdateCurrentUserState();
+
+        // Ensure real waypoint exists
+        EnsureRealWaypointExists();
+
+        // Update waypoint visualization
+        if (visualizationManager != null && visualizationManager.realWaypoint != null && targetWaypoint != null)
+        {
+            visualizationManager.realWaypoint.position = Utilities.GetRelativePosition(targetWaypoint.position, trackingSpace.transform);
+        }
+
+        //invalidData
+        if (movementManager != null && movementManager.ifInvalid)
+            return;
+        //do not redirect other avatar's transform during networking mode
+        if (globalConfiguration != null && globalConfiguration.networkingMode &&
+            networkManager != null && movementManager != null &&
+            movementManager.avatarId != networkManager.avatarId)
+            return;
+
+        if (currPos.Equals(prevPos))
+        {
+            //used in auto simulation mode and there are unfinished waypoints
+            if (globalConfiguration != null &&
+                globalConfiguration.movementController == GlobalConfiguration.MovementController.AutoPilot &&
+                movementManager != null && !movementManager.ifMissionComplete)
+            {
+                //accumulated time for standing on the same position
+                samePosTime += 1.0f / globalConfiguration.targetFPS;
+            }
+        }
+        else
+        {
+            samePosTime = 0;//clear accumulated time
+        }
+
+        CalculateStateChanges();
+
+        if (globalConfiguration != null && globalConfiguration.synchronizedReset)
+        {
+            HandleSynchronizedReset();
+        }
+        else
+        {
+            HandleIndividualReset();
+        }
+
+        UpdatePreviousUserState();
+        UpdateBodyPose();
+    }
+
+    private void HandleSynchronizedReset()
+    {
+        if (resetSign)
+        {
+            resetSign = false;
+            OnResetTrigger();
+        }
+        if (inReset)
+        {
+            if (EndResetCountDown > 0)
+            { // reset already finished 
+                bool othersInReset = false;
+                if (globalConfiguration.redirectedAvatars != null)
+                {
+                    foreach (var us in globalConfiguration.redirectedAvatars)
+                    {
+                        var rm = us.GetComponent<RedirectionManager>();
+                        if (rm.inReset && rm.EndResetCountDown == 0)
+                        {
+                            othersInReset = true;
+                            break;
+                        }
+                    }
+                }
+                if (!othersInReset || redirectorChoice != RedirectorChoice.SeparateSpace)
+                { // end reset
+                    inReset = false;
+                    if (redirector != null)
+                    {
+                        redirector.ClearGains();
+                        redirector.InjectRedirection();
+                    }
+                    EndResetCountDown = EndResetCountDown > 0 ? EndResetCountDown - 1 : 0;
+                }
+            }
+            else
+            { // in reset
+                if (resetter != null)
+                {
+                    resetter.InjectResetting();
+                }
+            }
+        }
+        else
+        {
+            if (redirector != null)
+            {
+                redirector.ClearGains();
+                redirector.InjectRedirection();
+            }
+            EndResetCountDown = EndResetCountDown > 0 ? EndResetCountDown - 1 : 0;
+        }
+    }
+
+    private void HandleIndividualReset()
+    {
+        if (resetter != null && !inReset && resetter.IsResetRequired() && EndResetCountDown == 0)
+        {
+            OnResetTrigger();
+        }
+        if (inReset)
+        {
+            if (resetter != null)
+            {
+                resetter.InjectResetting();
+            }
+        }
+        else
+        {
+            if (redirector != null)
+            {
+                redirector.ClearGains();
+                redirector.InjectRedirection();
+            }
+            EndResetCountDown = EndResetCountDown > 0 ? EndResetCountDown - 1 : 0;
+        }
+    }
+
+    public void UpdateCurrentUserState()
+    {
+        if (headTransform == null) return;
+
+        currPos = Utilities.FlattenedPos3D(headTransform.position);
+
+        // CRITICAL: Always use the SAME tracking space reference for consistency
+        currPosReal = GetPosReal(currPos);
+
+        currDir = Utilities.FlattenedDir3D(headTransform.forward);
+        currDirReal = GetDirReal(currDir);
+        walkDist += (Utilities.FlattenedPos2D(currPos) - Utilities.FlattenedPos2D(prevPos)).magnitude;
+
+        // Update waypoint for free exploration
+        if (globalConfiguration != null && globalConfiguration.freeExplorationMode && targetWaypoint != null)
+        {
+            Vector3 forward = Utilities.FlattenedDir3D(headTransform.forward);
+            targetWaypoint.position = currPos + forward * 3f;
+        }
+    }
+
+    void UpdateBodyPose()
+    {
+        if (body != null && headTransform != null)
+        {
+            body.position = Utilities.FlattenedPos3D(headTransform.position);
+            body.rotation = Quaternion.LookRotation(Utilities.FlattenedDir3D(headTransform.forward), Vector3.up);
+        }
+    }
+
+    void SetReferenceForRedirector()
+    {
+        if (redirector != null)
+            redirector.redirectionManager = this;
+    }
+
+    void SetReferenceForResetter()
+    {
+        if (resetter != null)
+            resetter.redirectionManager = this;
+    }
+
+    //modify these three functions when adding a new redirector
     public System.Type RedirectorChoiceToRedirector(RedirectorChoice redirectorChoice)
     {
         switch (redirectorChoice)
@@ -461,6 +757,7 @@ public class RedirectionManager : MonoBehaviour
         }
         return typeof(NullRedirector);
     }
+
     public static RedirectorChoice RedirectorToRedirectorChoice(System.Type redirector)
     {
         if (redirector.Equals(typeof(NullRedirector)))
@@ -485,6 +782,7 @@ public class RedirectionManager : MonoBehaviour
             return RedirectorChoice.SeparateSpace;
         return RedirectorChoice.None;
     }
+
     public static System.Type DecodeRedirector(string s)
     {
         switch (s.ToLower())
@@ -513,6 +811,7 @@ public class RedirectionManager : MonoBehaviour
                 return typeof(NullRedirector);
         }
     }
+
     //modify these functions when adding a new resetter
     public static System.Type ResetterChoiceToResetter(ResetterChoice resetterChoice)
     {
@@ -535,6 +834,7 @@ public class RedirectionManager : MonoBehaviour
         }
         return typeof(NullResetter);
     }
+
     public static ResetterChoice ResetterToResetChoice(System.Type reset)
     {
         if (reset.Equals(typeof(NullResetter)))
@@ -553,6 +853,7 @@ public class RedirectionManager : MonoBehaviour
             return ResetterChoice.SeparateSpace;
         return ResetterChoice.None;
     }
+
     public static System.Type DecodeResetter(string s)
     {
         switch (s.ToLower())
@@ -578,51 +879,34 @@ public class RedirectionManager : MonoBehaviour
 
     public Transform GetSimulatedAvatarHead()
     {
-        return transform.Find("Simulated User").Find("Head");
+        Transform simulatedUser = transform.Find("Simulated User");
+        if (simulatedUser != null)
+        {
+            return simulatedUser.Find("Head");
+        }
+        return null;
     }
+
     public void FixHeadTransform()
     {
-        // ORIGINAL:
-        // if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD && 
-        //     globalConfiguration.networkingMode && 
-        //     movementManager.avatarId != networkManager.avatarId)
-        // {
-        //     headTransform = simulatedHead;
-        // }
-
-        // MODIFIED:
-        // For VR mode, ALWAYS ensure we're using the real head
-        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+        if (globalConfiguration != null && globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD &&
+            globalConfiguration.networkingMode &&
+            movementManager != null && networkManager != null &&
+            movementManager.avatarId != networkManager.avatarId)
         {
-            // Find XR Origin at root level
-            GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
-            if (xrOrigin != null)
-            {
-                // Try to find the main camera within XR Origin
-                Transform mainCamera = xrOrigin.transform.Find("Camera Offset/Main Camera");
-                if (mainCamera != null)
-                {
-                    headTransform = mainCamera;
-                    Debug.Log("FixHeadTransform: Successfully reassigned head transform to XR camera");
-                }
-                else
-                {
-                    // Try alternative paths if your XR setup is different
-                    Camera cam = xrOrigin.GetComponentInChildren<Camera>();
-                    if (cam != null)
-                    {
-                        headTransform = cam.transform;
-                        Debug.Log("FixHeadTransform: Found alternative camera in XR Origin");
-                    }
-                }
-            }
+            headTransform = simulatedHead;
         }
     }
 
     public bool IsDirSafe(Vector2 pos, Vector2 dir)
     {// if this direction is away from physical obstacles
+        if (globalConfiguration == null || globalConfiguration.physicalSpaces == null ||
+            movementManager == null || movementManager.physicalSpaceIndex >= globalConfiguration.physicalSpaces.Count)
+            return true;
+
         var spa = globalConfiguration.physicalSpaces[movementManager.physicalSpaceIndex].trackingSpace;
         var obs = globalConfiguration.physicalSpaces[movementManager.physicalSpaceIndex].obstaclePolygons;
+
         for (int i = 0; i < spa.Count; i++)
         {
             if (Utilities.PointLineDistance(pos, spa[i], spa[(i + 1) % spa.Count]) < globalConfiguration.RESET_TRIGGER_BUFFER + 0.05f)
@@ -665,435 +949,137 @@ public class RedirectionManager : MonoBehaviour
         inReset = false;
         EndResetCountDown = 3;
     }
+
     public void UpdateRedirectionTime()
     {
-        if (!inReset)
+        if (!inReset && globalConfiguration != null)
             redirectionTime += globalConfiguration.GetDeltaTime();
     }
 
-    //make one step redirection: redirect or reset
-
-    public void SetupForHMDFreeExploration()
+    void UpdatePreviousUserState()
     {
-        // Add this at the beginning of SetupForHMDFreeExploration
-        if (globalConfiguration.physicalSpaces == null || globalConfiguration.physicalSpaces.Count == 0)
+        if (headTransform != null)
         {
-            Debug.Log("RedirectionManager: Creating physical spaces in SetupForHMDFreeExploration");
-
-            // Generate default tracking space
-            globalConfiguration.trackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice.Rectangle;
-            globalConfiguration.squareWidth = 4.0f;
-
-            globalConfiguration.GenerateTrackingSpace(
-                globalConfiguration.avatarNum,
-                out var physicalSpaces,
-                out var virtualSpace
-            );
-
-            globalConfiguration.physicalSpaces = physicalSpaces;
-            globalConfiguration.virtualSpace = virtualSpace;
-
-            Debug.Log($"RedirectionManager: Created {physicalSpaces.Count} physical spaces");
+            prevPos = Utilities.FlattenedPos3D(headTransform.position);
+            prevPosReal = GetPosReal(prevPos);
+            prevDir = Utilities.FlattenedDir3D(headTransform.forward);
+            prevDirReal = GetDirReal(prevDir);
         }
-        Debug.Log("Setting up for HMD free exploration");
-
-        // Ensure we have valid references
-        if (globalConfiguration == null)
-        {
-            Debug.LogError("globalConfiguration is null! Cannot set up HMD free exploration.");
-            return;
-        }
-
-        if (visualizationManager == null)
-        {
-            Debug.LogError("visualizationManager is null! Cannot set up HMD free exploration.");
-            return;
-        }
-
-        // Check if physicalSpaces is valid
-        if (globalConfiguration.physicalSpaces == null || globalConfiguration.physicalSpaces.Count == 0)
-        {
-            Debug.LogError("globalConfiguration.physicalSpaces is null or empty! Cannot generate tracking space.");
-            return;
-        }
-
-        // 1. Make sure we have a head transform
-        if (headTransform == null)
-        {
-            GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
-            if (xrOrigin != null)
-            {
-                // Look for the main camera 
-                Camera cam = xrOrigin.GetComponentInChildren<Camera>();
-                if (cam != null)
-                {
-                    headTransform = cam.transform;
-                    Debug.Log("Found and set head transform from XR Origin");
-                }
-            }
-        }
-
-        // 2. Make sure we have a target waypoint
-        if (targetWaypoint == null)
-        {
-            GetTargetWaypoint();
-        }
-
-        // 3. Force set the redirector and resetter - ALWAYS update these
-        // Log current state before changes
-        Debug.Log($"Before setup: Redirector={redirectorChoice}, Resetter={resetterChoice}");
-
-        if (redirectorChoice == RedirectorChoice.None)
-        {
-            redirectorChoice = RedirectorChoice.DynamicAPF;
-            UpdateRedirector(typeof(DynamicAPF_Redirector)); // Use the actual class name here
-        }
-
-        if (resetterChoice == ResetterChoice.None)
-        {
-            resetterChoice = ResetterChoice.FreezeTurn;
-            UpdateResetter(typeof(FreezeTurnResetter)); // Use the actual class name here
-        }
-
-        // Verify the components are correct
-        Redirector actualRedirector = gameObject.GetComponent<Redirector>();
-        Resetter actualResetter = gameObject.GetComponent<Resetter>();
-        Debug.Log($"Actual components: Redirector={actualRedirector.GetType().Name}, Resetter={actualResetter.GetType().Name}");
-
-        // 4. Initialize the system
-        Initialize();
-        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD && headTransform != null)
-        {
-            // Get the user's current forward direction
-            Vector3 userForward = headTransform.forward;
-            userForward.y = 0;
-            userForward.Normalize();
-
-            // Calculate the proper tracking space position
-            Vector3 trackingSpacePos = new Vector3(headTransform.position.x, 0, headTransform.position.z);
-
-            // Set tracking space position without modifying rotation
-            if (trackingSpace != null)
-            {
-                // Store original rotation
-                Quaternion originalRotation = trackingSpace.rotation;
-
-                // Update position
-                trackingSpace.position = trackingSpacePos;
-
-                // CRITICAL: DO NOT rotate tracking space 180 degrees - this likely causes the mirrored movement
-                float forwardAngle = Mathf.Atan2(userForward.x, userForward.z) * Mathf.Rad2Deg;
-                trackingSpace.rotation = Quaternion.Euler(0, forwardAngle, 0);
-
-                Debug.Log($"Set up tracking space at {trackingSpacePos} with forward angle {forwardAngle}°");
-            }
-        }
-
-        // 5. Enable trail drawing if desired
-        if (trailDrawer != null)
-        {
-            trailDrawer.enabled = true;
-            trailDrawer.BeginTrailDrawing();
-        }
-
-        // 6. Generate tracking space visualization
-        if (visualizationManager != null)
-        {
-            visualizationManager.DestroyAll();
-            visualizationManager.GenerateTrackingSpaceMesh(globalConfiguration.physicalSpaces);
-            visualizationManager.ChangeTrackingSpaceVisibility(true);
-        }
-
-        // 7. Print final debug info
-        Debug.Log($"HMD free exploration setup complete. Using {redirectorChoice} redirector and {resetterChoice} resetter");
-
-        // 8. Double-check reset buffer
-        Debug.Log($"Reset trigger buffer: {globalConfiguration.RESET_TRIGGER_BUFFER}");
     }
-    public void MakeOneStepRedirection()
+
+    public Vector3 GetPosReal(Vector3 pos)
     {
-        // Log mode
-        if (Time.frameCount % 120 == 0)
+        if (trackingSpace == null)
         {
-            bool isVRMode = (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD);
-            Debug.Log($"MakeOneStepRedirection - Mode: {(isVRMode ? "VR/HMD" : "Simulation")}, " +
-                      $"Head: {headTransform?.position}, TrackingSpace: {trackingSpace?.position}");
+            Debug.LogError("TrackingSpace is null in GetPosReal!");
+            return Vector3.zero;
         }
 
-        // Check targetWaypoint
-        if (targetWaypoint == null)
-        {
-            GetTargetWaypoint();
-            if (targetWaypoint == null)
-            {
-                Debug.LogError("Failed to create target waypoint, aborting redirection");
-                return;
-            }
-        }
+        // Always use the same transformation method for consistency
+        return Utilities.GetRelativePosition(pos, trackingSpace);
+    }
 
-        // IMPORTANT: In VR mode, never call FixHeadTransform as it might reset to simulatedHead
-        if (globalConfiguration.movementController != GlobalConfiguration.MovementController.HMD)
+    public Vector3 GetDirReal(Vector3 dir)
+    {
+        if (trackingSpace == null)
         {
-            FixHeadTransform(); // Only use this for simulation mode
+            return dir;
+        }
+        // Make sure we use trackingSpace.transform consistently
+        return Utilities.FlattenedDir3D(Utilities.GetRelativeDirection(dir, trackingSpace.transform));
+    }
+
+    void CalculateStateChanges()
+    {
+        deltaPos = currPos - prevPos;
+        deltaDir = Utilities.GetSignedAngle(prevDir, currDir);
+        if (deltaPos.magnitude / GetDeltaTime() > MOVEMENT_THRESHOLD) //User is moving
+        {
+            isWalking = true;
         }
         else
         {
-            // For VR, ensure we're using the XR camera
-            if (headTransform == null || headTransform.GetComponent<Camera>() == null)
-            {
-                GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
-                if (xrOrigin != null)
-                {
-                    Camera cam = xrOrigin.GetComponentInChildren<Camera>();
-                    if (cam != null)
-                    {
-                        headTransform = cam.transform;
-                        Debug.Log("MakeOneStepRedirection: Reassigned headTransform to XR camera");
-                    }
-                }
-            }
+            isWalking = false;
         }
-        // Add periodic debug logging
-        if (Time.frameCount % 120 == 0) // Log every 2 seconds approximately
+        if (Mathf.Abs(deltaDir) / GetDeltaTime() >= ROTATION_THRESHOLD)  //if User is rotating
         {
-            Debug.Log($"RDW Mode: {globalConfiguration.movementController}, HMD Mode: {globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD}");
-            Debug.Log($"Head position: {headTransform?.position}, Head exists: {headTransform != null}");
-            Debug.Log($"Free exploration: {globalConfiguration.freeExplorationMode}");
-            Debug.Log($"XR Origin found: {GameObject.Find("XR Origin Hands (XR Rig)") != null}");
-            Debug.Log($"In reset: {inReset}, Reset countdown: {EndResetCountDown}");
-            Debug.Log($"Target waypoint exists: {targetWaypoint != null}");
-        }
-
-        FixHeadTransform();
-        UpdateCurrentUserState();
-
-        // Ensure real waypoint exists
-        EnsureRealWaypointExists();
-
-        // Check if visualizationManager and realWaypoint exist
-        if (visualizationManager != null && visualizationManager.realWaypoint != null && targetWaypoint != null)
-        {
-            visualizationManager.realWaypoint.position = Utilities.GetRelativePosition(targetWaypoint.position, trackingSpace.transform);
-        }
-        else if (visualizationManager == null)
-        {
-            Debug.LogWarning("visualizationManager is null in MakeOneStepRedirection");
-        }
-        else if (visualizationManager.realWaypoint == null)
-        {
-            Debug.LogWarning("realWaypoint is null in MakeOneStepRedirection");
-            // Try to recreate it
-            EnsureRealWaypointExists();
-        }
-
-        //invalidData
-        if (movementManager.ifInvalid)
-            return;
-        //do not redirect other avatar's transform during networking mode
-        if (globalConfiguration.networkingMode && movementManager.avatarId != networkManager.avatarId)
-            return;
-
-        if (currPos.Equals(prevPos))
-        {
-            //used in auto simulation mode and there are unfinished waypoints
-            if (globalConfiguration.movementController == GlobalConfiguration.MovementController.AutoPilot && !movementManager.ifMissionComplete)
-            {
-                //accumulated time for standing on the same position
-                samePosTime += 1.0f / globalConfiguration.targetFPS;
-            }
+            isRotating = true;
         }
         else
         {
-            samePosTime = 0;//clear accumulated time
-        }
-
-        CalculateStateChanges();
-
-        if (globalConfiguration.synchronizedReset)
-        {
-            if (resetSign)
-            {
-                resetSign = false;
-                OnResetTrigger();
-            }
-            if (inReset)
-            {
-                if (EndResetCountDown > 0)
-                { // reset already finished 
-                    bool othersInReset = false;
-                    foreach (var us in globalConfiguration.redirectedAvatars)
-                    {
-                        if (us.GetComponent<RedirectionManager>().inReset && us.GetComponent<RedirectionManager>().EndResetCountDown == 0)
-                        {
-                            othersInReset = true;
-                            break;
-                        }
-                    }
-                    if (!othersInReset || redirectorChoice != RedirectorChoice.SeparateSpace)
-                    { // end reset
-                        inReset = false;
-                        if (redirector != null)
-                        {
-                            redirector.ClearGains();
-                            redirector.InjectRedirection();
-                        }
-                        EndResetCountDown = EndResetCountDown > 0 ? EndResetCountDown - 1 : 0;
-                    }
-                }
-                else
-                { // in reset
-                    if (resetter != null)
-                    {
-                        resetter.InjectResetting();
-                    }
-                }
-            }
-            else
-            {
-                if (redirector != null)
-                {
-                    redirector.ClearGains();
-                    redirector.InjectRedirection();
-                }
-                EndResetCountDown = EndResetCountDown > 0 ? EndResetCountDown - 1 : 0;
-            }
-        }
-        else
-        {
-            if (resetter != null && !inReset && resetter.IsResetRequired() && EndResetCountDown == 0)
-            {
-                OnResetTrigger();
-            }
-            if (inReset)
-            {
-                if (resetter != null)
-                {
-                    resetter.InjectResetting();
-                }
-            }
-            else
-            {
-                if (redirector != null)
-                {
-                    redirector.ClearGains();
-                    redirector.InjectRedirection();
-                }
-                EndResetCountDown = EndResetCountDown > 0 ? EndResetCountDown - 1 : 0;
-            }
-        }
-
-        UpdatePreviousUserState();
-        UpdateBodyPose();
-    }
-    public void UpdateCurrentUserState()
-    {
-        currPos = Utilities.FlattenedPos3D(headTransform.position);
-        currPosReal = GetPosReal(currPos);
-        currDir = Utilities.FlattenedDir3D(headTransform.forward);
-        currDirReal = GetDirReal(currDir);
-        walkDist += (Utilities.FlattenedPos2D(currPos) - Utilities.FlattenedPos2D(prevPos)).magnitude;
-
-        // In RedirectionManager.UpdateCurrentUserState(), modify the waypoint positioning:
-        // Update waypoint for free exploration
-        if (globalConfiguration.freeExplorationMode && targetWaypoint != null)
-        {
-            // Place the waypoint 3 meters ahead of the user in their walking direction
-            Vector3 forward = Utilities.FlattenedDir3D(headTransform.forward);
-
-            // IMPORTANT: Position relative to the USER, not some arbitrary offset
-            targetWaypoint.position = currPos + forward * 3f;
-
-            // Debug waypoint position
-            if (Time.frameCount % 120 == 0) // Log every 2 seconds (approx)
-            {
-                Debug.Log($"Target waypoint position: {targetWaypoint.position}");
-                Debug.Log($"Target waypoint is {(targetWaypoint.position - currPos).magnitude}m from user");
-            }
+            isRotating = false;
         }
     }
 
-    void UpdateBodyPose()
-    {
-        body.position = Utilities.FlattenedPos3D(headTransform.position);
-        body.rotation = Quaternion.LookRotation(Utilities.FlattenedDir3D(headTransform.forward), Vector3.up);
-    }
-
-    void SetReferenceForRedirector()
-    {
-        if (redirector != null)
-            redirector.redirectionManager = this;
-    }
-
-    void SetReferenceForResetter()
+    public void OnResetTrigger()
     {
         if (resetter != null)
-            resetter.redirectionManager = this;
-
-    }
-
-    void SetReferenceForSimulationManager()
-    {
-        if (movementManager != null)
         {
-            movementManager.redirectionManager = this;
+            resetter.InitializeReset();
+            inReset = true;
+
+            //record one reset operation
+            if (globalConfiguration != null && globalConfiguration.statisticsLogger != null && movementManager != null)
+                globalConfiguration.statisticsLogger.Event_Reset_Triggered(movementManager.avatarId);
         }
     }
 
-    //void GetRedirector()
-    //{
-    //    redirector = this.gameObject.GetComponent<Redirector>();
-    //    if (redirector == null)
-    //        this.gameObject.AddComponent<NullRedirector>();
-    //    redirector = this.gameObject.GetComponent<Redirector>();
-    //}
-
-    //void GetResetter()
-    //{
-    //    resetter = this.gameObject.GetComponent<Resetter>();
-    //    if (resetter == null)
-    //        this.gameObject.AddComponent<NullResetter>();
-    //    resetter = this.gameObject.GetComponent<Resetter>();
-    //}
-
-
-    void GetTrailDrawer()
+    public void OnResetEnd()
     {
-        trailDrawer = this.gameObject.GetComponent<TrailDrawer>();
+        if (resetter != null)
+        {
+            resetter.EndReset();
+            EndResetCountDown = 2;
+            if (globalConfiguration != null && !globalConfiguration.synchronizedReset)
+            {
+                inReset = false;
+            }
+        }
     }
 
-    void GetSimulationManager()
+    public void RemoveRedirector()
     {
-        movementManager = this.gameObject.GetComponent<MovementManager>();
+        redirector = gameObject.GetComponent<Redirector>();
+        if (redirector != null)
+            Destroy(redirector);
+        redirector = null;
     }
 
-    void GetSimulatedWalker()
+    public void UpdateRedirector(System.Type redirectorType)
     {
-        simulatedWalker = simulatedHead.GetComponent<SimulatedWalker>();
+        RemoveRedirector();
+        if (redirectorType != null)
+        {
+            redirector = (Redirector)gameObject.AddComponent(redirectorType);
+            SetReferenceForRedirector();
+        }
     }
 
-    void GetKeyboardController()
+    public void RemoveResetter()
     {
-        keyboardController = simulatedHead.GetComponent<KeyboardController>();
+        resetter = gameObject.GetComponent<Resetter>();
+        if (resetter != null)
+            Destroy(resetter);
+        resetter = null;
     }
 
-    void GetBodyHeadFollower()
+    public void UpdateResetter(System.Type resetterType)
     {
-        bodyHeadFollower = body.GetComponent<HeadFollower>();
+        RemoveResetter();
+        if (resetterType != null)
+        {
+            resetter = (Resetter)gameObject.AddComponent(resetterType);
+            SetReferenceForResetter();
+            if (resetter != null)
+                resetter.Initialize();
+        }
     }
 
-    void GetBody()
+    public float GetDeltaTime()
     {
-        body = transform.Find("Body");
-    }
-
-    void GetTrackedSpace()
-    {
-        trackingSpace = transform.Find("TrackingSpace0");
-    }
-
-    void GetSimulatedHead()
-    {
-        simulatedHead = transform.Find("Simulated User").Find("Head");
+        if (globalConfiguration != null)
+            return globalConfiguration.GetDeltaTime();
+        return Time.deltaTime;
     }
 
     void GetTargetWaypoint()
@@ -1138,162 +1124,18 @@ public class RedirectionManager : MonoBehaviour
         }
     }
 
-    private void Update()
+    private void UpdateDynamicWaypointForHMD()
     {
-        UpdateDynamicWaypointForHMD();
-        // Add keyboard shortcut for manual reset during testing
-        if (Input.GetKeyDown(KeyCode.F5))
+        if (globalConfiguration != null &&
+            globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD &&
+            headTransform != null && targetWaypoint != null)
         {
-            ResetTrackingSpaceAlignment();
-            Debug.Log("Manually reset tracking space alignment with F5");
-        }
-
-        // Add keyboard shortcut for diagnostic logging
-        if (Input.GetKeyDown(KeyCode.F6))
-        {
-            LogTrackingSpaceInfo();
-            Debug.Log("Logged tracking space diagnostic information with F6");
-        }
-
-        // In RedirectionManager.Update() - Periodic automatic drift correction
-        if (Time.frameCount % 300 == 0) // Every 5 seconds approximately at 60fps
-        {
-            // Check for tracking space drift issues
-            if (headTransform != null && trackingSpace != null)
-            {
-                Vector3 realPos = GetPosReal(headTransform.position);
-                // If real position is drifting away from center by more than 0.5m, automatically correct
-                if (realPos.magnitude > 0.5f)
-                {
-                    Debug.LogWarning($"Tracking space drift detected: Real position {realPos.magnitude}m from center");
-
-                    // CRITICAL: Automatically correct drift without requiring manual key press
-                    if (realPos.magnitude > 5.0f) // Only auto-correct if drift is significant
-                    {
-                        // Tracking space drifted too far, reset it
-                        Vector3 headPos = headTransform.position;
-                        // Preserve the original rotation of the tracking space
-                        Quaternion originalRotation = trackingSpace.rotation;
-
-                        // Update position only, not rotation
-                        trackingSpace.position = new Vector3(headPos.x, 0, headPos.z);
-                        trackingSpace.rotation = originalRotation;
-
-                        Debug.Log($"AUTO-CORRECTED tracking space position to {trackingSpace.position} while preserving rotation {originalRotation.eulerAngles}");
-                    }
-                }
-            }
+            // Create waypoint 3 meters in front of the user
+            Vector3 userForward = Utilities.FlattenedDir3D(headTransform.forward);
+            targetWaypoint.position = Utilities.FlattenedPos3D(headTransform.position) + userForward * 3f;
         }
     }
 
-    void UpdatePreviousUserState()
-    {
-        prevPos = Utilities.FlattenedPos3D(headTransform.position);
-        prevPosReal = GetPosReal(prevPos);
-        prevDir = Utilities.FlattenedDir3D(headTransform.forward);
-        prevDirReal = GetDirReal(prevDir);
-    }
-    // In RedirectionManager.cs - GetPosReal method
-    public Vector3 GetPosReal(Vector3 pos)
-    {
-        // For VR mode, we need to handle coordinate system differently
-        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
-        {
-            // Get the relative position without any inversion
-            return Utilities.GetRelativePosition(pos, trackingSpace.transform);
-        }
-        else
-        {
-            // Original implementation for simulation mode
-            return Utilities.GetRelativePosition(pos, trackingSpace.transform);
-        }
-    }
-    public Vector3 GetDirReal(Vector3 dir)
-    {
-        // Make sure we use trackingSpace.transform consistently (not just transform)
-        // and handle transformation the same way for both position and direction
-        return Utilities.FlattenedDir3D(Utilities.GetRelativeDirection(dir, trackingSpace.transform));
-    }
-
-    void CalculateStateChanges()
-    {
-        deltaPos = currPos - prevPos;
-        deltaDir = Utilities.GetSignedAngle(prevDir, currDir);
-        if (deltaPos.magnitude / GetDeltaTime() > MOVEMENT_THRESHOLD) //User is moving
-        {
-            isWalking = true;
-        }
-        else
-        {
-            isWalking = false;
-        }
-        if (Mathf.Abs(deltaDir) / GetDeltaTime() >= ROTATION_THRESHOLD)  //if User is rotating
-        {
-            isRotating = true;
-        }
-        else
-        {
-            isRotating = false;
-        }
-    }
-
-    public void OnResetTrigger()
-    {
-        resetter.InitializeReset();
-        inReset = true;
-
-        //record one reset operation
-        globalConfiguration.statisticsLogger.Event_Reset_Triggered(movementManager.avatarId);
-    }
-
-    public void OnResetEnd()
-    {
-        resetter.EndReset();
-        EndResetCountDown = 2;
-        if (!globalConfiguration.synchronizedReset)
-        {
-            inReset = false;
-        }
-    }
-
-    public void RemoveRedirector()
-    {
-        redirector = gameObject.GetComponent<Redirector>();
-        if (redirector != null)
-            Destroy(redirector);
-        redirector = null;
-    }
-
-    public void UpdateRedirector(System.Type redirectorType)
-    {
-        RemoveRedirector();
-        redirector = (Redirector)gameObject.AddComponent(redirectorType);
-        SetReferenceForRedirector();
-    }
-
-    public void RemoveResetter()
-    {
-        resetter = gameObject.GetComponent<Resetter>();
-        if (resetter != null)
-            Destroy(resetter);
-        resetter = null;
-    }
-
-    public void UpdateResetter(System.Type resetterType)
-    {
-        RemoveResetter();
-        if (resetterType != null)
-        {
-            resetter = (Resetter)gameObject.AddComponent(resetterType);
-            SetReferenceForResetter();
-            if (resetter != null)
-                resetter.Initialize();
-        }
-    }
-    public float GetDeltaTime()
-    {
-        return globalConfiguration.GetDeltaTime();
-    }
     void EnsureRealWaypointExists()
     {
         if (visualizationManager != null && visualizationManager.realWaypoint == null && targetWaypoint != null)
@@ -1313,27 +1155,33 @@ public class RedirectionManager : MonoBehaviour
                 {
                     waypointColor = globalConfiguration.avatarColors[movementManager.avatarId];
                 }
-                renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                if (renderer.material.shader == null)
+
+                // Create material with proper shader
+                Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (mat.shader == null)
                 {
-                    renderer.material = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+                    mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
                 }
-                renderer.material.color = waypointColor;
+                mat.color = waypointColor;
+                renderer.material = mat;
             }
 
             visualizationManager.realWaypoint = waypointObj.transform;
 
             // Position it
-            visualizationManager.realWaypoint.position = Utilities.GetRelativePosition(targetWaypoint.position, trackingSpace.transform);
+            if (trackingSpace != null)
+            {
+                visualizationManager.realWaypoint.position = Utilities.GetRelativePosition(targetWaypoint.position, trackingSpace.transform);
+            }
 
             Debug.Log("Created missing real waypoint");
         }
     }
-    // Add these methods to the RedirectionManager.cs file
 
+    // Add these methods to the RedirectionManager.cs file
     public void ToggleTrackingSpaceVisualization()
     {
-        if (visualizationManager != null)
+        if (visualizationManager != null && globalConfiguration != null)
         {
             bool current = globalConfiguration.trackingSpaceVisible;
             visualizationManager.ChangeTrackingSpaceVisibility(!current);
@@ -1388,42 +1236,9 @@ public class RedirectionManager : MonoBehaviour
         center.GetComponent<Renderer>().material.color = Color.red;
         Destroy(center, 30f);
 
-        // Add directional indicators
-        float minX = float.MaxValue, maxX = float.MinValue;
-        float minZ = float.MaxValue, maxZ = float.MinValue;
-
-        foreach (var point in physicalSpace.trackingSpace)
-        {
-            minX = Mathf.Min(minX, point.x);
-            maxX = Mathf.Max(maxX, point.x);
-            minZ = Mathf.Min(minZ, point.y); // y in 2D coordinates is z in 3D
-            maxZ = Mathf.Max(maxZ, point.y);
-        }
-
-        float width = maxX - minX;
-        float length = maxZ - minZ;
-
-        // Create forward direction indicator (blue)
-        GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        forwardMarker.name = "ForwardDirection";
-        forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * (length / 4) + Vector3.up * 0.05f;
-        forwardMarker.transform.rotation = trackingSpace.rotation;
-        forwardMarker.transform.localScale = new Vector3(0.1f, 0.05f, 1.0f);
-        forwardMarker.GetComponent<Renderer>().material.color = Color.blue;
-        Destroy(forwardMarker, 30f);
-
-        // Create right direction indicator (red)
-        GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightMarker.name = "RightDirection";
-        rightMarker.transform.position = trackingSpace.position + trackingSpace.right * (width / 4) + Vector3.up * 0.05f;
-        rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
-        rightMarker.transform.localScale = new Vector3(0.1f, 0.05f, 0.5f);
-        rightMarker.GetComponent<Renderer>().material.color = Color.red;
-        Destroy(rightMarker, 30f);
-
-        Debug.Log($"Tracking space dimensions: {width:F2}m × {length:F2}m");
-        Debug.Log("Created tracking space markers: Green spheres=corners, Red cylinder=center, Blue=forward, Red=right");
+        Debug.Log($"Created tracking space markers: Green spheres=corners, Red cylinder=center");
     }
+
     // Add this method to RedirectionManager.cs
     public void LogTrackingSpaceInfo()
     {
@@ -1441,10 +1256,6 @@ public class RedirectionManager : MonoBehaviour
             Vector3 posReal = GetPosReal(headTransform.position);
             Debug.Log($"Position in Tracking Space Coordinates: {posReal}");
         }
-
-        // Log redirector and resetter info
-        Debug.Log($"Redirector: {redirector?.GetType().Name}");
-        Debug.Log($"Resetter: {resetter?.GetType().Name}");
 
         // Log physical space dimensions
         if (globalConfiguration != null &&
@@ -1471,12 +1282,18 @@ public class RedirectionManager : MonoBehaviour
             Debug.Log($"Tracking Space Dimensions: {width:F2}m × {length:F2}m");
         }
 
+        // Log redirector and resetter info
+        Debug.Log($"Redirector: {redirector?.GetType().Name}");
+        Debug.Log($"Resetter: {resetter?.GetType().Name}");
+        Debug.Log($"Experiment Started: {experimentStarted}");
+        Debug.Log($"Waiting for Ready Signal: {waitingForReadySignal}");
         Debug.Log("==================================");
     }
+
     private void EnsureReferencesForRealUser()
     {
         // Debug starting state
-        Debug.Log($"Setting up RedirectionManager for real user. HMD Mode: {globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD}");
+        Debug.Log($"Setting up RedirectionManager for real user. HMD Mode: {globalConfiguration?.movementController == GlobalConfiguration.MovementController.HMD}");
 
         // Make sure we have required references
         if (body == null)
@@ -1496,7 +1313,7 @@ public class RedirectionManager : MonoBehaviour
             keyboardController = simulatedHead.GetComponent<KeyboardController>();
 
         // Fix GlobalConfiguration
-        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+        if (globalConfiguration != null && globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
         {
             // Find XR Origin
             GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
@@ -1537,14 +1354,58 @@ public class RedirectionManager : MonoBehaviour
 
         return mainCamera;
     }
-    private void UpdateDynamicWaypointForHMD()
+
+    // CRITICAL: Method for scenario transitions that preserves tracking space
+    public void UpdateVirtualPositionForScenario(Vector3 newVirtualPosition, Vector3 forwardDirection)
     {
-        if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD &&
-            headTransform != null && targetWaypoint != null)
+        if (!physicalSpaceCalibrated)
         {
-            // Create waypoint 3 meters in front of the user
-            Vector3 userForward = Utilities.FlattenedDir3D(headTransform.forward);
-            targetWaypoint.position = Utilities.FlattenedPos3D(headTransform.position) + userForward * 3f;
+            Debug.LogWarning("Physical space not calibrated - performing calibration first");
+            CalibratePhysicalSpaceReference();
+            return;
+        }
+
+        Debug.Log($"Updating virtual position for scenario: {newVirtualPosition}");
+
+        // Get current real position in physical space
+        Vector3 currentRealPos = GetPosReal(headTransform.position);
+
+        // CRITICAL: In OpenRDW style, we NEVER move the tracking space once calibrated
+        // Instead, we move the XR Origin to place the user at the desired virtual location
+        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+        if (xrOrigin != null)
+        {
+            // Calculate where XR Origin should be positioned
+            Vector3 desiredXROriginPos = newVirtualPosition - currentRealPos;
+            desiredXROriginPos.y = xrOrigin.transform.position.y; // Keep current Y
+
+            // Update XR Origin position (this moves the virtual world, not the tracking space)
+            xrOrigin.transform.position = desiredXROriginPos;
+
+            // Update XR Origin rotation for scenario direction
+            Vector3 flatForward = forwardDirection;
+            flatForward.y = 0;
+            flatForward.Normalize();
+
+            float scenarioAngle = Mathf.Atan2(flatForward.x, flatForward.z) * Mathf.Rad2Deg;
+            xrOrigin.transform.rotation = Quaternion.Euler(0, scenarioAngle, 0);
+
+            Debug.Log($"Updated XR Origin - Position: {desiredXROriginPos}, Rotation: {scenarioAngle}°");
+            Debug.Log($"Tracking space remains at: {trackingSpace.position} (NEVER MOVED)");
+        }
+        else
+        {
+            Debug.LogError("Could not find XR Origin for scenario transition!");
+        }
+
+        // Update current state
+        UpdateCurrentUserState();
+
+        // Update visualization if available
+        if (visualizationManager != null)
+        {
+            // Don't regenerate tracking space - it should never move
+            visualizationManager.ChangeTrackingSpaceVisibility(true);
         }
     }
 }

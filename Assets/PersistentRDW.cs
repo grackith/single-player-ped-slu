@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.IO; // Add this line
 using System.Linq; // This might also be helpful
@@ -27,6 +28,17 @@ public class PersistentRDW : MonoBehaviour
     [Tooltip("Direction player faces in physical space at start")]
     
     public Vector3 physicalReferenceDirection = Vector3.forward; // (0,0,1)
+    public float physicalWidth = 8.4f;  // Your exact width 
+    public float physicalLength = 14.0f; // Your exact length
+    private Vector3 lastHeadPosition;
+    private float driftCheckInterval = 3.0f; // Check every 3 seconds
+    private float lastDriftCheckTime = 0f;
+    private float maxAllowedDrift = 0.5f; // Maximum allowed drift in meters
+    [Header("Physical Space Stability")]
+    public bool preservePhysicalSpaceCalibration = true;
+    private bool isPhysicalSpaceInitialized = false;
+    private Vector3 physicalSpaceOrigin;
+    private Quaternion physicalSpaceOrientation;
 
 
     void Awake()
@@ -65,6 +77,25 @@ public class PersistentRDW : MonoBehaviour
     {
         // Find the ScenarioManager (may not exist immediately at Awake)
         FindScenarioManager();
+        // Force correct physical space dimensions
+        if (globalConfig != null &&
+            globalConfig.physicalSpaces != null &&
+            globalConfig.physicalSpaces.Count > 0)
+        {
+            // Create a rectangle with the specified dimensions
+            List<Vector2> trackingSpacePoints = new List<Vector2>
+        {
+            new Vector2(physicalWidth/2, physicalLength/2),   // Front Right
+            new Vector2(-physicalWidth/2, physicalLength/2),  // Front Left
+            new Vector2(-physicalWidth/2, -physicalLength/2), // Back Left
+            new Vector2(physicalWidth/2, -physicalLength/2)   // Back Right
+        };
+
+            // Update the physical space dimensions
+            globalConfig.physicalSpaces[0].trackingSpace = trackingSpacePoints;
+
+            Debug.Log($"Set physical space dimensions to {physicalWidth}m × {physicalLength}m");
+        }
     }
 
     void FindScenarioManager()
@@ -467,39 +498,7 @@ public class PersistentRDW : MonoBehaviour
         // Unsubscribe from events
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
-    public void CalibrateTrackingSpace()
-    {
-        Debug.Log("=== STARTING FULL CALIBRATION ===");
-
-        if (redirectionManager == null || redirectionManager.headTransform == null || redirectionManager.trackingSpace == null)
-        {
-            Debug.LogError("Cannot calibrate - missing components");
-            return;
-        }
-
-        // 1. Get the current head position and direction
-        Vector3 headPosition = redirectionManager.headTransform.position;
-        Vector3 headForward = redirectionManager.headTransform.forward;
-        headForward.y = 0; // Flatten
-        headForward.Normalize();
-
-        Debug.Log($"Head position: {headPosition}, forward: {headForward}");
-
-        // 2. Simply use the centralized method for alignment
-        // This replaces all the manual positioning, rotation, and visualization code
-        AlignTrackingSpaceWithRoad(
-            new Vector3(headPosition.x, 0, headPosition.z),
-            headForward,
-            5.0f,  // Width
-            13.5f  // Length
-        );
-
-        // 3. Verify real position is now near zero
-        Vector3 realPos = redirectionManager.GetPosReal(headPosition);
-        Debug.Log($"Real position after calibration: {realPos} (should be near zero)");
-
-        Debug.Log("=== CALIBRATION COMPLETE ===");
-    }
+    
 
     // NEW METHOD: Clear all corner markers before creating new ones
     public void ClearAllCornerMarkers()
@@ -538,114 +537,8 @@ public class PersistentRDW : MonoBehaviour
     }
 
     // NEW METHOD: Create persistent corner markers
-    public void CreatePersistentCornerMarkers(float width, float length)
-    {
-        Debug.Log($"Creating persistent corner markers for {width}m × {length}m space");
+    
 
-        if (redirectionManager == null || redirectionManager.trackingSpace == null)
-        {
-            Debug.LogError("Cannot create markers - RedirectionManager not available");
-            return;
-        }
-
-        Transform trackingSpace = redirectionManager.trackingSpace;
-
-        // Create corner markers
-        Vector2[] corners = new Vector2[]
-        {
-        new Vector2(width/2, length/2),   // Front Right
-        new Vector2(-width/2, length/2),  // Front Left
-        new Vector2(-width/2, -length/2), // Back Left
-        new Vector2(width/2, -length/2)   // Back Right
-        };
-
-        Color[] cornerColors = new Color[]
-        {
-        Color.blue,    // 0: Front Right - Blue
-        Color.green,   // 1: Front Left - Green
-        Color.yellow,  // 2: Back Left - Yellow
-        Color.magenta  // 3: Back Right - Magenta
-        };
-
-        for (int i = 0; i < corners.Length; i++)
-        {
-            // Convert local space corner to world space
-            Vector3 worldCorner = trackingSpace.TransformPoint(
-                new Vector3(corners[i].x, 0, corners[i].y));
-
-            // Create the marker
-            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            marker.name = $"Corner_{i}";
-
-            // Try to tag it - handle if tag doesn't exist
-            try
-            {
-                marker.tag = "CornerMarker";
-            }
-            catch (System.Exception)
-            {
-                Debug.LogWarning("Could not set CornerMarker tag - tag may not exist in project");
-            }
-
-            // Position and scale
-            marker.transform.position = worldCorner + Vector3.up * 0.5f;
-            marker.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f);
-
-            // Set color
-            Material mat = new Material(Shader.Find("Standard"));
-            mat.color = cornerColors[i];
-            marker.GetComponent<Renderer>().material = mat;
-
-            // Don't destroy on load
-            //DontDestroyOnLoad(marker);
-
-            Debug.Log($"Created corner {i} at {worldCorner}");
-        }
-
-        // Create center marker
-        GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        centerMarker.name = "TrackingSpaceCenter";
-        try { centerMarker.tag = "CornerMarker"; } catch { }
-        centerMarker.transform.position = trackingSpace.position + Vector3.up * 0.1f;
-        centerMarker.transform.localScale = Vector3.one * 0.3f;
-
-        Material centerMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        centerMat.color = Color.red;
-        centerMarker.GetComponent<Renderer>().material = centerMat;
-        DontDestroyOnLoad(centerMarker);
-
-        // Create direction indicators
-        //CreateDirectionIndicators(trackingSpace, width, length);
-
-        Debug.Log("Persistent corner markers created successfully");
-    }
-    public void ClearAllDirectionMarkers()
-    {
-        // Find by both tag and name
-        GameObject[] taggedMarkers = GameObject.FindGameObjectsWithTag("CornerMarker");
-        foreach (var marker in taggedMarkers)
-        {
-            Destroy(marker);
-        }
-
-        // Also find by name patterns
-        foreach (string pattern in new string[] {
-        "ForwardDirection", "RightDirection", "RoadDirection",
-        "DirectionLabel", "Corner_", "TrackingSpaceCenter"
-    })
-        {
-            var foundObjects = GameObject.FindObjectsOfType<GameObject>()
-                .Where(go => go.name.Contains(pattern))
-                .ToArray();
-
-            foreach (var obj in foundObjects)
-            {
-                Destroy(obj);
-            }
-        }
-
-        Debug.Log($"Cleared all direction markers");
-    }
     // Add this to ScenarioManager or PersistentRDW
     public void FixRedirectedAvatarHierarchy()
     {
@@ -682,61 +575,7 @@ public class PersistentRDW : MonoBehaviour
     // NEW METHOD: Create direction indicators to show tracking space alignment
 
     // Add this to PersistentRDW or another manager class
-    public void AlignTrackingSpaceWithRoad(Vector3 position, Vector3 roadDirection, float width, float length)
-    {
-        Debug.Log($"=== ALIGNING TRACKING SPACE WITH ROAD (w={width}m, l={length}m) ===");
-
-        // Find the RedirectionManager - use the helper method
-        RedirectionManager redirectionManager = FindActiveRedirectionManager();
-        if (redirectionManager == null)
-        {
-            Debug.LogError("RedirectionManager not found!");
-            return;
-        }
-
-        if (redirectionManager.trackingSpace == null)
-        {
-            Debug.LogError("Tracking space transform not found!");
-            return;
-        }
-
-        // Ensure the physical space dimensions are correctly set
-        EnsurePhysicalSpaceDimensions(width, length);
-
-        // Calculate the tracking space position and rotation
-        // Position the tracking space at the user's position
-        Vector3 trackingSpacePos = new Vector3(position.x, 0, position.z);
-
-        // Calculate rotation to align with road direction
-        float roadAngle = Mathf.Atan2(roadDirection.x, roadDirection.z) * Mathf.Rad2Deg;
-        Quaternion trackingSpaceRot = Quaternion.Euler(0, roadAngle, 0);
-
-        // Apply the position and rotation
-        redirectionManager.trackingSpace.position = trackingSpacePos;
-        redirectionManager.trackingSpace.rotation = trackingSpaceRot;
-
-        // Update the visualization
-        if (redirectionManager.visualizationManager != null)
-        {
-            redirectionManager.visualizationManager.DestroyAll();
-            redirectionManager.visualizationManager.GenerateTrackingSpaceMesh(globalConfig.physicalSpaces);
-            redirectionManager.visualizationManager.ChangeTrackingSpaceVisibility(true);
-        }
-
-        // Create visual indicators for easier debugging
-        CreateDirectionIndicators(redirectionManager.trackingSpace, width, length, roadDirection);
-
-        // Log success
-        Debug.Log($"Tracking space aligned with road. Position: {trackingSpacePos}, Rotation: {roadAngle}°");
-        Debug.Log($"Road direction vector: {roadDirection}");
-
-        // Verify the real position is now centered
-        if (redirectionManager.headTransform != null)
-        {
-            Vector3 realPos = redirectionManager.GetPosReal(redirectionManager.headTransform.position);
-            Debug.Log($"Real position after alignment: {realPos} (should be near zero)");
-        }
-    }
+    
 
     private void CreateDirectionIndicators(Transform trackingSpace, float width, float length, Vector3 roadDirection = default)
     {
@@ -898,28 +737,9 @@ public class PersistentRDW : MonoBehaviour
         return FindObjectOfType<RedirectionManager>();
     }
 
-    private void EnsurePhysicalSpaceDimensions(float width, float length)
-    {
-        if (globalConfig == null || globalConfig.physicalSpaces == null || globalConfig.physicalSpaces.Count == 0)
-        {
-            Debug.LogError("Global configuration or physical spaces missing!");
-            return;
-        }
 
-        // Create a rectangle with the specified dimensions
-        List<Vector2> trackingSpacePoints = new List<Vector2>
-    {
-        new Vector2(width/2, length/2),   // Front Right
-        new Vector2(-width/2, length/2),  // Front Left  
-        new Vector2(-width/2, -length/2), // Back Left
-        new Vector2(width/2, -length/2)   // Back Right
-    };
 
-        // Update the physical space dimensions
-        globalConfig.physicalSpaces[0].trackingSpace = trackingSpacePoints;
-
-        Debug.Log($"Physical space dimensions set to {width}m × {length}m");
-    }
+    
 
     // Add this as a public method in the PersistentRDW class
     public void AlignWith5x13_5Rectangle()
@@ -1022,5 +842,843 @@ public class PersistentRDW : MonoBehaviour
             }
         }
         return Vector2.zero;
+    }
+
+    // Add this to your PersistentRDW class
+    public void EnablePersistentTrackingSpace()
+    {
+        Debug.Log("Enabling persistent tracking space visualization");
+
+        // First find all visualization managers
+        VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
+
+        foreach (var vm in visualManagers)
+        {
+            if (vm != null)
+            {
+                // Force tracking space visibility ON
+                vm.ChangeTrackingSpaceVisibility(true);
+
+                // Ensure we have tracking space mesh generated
+                if (vm.allPlanes == null || vm.allPlanes.Count == 0)
+                {
+                    // Find GlobalConfiguration to get physical spaces
+                    GlobalConfiguration gc = vm.generalManager;
+                    if (gc != null && gc.physicalSpaces != null && gc.physicalSpaces.Count > 0)
+                    {
+                        vm.GenerateTrackingSpaceMesh(gc.physicalSpaces);
+                    }
+                }
+
+                // Create persistent corners and markers
+                StartCoroutine(CreatePersistentVisualizations(vm));
+            }
+        }
+
+        // Also find RedirectionManager and set its flag
+        RedirectionManager[] redirectionManagers = FindObjectsOfType<RedirectionManager>();
+        foreach (var rm in redirectionManagers)
+        {
+            if (rm != null && rm.globalConfiguration != null)
+            {
+                rm.globalConfiguration.trackingSpaceVisible = true;
+                Debug.Log("Set trackingSpaceVisible=true on GlobalConfiguration");
+            }
+        }
+    }
+
+    private IEnumerator CreatePersistentVisualizations(VisualizationManager vm)
+    {
+        // Ensure we have good references
+        if (vm == null || vm.redirectionManager == null || vm.redirectionManager.trackingSpace == null)
+        {
+            Debug.LogWarning("Missing key references for persistent visualizations");
+            yield break;
+        }
+
+        Transform trackingSpace = vm.redirectionManager.trackingSpace;
+
+        // Clear any existing markers
+        GameObject[] existingMarkers = GameObject.FindGameObjectsWithTag("CornerMarker");
+        foreach (var marker in existingMarkers)
+        {
+            if (marker != null) Destroy(marker);
+        }
+
+        yield return null; // Wait a frame for cleanup
+
+        // Get physical dimensions
+        float width = 5.0f;  // Default
+        float length = 13.5f; // Default
+
+        GlobalConfiguration gc = vm.generalManager;
+        if (gc != null && gc.physicalSpaces != null && gc.physicalSpaces.Count > 0)
+        {
+            // Calculate from actual physical space
+            var space = gc.physicalSpaces[0];
+            if (space != null && space.trackingSpace != null && space.trackingSpace.Count > 0)
+            {
+                float minX = float.MaxValue, maxX = float.MinValue;
+                float minZ = float.MaxValue, maxZ = float.MinValue;
+
+                foreach (var point in space.trackingSpace)
+                {
+                    minX = Mathf.Min(minX, point.x);
+                    maxX = Mathf.Max(maxX, point.x);
+                    minZ = Mathf.Min(minZ, point.y); // y in 2D is z in 3D
+                    maxZ = Mathf.Max(maxZ, point.y);
+                }
+
+                width = maxX - minX;
+                length = maxZ - minZ;
+            }
+        }
+
+        // Create persistent parent that follows tracking space
+        GameObject markersParent = new GameObject("PersistentTrackingMarkers");
+        markersParent.transform.SetParent(trackingSpace); // Important: attach to tracking space
+        markersParent.transform.localPosition = Vector3.zero;
+        markersParent.transform.localRotation = Quaternion.identity;
+
+        try
+        {
+            markersParent.tag = "CornerMarker";
+        }
+        catch
+        {
+            // Tag might not exist, that's ok
+        }
+
+        // Create corner markers in local space of tracking space
+        float halfWidth = width / 2;
+        float halfLength = length / 2;
+
+        // Corner positions in local space of tracking space
+        Vector3[] corners = new Vector3[] {
+        new Vector3(halfWidth, 0.01f, halfLength),    // Front Right
+        new Vector3(-halfWidth, 0.01f, halfLength),   // Front Left
+        new Vector3(-halfWidth, 0.01f, -halfLength),  // Back Left
+        new Vector3(halfWidth, 0.01f, -halfLength)    // Back Right
+    };
+
+        Color[] cornerColors = new Color[] {
+        Color.red,     // Front Right - Red
+        Color.green,   // Front Left - Green
+        Color.blue,    // Back Left - Blue
+        Color.yellow   // Back Right - Yellow
+    };
+
+        string[] cornerNames = { "FrontRight", "FrontLeft", "BackLeft", "BackRight" };
+
+        for (int i = 0; i < corners.Length; i++)
+        {
+            GameObject corner = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            corner.name = $"{cornerNames[i]}Corner";
+
+            try
+            {
+                corner.tag = "CornerMarker";
+            }
+            catch { }
+
+            corner.transform.SetParent(markersParent.transform);
+            corner.transform.localPosition = corners[i];
+            corner.transform.localScale = new Vector3(0.3f, 0.02f, 0.3f);
+
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (mat.shader == null)
+                mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+            mat.color = cornerColors[i];
+            corner.GetComponent<Renderer>().material = mat;
+
+            // Remove collider
+            Destroy(corner.GetComponent<Collider>());
+
+            yield return null; // Spread creation over frames
+        }
+
+        // Create edges
+        for (int i = 0; i < corners.Length; i++)
+        {
+            int next = (i + 1) % corners.Length;
+
+            GameObject edge = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            edge.name = $"Edge_{i}_{next}";
+
+            try
+            {
+                edge.tag = "CornerMarker";
+            }
+            catch { }
+
+            edge.transform.SetParent(markersParent.transform);
+
+            // Position midway between corners
+            Vector3 midpoint = (corners[i] + corners[next]) / 2;
+            edge.transform.localPosition = midpoint;
+
+            // Rotate to align with corners
+            Vector3 direction = corners[next] - corners[i];
+            Quaternion rotation = Quaternion.LookRotation(direction);
+            edge.transform.localRotation = rotation;
+
+            // Scale to fit
+            float distance = Vector3.Distance(corners[i], corners[next]);
+            edge.transform.localScale = new Vector3(0.05f, 0.01f, distance);
+
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (mat.shader == null)
+                mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+            mat.color = Color.white;
+            edge.GetComponent<Renderer>().material = mat;
+
+            // Remove collider
+            Destroy(edge.GetComponent<Collider>());
+
+            yield return null; // Spread creation over frames
+        }
+
+        // Create directional indicators
+        CreateDirectionalIndicators(markersParent.transform, trackingSpace, width, length);
+
+        Debug.Log($"Created persistent tracking space visualization: {width}m × {length}m");
+    }
+
+    private void CreateDirectionalIndicators(Transform parent, Transform trackingSpace, float width, float length)
+    {
+        // Create forward direction indicator (along LONG dimension)
+        GameObject forwardIndicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        forwardIndicator.name = "ForwardDirection";
+        try { forwardIndicator.tag = "CornerMarker"; } catch { }
+        forwardIndicator.transform.SetParent(parent);
+
+        // Position in local space of parent
+        forwardIndicator.transform.localPosition = new Vector3(0, 0.05f, length / 4);
+        forwardIndicator.transform.localRotation = Quaternion.identity;
+        forwardIndicator.transform.localScale = new Vector3(0.2f, 0.05f, length / 2);
+
+        // Set blue material
+        Material blueMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (blueMat.shader == null)
+            blueMat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+        blueMat.color = Color.blue;
+        forwardIndicator.GetComponent<Renderer>().material = blueMat;
+
+        // Remove collider
+        Destroy(forwardIndicator.GetComponent<Collider>());
+
+        // Create right direction indicator (along SHORT dimension)
+        GameObject rightIndicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightIndicator.name = "RightDirection";
+        try { rightIndicator.tag = "CornerMarker"; } catch { }
+        rightIndicator.transform.SetParent(parent);
+
+        // Position in local space of parent
+        rightIndicator.transform.localPosition = new Vector3(width / 4, 0.05f, 0);
+        rightIndicator.transform.localRotation = Quaternion.Euler(0, 90, 0);
+        rightIndicator.transform.localScale = new Vector3(0.2f, 0.05f, width / 2);
+
+        // Set red material
+        Material redMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (redMat.shader == null)
+            redMat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+        redMat.color = Color.red;
+        rightIndicator.GetComponent<Renderer>().material = redMat;
+
+        // Remove collider
+        Destroy(rightIndicator.GetComponent<Collider>());
+    }
+    // Add this method to PersistentRDW
+    public void UpdateTrackingSpaceVisualization()
+    {
+        // This can be called from LateUpdate to keep visualizations in sync with physical space
+
+        // Find all visualization managers
+        VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
+
+        foreach (var vm in visualManagers)
+        {
+            if (vm == null || vm.redirectionManager == null || vm.redirectionManager.trackingSpace == null)
+                continue;
+
+            // Make sure tracking space visuals are enabled
+            vm.ChangeTrackingSpaceVisibility(true);
+
+            // Update the visualization to stay aligned with current tracking space
+            Transform trackingSpace = vm.redirectionManager.trackingSpace;
+
+            // Find any persistent corner markers and update if needed
+            Transform persistentMarkers = trackingSpace.Find("PersistentTrackingMarkers");
+            if (persistentMarkers == null)
+            {
+                // Create new markers since they don't exist
+                StartCoroutine(CreatePersistentVisualizations(vm));
+            }
+        }
+    }
+
+
+    void Update()
+    {
+        // Existing drift check code...
+        if (redirectionManager != null &&
+            redirectionManager.headTransform != null &&
+            Time.time > lastDriftCheckTime + driftCheckInterval)
+        {
+            lastDriftCheckTime = Time.time;
+
+            Vector3 realPos = redirectionManager.GetPosReal(redirectionManager.headTransform.position);
+            float driftMagnitude = realPos.magnitude;
+
+            // Log periodic checks
+            if (Time.frameCount % 600 == 0)
+            {
+                Debug.Log($"Tracking space check: Real position {driftMagnitude:F2}m from center");
+            }
+
+            // Auto-correct significant drift, but preserve physical space calibration
+            if (driftMagnitude > maxAllowedDrift)
+            {
+                Debug.LogWarning($"Drift detected: {driftMagnitude:F2}m! Correcting while preserving physical space");
+
+                if (isPhysicalSpaceInitialized && preservePhysicalSpaceCalibration)
+                {
+                    // Gentle correction that preserves physical space orientation
+                    Quaternion preservedRotation = redirectionManager.trackingSpace.rotation;
+
+                    redirectionManager.trackingSpace.position = new Vector3(
+                        redirectionManager.headTransform.position.x,
+                        0,
+                        redirectionManager.headTransform.position.z
+                    );
+
+                    redirectionManager.trackingSpace.rotation = preservedRotation;
+
+                    Debug.Log("Applied gentle drift correction");
+                }
+                else
+                {
+                    // Full recalibration if physical space not established
+                    CalibrateTrackingSpace();
+                }
+            }
+        }
+
+        // Add emergency key for resetting physical space (use with extreme caution)
+        if (Input.GetKeyDown(KeyCode.F12))
+        {
+            Debug.LogWarning("EMERGENCY: Resetting physical space calibration with F12");
+            ResetPhysicalSpaceCalibration();
+        }
+    }
+
+    // Add this to PersistentRDW
+    void LateUpdate()
+    {
+        // Only update if we need to
+        if (Time.frameCount % 10 == 0) // Update every 10 frames to reduce overhead
+        {
+            UpdateTrackingSpaceVisualization();
+        }
+    }
+    // Add this to your PersistentRDW class
+    public void CreateFixedTrackingSpaceVisualization()
+    {
+        Debug.Log("Creating fixed tracking space visualization");
+
+        // First clean up any existing markers
+        ClearAllDirectionMarkers();
+
+        // Find all visualization managers to get current tracking space info
+        VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
+        if (visualManagers.Length == 0)
+        {
+            Debug.LogWarning("No VisualizationManager found");
+            return;
+        }
+
+        foreach (var vm in visualManagers)
+        {
+            if (vm == null || vm.redirectionManager == null || vm.redirectionManager.trackingSpace == null)
+                continue;
+
+            // Get the current tracking space position and rotation - this is our reference point
+            Transform trackingSpace = vm.redirectionManager.trackingSpace;
+            Vector3 trackingSpacePosition = trackingSpace.position;
+            Quaternion trackingSpaceRotation = trackingSpace.rotation;
+
+            // Make sure the tracking space visuals are visible
+            vm.ChangeTrackingSpaceVisibility(true);
+
+            // Get physical dimensions
+            float width = 5.0f;  // Default
+            float length = 13.5f; // Default
+
+            GlobalConfiguration gc = vm.generalManager;
+            if (gc != null && gc.physicalSpaces != null && gc.physicalSpaces.Count > 0)
+            {
+                var space = gc.physicalSpaces[0];
+                if (space != null && space.trackingSpace != null && space.trackingSpace.Count > 0)
+                {
+                    float minX = float.MaxValue, maxX = float.MinValue;
+                    float minZ = float.MaxValue, maxZ = float.MinValue;
+
+                    foreach (var point in space.trackingSpace)
+                    {
+                        minX = Mathf.Min(minX, point.x);
+                        maxX = Mathf.Max(maxX, point.x);
+                        minZ = Mathf.Min(minZ, point.y); // y in 2D is z in 3D
+                        maxZ = Mathf.Max(maxZ, point.y);
+                    }
+
+                    width = maxX - minX;
+                    length = maxZ - minZ;
+                }
+            }
+
+            // Create parent object in world space - NOT parented to tracking space
+            GameObject markersParent = new GameObject("FixedTrackingSpaceMarkers");
+            markersParent.transform.position = trackingSpacePosition;
+            markersParent.transform.rotation = trackingSpaceRotation;
+            markersParent.tag = "CornerMarker"; // If this tag is defined in your project
+
+            // Create corner markers in world space
+            CreateFixedCornerMarkers(markersParent.transform, width, length);
+
+            // Create center marker
+            GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            centerMarker.name = "TrackingSpaceCenter";
+            centerMarker.transform.SetParent(markersParent.transform);
+            centerMarker.transform.localPosition = new Vector3(0, 0.01f, 0);
+            centerMarker.transform.localScale = new Vector3(0.3f, 0.02f, 0.3f);
+            centerMarker.GetComponent<Renderer>().material.color = Color.cyan;
+            Destroy(centerMarker.GetComponent<Collider>());
+
+            // Create direction indicators
+            CreateFixedDirectionIndicators(markersParent.transform, width, length);
+
+            Debug.Log($"Created fixed tracking space visualization: {width}m × {length}m");
+
+            // Only process the first valid visualization manager
+            break;
+        }
+    }
+
+    private void CreateFixedCornerMarkers(Transform parent, float width, float length)
+    {
+        // Half measurements for positioning
+        float halfWidth = width / 2;
+        float halfLength = length / 2;
+
+        // Corner positions in local space
+        Vector3[] corners = new Vector3[] {
+        new Vector3(halfWidth, 0.01f, halfLength),    // Front Right
+        new Vector3(-halfWidth, 0.01f, halfLength),   // Front Left
+        new Vector3(-halfWidth, 0.01f, -halfLength),  // Back Left
+        new Vector3(halfWidth, 0.01f, -halfLength)    // Back Right
+    };
+
+        Color[] cornerColors = new Color[] {
+        Color.red,     // Front Right - Red
+        Color.green,   // Front Left - Green
+        Color.blue,    // Back Left - Blue
+        Color.yellow   // Back Right - Yellow
+    };
+
+        string[] cornerNames = { "FrontRight", "FrontLeft", "BackLeft", "BackRight" };
+
+        for (int i = 0; i < corners.Length; i++)
+        {
+            GameObject corner = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            corner.name = $"{cornerNames[i]}Corner";
+            corner.tag = "CornerMarker"; // If this tag is defined
+
+            corner.transform.SetParent(parent);
+            corner.transform.localPosition = corners[i];
+            corner.transform.localScale = new Vector3(0.3f, 0.02f, 0.3f);
+
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (mat.shader == null)
+                mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+            mat.color = cornerColors[i];
+            corner.GetComponent<Renderer>().material = mat;
+
+            // Remove collider
+            Destroy(corner.GetComponent<Collider>());
+        }
+
+        // Create edges
+        for (int i = 0; i < corners.Length; i++)
+        {
+            int next = (i + 1) % corners.Length;
+
+            GameObject edge = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            edge.name = $"Edge_{i}_{next}";
+            edge.tag = "CornerMarker"; // If this tag is defined
+
+            edge.transform.SetParent(parent);
+
+            // Position midway between corners
+            Vector3 midpoint = (corners[i] + corners[next]) / 2;
+            edge.transform.localPosition = midpoint;
+
+            // Rotate to align with corners
+            Vector3 direction = corners[next] - corners[i];
+            Quaternion rotation = Quaternion.LookRotation(direction);
+            edge.transform.localRotation = rotation;
+
+            // Scale to fit
+            float distance = Vector3.Distance(corners[i], corners[next]);
+            edge.transform.localScale = new Vector3(0.05f, 0.01f, distance);
+
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (mat.shader == null)
+                mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+            mat.color = Color.white;
+            edge.GetComponent<Renderer>().material = mat;
+
+            // Remove collider
+            Destroy(edge.GetComponent<Collider>());
+        }
+    }
+
+    private void CreateFixedDirectionIndicators(Transform parent, float width, float length)
+    {
+        // Create forward direction indicator (along LONG dimension)
+        GameObject forwardIndicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        forwardIndicator.name = "ForwardDirection";
+        forwardIndicator.tag = "CornerMarker"; // If this tag is defined
+        forwardIndicator.transform.SetParent(parent);
+
+        // Position in local space of parent
+        forwardIndicator.transform.localPosition = new Vector3(0, 0.05f, length / 4);
+        forwardIndicator.transform.localRotation = Quaternion.identity;
+        forwardIndicator.transform.localScale = new Vector3(0.2f, 0.05f, length / 2);
+
+        // Set blue material
+        Material blueMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (blueMat.shader == null)
+            blueMat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+        blueMat.color = Color.blue;
+        forwardIndicator.GetComponent<Renderer>().material = blueMat;
+
+        // Remove collider
+        Destroy(forwardIndicator.GetComponent<Collider>());
+
+        // Create right direction indicator (along SHORT dimension)
+        GameObject rightIndicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightIndicator.name = "RightDirection";
+        rightIndicator.tag = "CornerMarker"; // If this tag is defined
+        rightIndicator.transform.SetParent(parent);
+
+        // Position in local space of parent
+        rightIndicator.transform.localPosition = new Vector3(width / 4, 0.05f, 0);
+        rightIndicator.transform.localRotation = Quaternion.Euler(0, 90, 0);
+        rightIndicator.transform.localScale = new Vector3(0.2f, 0.05f, width / 2);
+
+        // Set red material
+        Material redMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (redMat.shader == null)
+            redMat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+        redMat.color = Color.red;
+        rightIndicator.GetComponent<Renderer>().material = redMat;
+
+        // Remove collider
+        Destroy(rightIndicator.GetComponent<Collider>());
+    }
+
+    // Method to clear existing markers
+
+
+    // Add this to PersistentRDW.cs
+    public void EnsurePhysicalSpaceDimensions(float width, float length)
+    {
+        if (globalConfig == null || globalConfig.physicalSpaces == null ||
+            globalConfig.physicalSpaces.Count == 0)
+        {
+            Debug.LogError("Global configuration or physical spaces missing!");
+            return;
+        }
+
+        // Create a rectangle with the specified dimensions
+        List<Vector2> trackingSpacePoints = new List<Vector2>
+    {
+        new Vector2(width/2, length/2),   // Front Right
+        new Vector2(-width/2, length/2),  // Front Left  
+        new Vector2(-width/2, -length/2), // Back Left
+        new Vector2(width/2, -length/2)   // Back Right
+    };
+
+        // Update the physical space dimensions
+        globalConfig.physicalSpaces[0].trackingSpace = trackingSpacePoints;
+
+        Debug.Log($"Physical space dimensions set to {width}m × {length}m");
+    }
+
+    // Add this method to visually highlight the space corners
+    public void CreatePersistentCornerMarkers(float width, float length)
+    {
+        Debug.Log($"Creating persistent corner markers for {width}m × {length}m space");
+
+        if (redirectionManager == null || redirectionManager.trackingSpace == null)
+        {
+            Debug.LogError("Cannot create markers - RedirectionManager not available");
+            return;
+        }
+
+        Transform trackingSpace = redirectionManager.trackingSpace;
+
+        // Create corner markers
+        Vector2[] corners = new Vector2[]
+        {
+        new Vector2(width/2, length/2),   // Front Right
+        new Vector2(-width/2, length/2),  // Front Left
+        new Vector2(-width/2, -length/2), // Back Left
+        new Vector2(width/2, -length/2)   // Back Right
+        };
+
+        Color[] cornerColors = new Color[]
+        {
+        Color.blue,    // 0: Front Right - Blue
+        Color.green,   // 1: Front Left - Green
+        Color.yellow,  // 2: Back Left - Yellow
+        Color.magenta  // 3: Back Right - Magenta
+        };
+
+        for (int i = 0; i < corners.Length; i++)
+        {
+            // Convert local space corner to world space
+            Vector3 worldCorner = trackingSpace.TransformPoint(
+                new Vector3(corners[i].x, 0, corners[i].y));
+
+            // Create the marker
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            marker.name = $"Corner_{i}";
+
+            // Try to tag it - handle if tag doesn't exist
+            try
+            {
+                marker.tag = "CornerMarker";
+            }
+            catch (System.Exception)
+            {
+                Debug.LogWarning("Could not set CornerMarker tag - tag may not exist in project");
+            }
+
+            // Position and scale
+            marker.transform.position = worldCorner + Vector3.up * 0.5f;
+            marker.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f);
+
+            // Set color
+            Material mat = new Material(Shader.Find("Standard"));
+            mat.color = cornerColors[i];
+            marker.GetComponent<Renderer>().material = mat;
+
+            Debug.Log($"Created corner {i} at {worldCorner}");
+        }
+
+        // Create center marker
+        GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        centerMarker.name = "TrackingSpaceCenter";
+        try { centerMarker.tag = "CornerMarker"; } catch { }
+        centerMarker.transform.position = trackingSpace.position + Vector3.up * 0.1f;
+        centerMarker.transform.localScale = Vector3.one * 0.3f;
+
+        Material centerMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (centerMat.shader == null)
+            centerMat = new Material(Shader.Find("Standard"));
+        centerMat.color = Color.red;
+        centerMarker.GetComponent<Renderer>().material = centerMat;
+
+        Debug.Log("Persistent corner markers created successfully");
+    }
+
+    // Method to clear existing markers
+    public void ClearAllDirectionMarkers()
+    {
+        // Find markers by name
+        string[] markerPatterns = {
+        "TrackingSpaceCenter",
+        "ForwardDirection",
+        "RightDirection",
+        "Corner_",
+        "Edge_",
+        "FixedTrackingSpaceMarkers",
+        "PersistentTrackingMarkers"
+    };
+
+        foreach (string pattern in markerPatterns)
+        {
+            var objects = GameObject.FindObjectsOfType<GameObject>().Where(obj => obj.name.Contains(pattern)).ToArray();
+            foreach (var obj in objects)
+            {
+                Destroy(obj);
+            }
+        }
+
+        // Try by tag as well (if tag is defined)
+        try
+        {
+            GameObject[] taggedMarkers = GameObject.FindGameObjectsWithTag("CornerMarker");
+            foreach (var marker in taggedMarkers)
+            {
+                Destroy(marker);
+            }
+        }
+        catch (System.Exception)
+        {
+            // Tag might not exist, that's ok
+        }
+
+        Debug.Log("Cleared existing visual markers");
+    }
+
+    public void CalibrateTrackingSpace()
+    {
+        Debug.Log("=== STARTING STABLE CALIBRATION ===");
+
+        if (redirectionManager == null || redirectionManager.headTransform == null ||
+            redirectionManager.trackingSpace == null)
+        {
+            Debug.LogError("Cannot calibrate - missing components");
+            return;
+        }
+
+        // Ensure physical space dimensions are correct
+        EnsurePhysicalSpaceDimensions(physicalWidth, physicalLength);
+
+        // Get the current head position and direction
+        Vector3 headPosition = redirectionManager.headTransform.position;
+        Vector3 headForward = redirectionManager.headTransform.forward;
+        headForward.y = 0; // Flatten
+        headForward.Normalize();
+
+        Debug.Log($"Head position: {headPosition}, forward: {headForward}");
+
+        // CRITICAL: Store this as the stable physical space reference
+        if (!isPhysicalSpaceInitialized || !preservePhysicalSpaceCalibration)
+        {
+            physicalSpaceOrigin = headPosition;
+            physicalSpaceOrientation = Quaternion.LookRotation(headForward, Vector3.up);
+            isPhysicalSpaceInitialized = true;
+
+            Debug.Log("Established new physical space reference point");
+        }
+
+        // Set tracking space to center the user in physical space (real position = 0,0,0)
+        redirectionManager.trackingSpace.position = new Vector3(
+            physicalSpaceOrigin.x,
+            0,
+            physicalSpaceOrigin.z
+        );
+
+        // Set rotation to match physical space orientation
+        redirectionManager.trackingSpace.rotation = physicalSpaceOrientation;
+
+        // Verify real position is now near zero
+        Vector3 realPos = redirectionManager.GetPosReal(headPosition);
+        Debug.Log($"Real position after calibration: {realPos} (should be near zero)");
+
+        // Update visualization
+        UpdateAllVisualizations();
+
+        Debug.Log("=== STABLE CALIBRATION COMPLETE ===");
+    }
+
+    // New method to update only virtual position without affecting physical space calibration
+    public void UpdateVirtualPositionOnly(Vector3 newVirtualPosition, Vector3 virtualDirection)
+    {
+        if (!isPhysicalSpaceInitialized)
+        {
+            Debug.LogWarning("Physical space not initialized - performing initial calibration");
+            CalibrateTrackingSpace();
+            return;
+        }
+
+        Debug.Log($"Updating virtual position to {newVirtualPosition} while preserving physical space");
+
+        // Get current real position in physical space
+        Vector3 currentRealPos = redirectionManager.GetPosReal(redirectionManager.headTransform.position);
+
+        // Calculate new tracking space position to place user at desired virtual location
+        // while keeping their physical position the same
+        Vector3 newTrackingSpacePos = newVirtualPosition - currentRealPos;
+        newTrackingSpacePos.y = 0; // Keep at ground level
+
+        // Update tracking space position
+        redirectionManager.trackingSpace.position = newTrackingSpacePos;
+
+        // Update rotation to match virtual direction
+        virtualDirection.y = 0;
+        virtualDirection.Normalize();
+        float virtualAngle = Mathf.Atan2(virtualDirection.x, virtualDirection.z) * Mathf.Rad2Deg;
+        redirectionManager.trackingSpace.rotation = Quaternion.Euler(0, virtualAngle, 0);
+
+        Debug.Log($"Updated tracking space position: {newTrackingSpacePos}");
+        Debug.Log($"Updated tracking space rotation: {virtualAngle}°");
+
+        // Update current state
+        redirectionManager.UpdateCurrentUserState();
+    }
+
+    // Improved AlignTrackingSpaceWithRoad that preserves physical space
+    public void AlignTrackingSpaceWithRoad(Vector3 position, Vector3 roadDirection, float width, float length)
+    {
+        Debug.Log($"=== ALIGNING WITH ROAD (preserving physical space) ===");
+
+        RedirectionManager rm = FindActiveRedirectionManager();
+        if (rm == null)
+        {
+            Debug.LogError("RedirectionManager not found!");
+            return;
+        }
+
+        // Ensure physical space dimensions are correct
+        EnsurePhysicalSpaceDimensions(width, length);
+
+        if (isPhysicalSpaceInitialized && preservePhysicalSpaceCalibration)
+        {
+            // Use the stable virtual position update instead of full recalibration
+            UpdateVirtualPositionOnly(position, roadDirection);
+        }
+        else
+        {
+            // First-time setup - establish physical space reference
+            rm.trackingSpace.position = new Vector3(position.x, 0, position.z);
+
+            float roadAngle = Mathf.Atan2(roadDirection.x, roadDirection.z) * Mathf.Rad2Deg;
+            rm.trackingSpace.rotation = Quaternion.Euler(0, roadAngle, 0);
+
+            // Store as physical space reference
+            physicalSpaceOrigin = rm.headTransform.position;
+            physicalSpaceOrientation = rm.trackingSpace.rotation;
+            isPhysicalSpaceInitialized = true;
+        }
+
+        // Update visualization
+        if (rm.visualizationManager != null)
+        {
+            rm.visualizationManager.DestroyAll();
+            rm.visualizationManager.GenerateTrackingSpaceMesh(globalConfig.physicalSpaces);
+            rm.visualizationManager.ChangeTrackingSpaceVisibility(true);
+        }
+
+        // Create visual indicators
+        CreateDirectionIndicators(rm.trackingSpace, width, length, roadDirection);
+
+        Debug.Log("Road alignment complete with physical space preservation");
+    }
+
+    // Add a method to reset physical space calibration (emergency use only)
+    public void ResetPhysicalSpaceCalibration()
+    {
+        Debug.LogWarning("RESETTING PHYSICAL SPACE CALIBRATION - Use with caution!");
+
+        isPhysicalSpaceInitialized = false;
+        physicalSpaceOrigin = Vector3.zero;
+        physicalSpaceOrientation = Quaternion.identity;
+
+        // Recalibrate from current position
+        CalibrateTrackingSpace();
     }
 }

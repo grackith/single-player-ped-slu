@@ -171,8 +171,20 @@ public class VisualizationManager : MonoBehaviour
             // Generate meshes FIRST before trying to set visibility
             GenerateTrackingSpaceMesh(generalManager.physicalSpaces);
 
+            // ALWAYS make tracking space visible by default for VR mode
+            if (generalManager.movementController == GlobalConfiguration.MovementController.HMD)
+            {
+                generalManager.trackingSpaceVisible = true;
+            }
+
             // Now safely set visibility
             ChangeTrackingSpaceVisibility(generalManager.trackingSpaceVisible);
+
+            // Enable persistent visualization for VR mode
+            if (generalManager.movementController == GlobalConfiguration.MovementController.HMD)
+            {
+                EnablePersistentTrackingSpaceVisualization();
+            }
 
             // Only try to set buffer visibility if we have buffers
             if (bufferRepresentations != null && bufferRepresentations.Count > 0)
@@ -1134,6 +1146,9 @@ public class VisualizationManager : MonoBehaviour
     // Helper method to create visual alignment indicators
     private void CreateAlignmentVisualizations()
     {
+        // Clear existing markers first
+        ClearCornerMarkers();
+
         if (redirectionManager == null || redirectionManager.trackingSpace == null)
             return;
 
@@ -1145,7 +1160,7 @@ public class VisualizationManager : MonoBehaviour
 
         if (generalManager != null && generalManager.physicalSpaces.Count > 0)
         {
-            // Calculate actual dimensions
+            // Calculate actual dimensions from physical space definitions
             float minX = float.MaxValue, maxX = float.MinValue;
             float minZ = float.MaxValue, maxZ = float.MinValue;
 
@@ -1157,81 +1172,190 @@ public class VisualizationManager : MonoBehaviour
                 maxZ = Mathf.Max(maxZ, point.y);
             }
 
-            // Get actual dimensions
-            float calculatedWidth = maxX - minX;
-            float calculatedLength = maxZ - minZ;
-
-            // Make sure width is the shorter dimension
-            if (calculatedWidth > calculatedLength)
-            {
-                width = calculatedLength;
-                length = calculatedWidth;
-            }
-            else
-            {
-                width = calculatedWidth;
-                length = calculatedLength;
-            }
+            width = maxX - minX;
+            length = maxZ - minZ;
         }
 
-        // Create forward direction indicator (blue) - for the LONG axis
-        GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        forwardMarker.name = "ForwardDirection";
-        forwardMarker.tag = "CornerMarker"; // Tag it for easy cleanup
-        forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * (length / 3f) + Vector3.up * 0.05f;
-        forwardMarker.transform.rotation = trackingSpace.rotation;
-        forwardMarker.transform.localScale = new Vector3(0.2f, 0.05f, length / 2f);
-        Material blueMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        if (blueMaterial.shader == null)
-            blueMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        blueMaterial.color = Color.blue;
-        forwardMarker.GetComponent<Renderer>().material = blueMaterial;
+        // Create a parent object for all markers that follows the tracking space
+        GameObject markersParent = new GameObject("PersistentTrackingMarkers");
+        markersParent.transform.SetParent(trackingSpace); // Attach to tracking space
+        markersParent.transform.localPosition = Vector3.zero; // Centered at tracking space origin
+        markersParent.transform.localRotation = Quaternion.identity;
+        markersParent.tag = "CornerMarker";
 
-        // Create right direction indicator (red) - for the SHORT axis
-        GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightMarker.name = "RightDirection";
-        rightMarker.tag = "CornerMarker"; // Tag it for easy cleanup
-        rightMarker.transform.position = trackingSpace.position + trackingSpace.right * (width / 3f) + Vector3.up * 0.05f;
-        rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
-        rightMarker.transform.localScale = new Vector3(0.2f, 0.05f, width / 2f);
-        Material redMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        if (redMaterial.shader == null)
-            redMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        redMaterial.color = Color.red;
-        rightMarker.GetComponent<Renderer>().material = redMaterial;
+        // Create markers at each corner relative to the tracking space
+        CreateCornerMarkers(markersParent.transform, width, length);
 
-        // Add a text label for clarity
-        GameObject labelObj = new GameObject("DirectionLabel");
-        labelObj.tag = "CornerMarker";
-        TextMesh textMesh = labelObj.AddComponent<TextMesh>();
-        textMesh.text = "BLUE = Forward (Long)\nRED = Right (Short)";
-        textMesh.fontSize = 72;
-        textMesh.characterSize = 0.03f;
-        textMesh.color = Color.white;
-        textMesh.anchor = TextAnchor.MiddleCenter;
-        textMesh.alignment = TextAlignment.Center;
-        labelObj.transform.position = trackingSpace.position + Vector3.up * 0.5f;
+        // Create a center marker
+        GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        centerMarker.name = "TrackingSpaceCenter";
+        centerMarker.transform.SetParent(markersParent.transform);
+        centerMarker.transform.localPosition = new Vector3(0, 0.01f, 0);
+        centerMarker.transform.localScale = new Vector3(0.3f, 0.02f, 0.3f);
+        centerMarker.GetComponent<Renderer>().material.color = Color.cyan;
+        Destroy(centerMarker.GetComponent<Collider>());
 
-        // Make text face the camera if possible
-        if (Camera.main != null)
+        // This parent object will remain until manually cleared or scene changed
+        Debug.Log("Created persistent tracking space markers");
+    }
+
+    private void CreateCornerMarkers(Transform parent, float width, float length)
+    {
+        // Half measurements for positioning
+        float halfWidth = width / 2;
+        float halfLength = length / 2;
+
+        // Create corner markers in local coordinates of the tracking space
+        Vector3[] cornerPositions = new Vector3[]
         {
-            Vector3 lookDir = Camera.main.transform.position - labelObj.transform.position;
-            lookDir.y = 0; // Keep it level
-            if (lookDir != Vector3.zero)
-                labelObj.transform.rotation = Quaternion.LookRotation(lookDir);
-        }
-        else
+        new Vector3(halfWidth, 0.01f, halfLength),    // Front Right
+        new Vector3(-halfWidth, 0.01f, halfLength),   // Front Left
+        new Vector3(-halfWidth, 0.01f, -halfLength),  // Back Left
+        new Vector3(halfWidth, 0.01f, -halfLength)    // Back Right
+        };
+
+        string[] cornerNames = { "FrontRight", "FrontLeft", "BackLeft", "BackRight" };
+        Color[] cornerColors = { Color.red, Color.green, Color.blue, Color.yellow };
+
+        for (int i = 0; i < 4; i++)
         {
-            // Default rotation facing forward
-            labelObj.transform.rotation = trackingSpace.rotation;
+            GameObject corner = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            corner.name = cornerNames[i] + "Corner";
+            corner.transform.SetParent(parent);
+            corner.transform.localPosition = cornerPositions[i];
+            corner.transform.localScale = Vector3.one * 0.2f;
+
+            // Set unique colors for easier identification
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (mat.shader == null)
+                mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+            mat.color = cornerColors[i];
+            corner.GetComponent<Renderer>().material = mat;
+
+            // Remove collider
+            Destroy(corner.GetComponent<Collider>());
+
+            // Add label
+            GameObject label = new GameObject("Label_" + cornerNames[i]);
+            label.transform.SetParent(corner.transform);
+            label.transform.localPosition = Vector3.up * 0.3f;
+            TextMesh textMesh = label.AddComponent<TextMesh>();
+            textMesh.text = cornerNames[i];
+            textMesh.fontSize = 40;
+            textMesh.characterSize = 0.05f;
+            textMesh.color = cornerColors[i];
+            textMesh.anchor = TextAnchor.MiddleCenter;
+
+            // Make text always face camera
+            label.AddComponent<LookAtCamera>();
         }
 
-        // Make them last longer - 2 minutes
-        Destroy(forwardMarker, 120f);
-        Destroy(rightMarker, 120f);
-        Destroy(labelObj, 120f);
+        // Create edges between corners
+        CreateEdge(parent, cornerPositions[0], cornerPositions[1], Color.white); // Front
+        CreateEdge(parent, cornerPositions[1], cornerPositions[2], Color.white); // Left
+        CreateEdge(parent, cornerPositions[2], cornerPositions[3], Color.white); // Back
+        CreateEdge(parent, cornerPositions[3], cornerPositions[0], Color.white); // Right
+    }
 
-        Debug.Log($"Created alignment visualizations: BLUE = Long axis ({length:F2}m), RED = Short axis ({width:F2}m)");
+    private void CreateEdge(Transform parent, Vector3 start, Vector3 end, Color color)
+    {
+        GameObject edge = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        edge.name = "Edge";
+        edge.transform.SetParent(parent);
+
+        // Position at midpoint
+        edge.transform.localPosition = (start + end) / 2;
+
+        // Orient along the line
+        edge.transform.localRotation = Quaternion.FromToRotation(Vector3.up, (end - start).normalized);
+
+        // Scale to fit
+        float distance = Vector3.Distance(start, end);
+        edge.transform.localScale = new Vector3(0.05f, distance / 2, 0.05f);
+
+        // Material
+        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (mat.shader == null)
+            mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+        mat.color = color;
+        edge.GetComponent<Renderer>().material = mat;
+
+        // Remove collider
+        Destroy(edge.GetComponent<Collider>());
+    }
+    public void EnablePersistentTrackingSpaceVisualization()
+    {
+        // Make sure tracking space visualization is visible
+        ChangeTrackingSpaceVisibility(true);
+
+        // Ensure this setting persists across recalibrations
+        if (generalManager != null)
+        {
+            generalManager.trackingSpaceVisible = true;
+        }
+
+        // Create an update coroutine if not already running
+        if (!isUpdatingTrackingSpaceVisuals)
+        {
+            StartCoroutine(UpdateTrackingSpaceVisualsRoutine());
+        }
+
+        Debug.Log("Persistent tracking space visualization enabled");
+    }
+
+    private bool isUpdatingTrackingSpaceVisuals = false;
+
+    private IEnumerator UpdateTrackingSpaceVisualsRoutine()
+    {
+        isUpdatingTrackingSpaceVisuals = true;
+
+        while (true)
+        {
+            // Update tracking space visuals to follow physical space
+            UpdateTrackingSpacePosition();
+
+            // Update less frequently to avoid performance impact
+            yield return new WaitForSeconds(0.1f); // 10 times per second
+        }
+    }
+
+    private void UpdateTrackingSpacePosition()
+    {
+        if (redirectionManager == null || redirectionManager.trackingSpace == null || allPlanes == null || allPlanes.Count == 0)
+            return;
+
+        // Get the tracking space transform
+        Transform trackingSpaceTransform = redirectionManager.trackingSpace;
+
+        // Update the visual tracking space to match the actual tracking space
+        foreach (var plane in allPlanes)
+        {
+            if (plane != null)
+            {
+                // Keep the plane aligned with the tracking space transform
+                plane.transform.position = trackingSpaceTransform.position;
+                plane.transform.rotation = trackingSpaceTransform.rotation;
+            }
+        }
+
+        // Update buffer meshes if they exist
+        foreach (var buffer in bufferRepresentations)
+        {
+            if (buffer != null)
+            {
+                // Only update parent-relative positioning
+                HorizontalFollower follower = buffer.GetComponent<HorizontalFollower>();
+                if (follower == null)
+                {
+                    // If no follower, ensure it's at least in the right place
+                    buffer.transform.position = trackingSpaceTransform.position;
+                    buffer.transform.rotation = trackingSpaceTransform.rotation;
+                }
+            }
+        }
+
+        // Also update any markers if they exist (optional)
+        CreateAlignmentVisualizations();
     }
 
 }

@@ -284,14 +284,11 @@ public class TrackingSpaceHelper : MonoBehaviour
                     PersistentRDW persistentRDW = FindObjectOfType<PersistentRDW>();
                     if (persistentRDW != null)
                     {
-                        Vector3 userForward = headTransform.forward;
-                        userForward.y = 0;
-                        userForward.Normalize();
+                        // This will align the tracking space with the player's current position and direction
+                        persistentRDW.CalibrateTrackingSpace();
 
-                        Vector3 newPosition = new Vector3(headPosition.x, 0, headPosition.z);
-
-                        persistentRDW.AlignTrackingSpaceWithRoad(newPosition, userForward, actualWidth, actualLength);
-                        if (verbose) Debug.Log("Used centralized alignment method");
+                        // Force tracking space visualization on for debugging
+                        persistentRDW.ToggleTrackingSpaceVisualization();
                     }
                     else
                     {

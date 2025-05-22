@@ -157,7 +157,7 @@ public class RDWInitializer : MonoBehaviour
                     // Set up for free exploration
                     try
                     {
-                        rm.SetupForHMDFreeExploration();
+                        //rm.SetupForHMDFreeExploration();
                         Debug.Log($"RDWInitializer: SetupForHMDFreeExploration successful for avatar {i}");
                     }
                     catch (System.Exception ex)
