@@ -385,9 +385,6 @@ public class PersistentRDW : MonoBehaviour
         }
     }
 
-
-
-
     // Call this when the scenario ends (when bus is caught)
     public void EndScenario()
     {
@@ -442,7 +439,7 @@ public class PersistentRDW : MonoBehaviour
     // Call when player position needs to be updated (e.g., when scenario starts)
     public void UpdateRedirectionOrigin(Transform startPosition)
     {
-        if (!rdwInitialized || redirectionManager == null || redirectionManager.trackingSpace == null)
+        if (!rdwInitialized || redirectionManager == null)
         {
             Debug.LogWarning("PersistentRDW: Cannot update redirection origin - RDW not initialized");
             return;
@@ -450,25 +447,32 @@ public class PersistentRDW : MonoBehaviour
 
         Debug.Log($"PersistentRDW: Updating redirection origin to {startPosition.position}");
 
-        // Save current head position
-        Vector3 headPos = redirectionManager.headTransform.position;
-        Vector3 headForward = redirectionManager.headTransform.forward;
+        // CRITICAL: In OpenRDW, NEVER move tracking space after calibration!
+        // Instead, move the XR Origin to create virtual world transitions
 
-        // Calculate the tracking space position to place the head at startPosition
-        Vector3 newTrackingSpacePos = new Vector3(
-            startPosition.position.x - (headPos.x - redirectionManager.trackingSpace.position.x),
-            0f,
-            startPosition.position.z - (headPos.z - redirectionManager.trackingSpace.position.z)
-        );
+        // Get current real position in physical space (this should stay the same)
+        Vector3 currentRealPos = redirectionManager.GetPosReal(redirectionManager.headTransform.position);
 
-        // Calculate rotation offset
-        float currentYaw = redirectionManager.trackingSpace.eulerAngles.y;
-        float targetYaw = startPosition.eulerAngles.y;
-        float headYaw = redirectionManager.headTransform.eulerAngles.y;
+        // CORRECT: Move XR Origin to place user at desired location
+        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+        if (xrOrigin != null)
+        {
+            // Calculate where XR Origin should be positioned
+            Vector3 desiredXROriginPos = startPosition.position - currentRealPos;
+            desiredXROriginPos.y = xrOrigin.transform.position.y; // Keep current Y
 
-        // Apply the offset to place head at startPosition with correct orientation
-        redirectionManager.trackingSpace.position = newTrackingSpacePos;
-        redirectionManager.trackingSpace.rotation = Quaternion.Euler(0f, targetYaw - (headYaw - currentYaw), 0f);
+            // Update XR Origin position and rotation
+            xrOrigin.transform.position = desiredXROriginPos;
+            xrOrigin.transform.rotation = startPosition.rotation;
+
+            Debug.Log($"Updated XR Origin to position: {desiredXROriginPos}");
+            Debug.Log($"Updated XR Origin to rotation: {startPosition.rotation.eulerAngles}");
+            Debug.Log($"Tracking space remains at: {redirectionManager.trackingSpace.position} (NEVER MOVED)");
+        }
+        else
+        {
+            Debug.LogError("Could not find XR Origin for redirection origin update!");
+        }
 
         // Force update visualization
         if (visualManager != null)
@@ -476,12 +480,12 @@ public class PersistentRDW : MonoBehaviour
             visualManager.UpdateVisualizations();
         }
 
-        // Update current user state to reflect the new position
+        // Update current user state to reflect the new virtual position
         redirectionManager.UpdateCurrentUserState();
 
-        // Verify position
+        // Verify real position (should stay the same)
         Vector3 realPos = redirectionManager.GetPosReal(redirectionManager.headTransform.position);
-        Debug.Log($"PersistentRDW: New real position: {realPos}");
+        Debug.Log($"PersistentRDW: Real position (should be unchanged): {realPos}");
     }
 
     // Add a method to toggle tracking space visualization (useful for debugging)
@@ -1597,25 +1601,37 @@ public class PersistentRDW : MonoBehaviour
 
         Debug.Log($"Updating virtual position to {newVirtualPosition} while preserving physical space");
 
-        // Get current real position in physical space
+        // CRITICAL: In OpenRDW, NEVER move tracking space after calibration!
+        // Instead, move the XR Origin to create virtual world transitions
+
+        // Get current real position in physical space (this should stay the same)
         Vector3 currentRealPos = redirectionManager.GetPosReal(redirectionManager.headTransform.position);
 
-        // Calculate new tracking space position to place user at desired virtual location
-        // while keeping their physical position the same
-        Vector3 newTrackingSpacePos = newVirtualPosition - currentRealPos;
-        newTrackingSpacePos.y = 0; // Keep at ground level
+        // CORRECT: Move XR Origin to place user at desired virtual location
+        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+        if (xrOrigin != null)
+        {
+            // Calculate where XR Origin should be positioned
+            Vector3 desiredXROriginPos = newVirtualPosition - currentRealPos;
+            desiredXROriginPos.y = xrOrigin.transform.position.y; // Keep current Y
 
-        // Update tracking space position
-        redirectionManager.trackingSpace.position = newTrackingSpacePos;
+            // Update XR Origin position (this moves the virtual world, not the tracking space)
+            xrOrigin.transform.position = desiredXROriginPos;
 
-        // Update rotation to match virtual direction
-        virtualDirection.y = 0;
-        virtualDirection.Normalize();
-        float virtualAngle = Mathf.Atan2(virtualDirection.x, virtualDirection.z) * Mathf.Rad2Deg;
-        redirectionManager.trackingSpace.rotation = Quaternion.Euler(0, virtualAngle, 0);
+            // Update XR Origin rotation for virtual direction
+            virtualDirection.y = 0;
+            virtualDirection.Normalize();
+            float virtualAngle = Mathf.Atan2(virtualDirection.x, virtualDirection.z) * Mathf.Rad2Deg;
+            xrOrigin.transform.rotation = Quaternion.Euler(0, virtualAngle, 0);
 
-        Debug.Log($"Updated tracking space position: {newTrackingSpacePos}");
-        Debug.Log($"Updated tracking space rotation: {virtualAngle}°");
+            Debug.Log($"Updated XR Origin position: {desiredXROriginPos} (NOT tracking space)");
+            Debug.Log($"Updated XR Origin rotation: {virtualAngle}°");
+            Debug.Log($"Tracking space remains at: {redirectionManager.trackingSpace.position} (NEVER MOVED)");
+        }
+        else
+        {
+            Debug.LogError("Could not find XR Origin for virtual position update!");
+        }
 
         // Update current state
         redirectionManager.UpdateCurrentUserState();

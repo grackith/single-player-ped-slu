@@ -48,6 +48,7 @@ public class RedirectionManager : MonoBehaviour
     [Header("OpenRDW Integration")]
     public bool waitingForReadySignal = true;
     private bool experimentStarted = false;
+   
 
     //record the time standing on the same position
     private float samePosTime;
@@ -179,38 +180,50 @@ public class RedirectionManager : MonoBehaviour
 
     void Start()
     {
+        // CRITICAL: Set OpenRDW reset trigger buffer FIRST
+        if (globalConfiguration != null)
+        {
+            globalConfiguration.RESET_TRIGGER_BUFFER = 0.4f; // OpenRDW minimum recommended
+            Debug.Log($"Set RESET_TRIGGER_BUFFER to {globalConfiguration.RESET_TRIGGER_BUFFER}");
+        }
+
         // Ensure physical spaces exist with correct dimensions
         EnsurePhysicalSpacesExist();
 
         // Set up references
         EnsureReferencesForRealUser();
 
+        // Force correct physical space dimensions (before any VR setup)
+        SetCorrectPhysicalSpaceDimensions();
+
         // For VR mode, set up tracking space correctly
         if (globalConfiguration != null &&
             globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
         {
-            // Wait a frame for everything to initialize
+            // UPDATED: Simplified VR setup - no auto-calibration
             StartCoroutine(DelayedVRSetup());
-        }
 
-        // Force correct physical space dimensions
-        SetCorrectPhysicalSpaceDimensions();
-
-        // Initialize the system
-        Initialize();
-
-        // For HMD mode, wait for 'R' key (OpenRDW standard)
-        if (globalConfiguration != null && globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
-        {
-            Debug.Log("HMD Mode: Press 'R' key to start the experiment");
+            // OpenRDW standard: wait for 'R' key
+            Debug.Log("HMD Mode: Press 'R' key to start the experiment and calibrate physical space");
             waitingForReadySignal = true;
             experimentStarted = false;
         }
         else
         {
+            // Simulation mode
             waitingForReadySignal = false;
             experimentStarted = true;
         }
+
+        // Initialize the system AFTER configuration is set
+        Initialize();
+
+        // IMPORTANT: Log current configuration for debugging
+        Debug.Log($"RedirectionManager Start Complete:");
+        Debug.Log($"- Movement Controller: {globalConfiguration?.movementController}");
+        Debug.Log($"- Reset Trigger Buffer: {globalConfiguration?.RESET_TRIGGER_BUFFER}");
+        Debug.Log($"- Physical Dimensions: {physicalWidth}m × {physicalLength}m");
+        Debug.Log($"- Waiting for Ready Signal: {waitingForReadySignal}");
     }
 
     private IEnumerator DelayedVRSetup()
@@ -220,14 +233,18 @@ public class RedirectionManager : MonoBehaviour
         // Make sure we have the XR camera as head transform
         EnsureXRCameraReference();
 
-        // Initial setup but don't calibrate until 'R' is pressed
+        // UPDATED: NO auto-calibration here - wait for 'R' key press
+        // Just ensure basic positioning
         if (headTransform != null && trackingSpace != null)
         {
-            // Just basic positioning for now
+            // Initial position at origin - will be properly set when 'R' is pressed
             trackingSpace.position = Vector3.zero;
             trackingSpace.rotation = Quaternion.identity;
+            Debug.Log("VR setup complete - tracking space at origin, waiting for 'R' calibration");
         }
     }
+
+    
 
     void Update()
     {
@@ -1356,6 +1373,7 @@ public class RedirectionManager : MonoBehaviour
     }
 
     // CRITICAL: Method for scenario transitions that preserves tracking space
+    // FIXED VERSION: This method should ONLY move XR Origin, NEVER move tracking space
     public void UpdateVirtualPositionForScenario(Vector3 newVirtualPosition, Vector3 forwardDirection)
     {
         if (!physicalSpaceCalibrated)
@@ -1367,11 +1385,14 @@ public class RedirectionManager : MonoBehaviour
 
         Debug.Log($"Updating virtual position for scenario: {newVirtualPosition}");
 
-        // Get current real position in physical space
+        // CRITICAL: In OpenRDW, tracking space NEVER moves after calibration!
+        // Only the XR Origin moves to create virtual world transitions
+
+        // Get current real position in physical space (this should stay the same)
         Vector3 currentRealPos = GetPosReal(headTransform.position);
 
-        // CRITICAL: In OpenRDW style, we NEVER move the tracking space once calibrated
-        // Instead, we move the XR Origin to place the user at the desired virtual location
+        // CORRECT: Move XR Origin to place user at desired virtual location
+        // while keeping their physical position in the room the same
         GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
         if (xrOrigin != null)
         {
@@ -1405,6 +1426,122 @@ public class RedirectionManager : MonoBehaviour
         if (visualizationManager != null)
         {
             // Don't regenerate tracking space - it should never move
+            visualizationManager.ChangeTrackingSpaceVisibility(true);
+        }
+    }
+
+    // REMOVE any method that automatically corrects drift by moving tracking space
+    // The CheckAndCorrectPhysicalSpaceDrift method should be DELETED or modified to NOT move tracking space
+
+    // FIXED VERSION: This should only log warnings, not move tracking space
+    //private void CheckAndCorrectPhysicalSpaceDrift()
+    //{
+    //    if (!physicalSpaceCalibrated) return;
+
+    //    Vector3 currentRealPos = GetPosReal(headTransform.position);
+    //    float driftMagnitude = currentRealPos.magnitude;
+
+    //    // If drift is significant, LOG WARNING but DO NOT auto-correct
+    //    if (driftMagnitude > 0.3f) // 30cm threshold
+    //    {
+    //        Debug.LogWarning($"Physical space drift detected: {driftMagnitude:F2}m from center");
+    //        Debug.LogWarning("This may indicate the user is approaching physical boundaries");
+    //        Debug.LogWarning("Reset should trigger soon if user continues in this direction");
+
+    //        // DO NOT MOVE TRACKING SPACE! This is what prevents resets!
+    //        // The whole point is that when they get to the edge, a reset should trigger
+    //    }
+    //}
+
+    // ADD: Method to check if user is near physical boundaries (for reset triggering)
+    public bool IsNearPhysicalBoundary()
+    {
+        if (!physicalSpaceCalibrated || headTransform == null) return false;
+
+        Vector3 realPos = GetPosReal(headTransform.position);
+
+        // Check if user is within reset trigger buffer of any boundary
+        float halfWidth = physicalWidth / 2;
+        float halfLength = physicalLength / 2;
+
+        // Check each boundary
+        bool nearXBoundary = Mathf.Abs(realPos.x) > (halfWidth - globalConfiguration.RESET_TRIGGER_BUFFER);
+        bool nearZBoundary = Mathf.Abs(realPos.z) > (halfLength - globalConfiguration.RESET_TRIGGER_BUFFER);
+
+        if (nearXBoundary || nearZBoundary)
+        {
+            Debug.Log($"User near boundary: realPos={realPos}, buffer={globalConfiguration.RESET_TRIGGER_BUFFER}");
+            return true;
+        }
+
+        return false;
+    }
+
+    // ADD: Method to get distance to nearest boundary
+    public float GetDistanceToNearestBoundary()
+    {
+        if (!physicalSpaceCalibrated || headTransform == null) return float.MaxValue;
+
+        Vector3 realPos = GetPosReal(headTransform.position);
+
+        float halfWidth = physicalWidth / 2;
+        float halfLength = physicalLength / 2;
+
+        // Calculate distance to each boundary
+        float distToRightBoundary = halfWidth - realPos.x;
+        float distToLeftBoundary = halfWidth + realPos.x;
+        float distToFrontBoundary = halfLength - realPos.z;
+        float distToBackBoundary = halfLength + realPos.z;
+
+        // Return minimum distance
+        return Mathf.Min(distToRightBoundary, distToLeftBoundary, distToFrontBoundary, distToBackBoundary);
+    }
+
+    // Add this method to RedirectionManager
+    public void SetupForRealHumanExperiment()
+    {
+        if (movementManager != null)
+        {
+            movementManager.ConfigureForFreeExploration();
+            Debug.Log("Configured MovementManager for real human free exploration");
+        }
+
+        // Also ensure proper redirector/resetter setup
+        if (redirectorChoice == RedirectorChoice.None)
+        {
+            redirectorChoice = RedirectorChoice.DynamicAPF;
+            UpdateRedirector(typeof(DynamicAPF_Redirector));
+        }
+
+        if (resetterChoice == ResetterChoice.None)
+        {
+            resetterChoice = ResetterChoice.FreezeTurn;
+            UpdateResetter(typeof(FreezeTurnResetter));
+        }
+    }
+
+    // Update your StartRDWExperiment method in RedirectionManager:
+    private void StartRDWExperiment()
+    {
+        Debug.Log("'R' key pressed - Starting RDW experiment");
+        experimentStarted = true; // Use existing field instead of rdwExperimentStarted
+
+        // Set global configuration ready state
+        if (globalConfiguration != null)
+        {
+            globalConfiguration.readyToStart = true;
+            globalConfiguration.experimentInProgress = true;
+        }
+
+        // CRITICAL: Use the new RedirectionManager calibration method
+        CalibratePhysicalSpaceReference();
+
+        // Set up for real human experiment
+        SetupForRealHumanExperiment();
+
+        // Enable visualization
+        if (visualizationManager != null)
+        {
             visualizationManager.ChangeTrackingSpaceVisibility(true);
         }
     }

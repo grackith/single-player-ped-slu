@@ -88,7 +88,7 @@ public class ScenarioManager : MonoBehaviour
         get { return _instance; }
     }
 
-    public AITrafficWaypointRoute scenarioBusRoute;
+    public AITrafficWaypointRoute busRoute;
     #endregion
 
     #region Unity Lifecycle Methods
@@ -702,7 +702,7 @@ public class ScenarioManager : MonoBehaviour
         }
     }
 
-    public AITrafficWaypointRoute busRoute;
+    
 
     private class SpawnOnce : MonoBehaviour
     {
@@ -2190,38 +2190,38 @@ public class ScenarioManager : MonoBehaviour
     }
 
     // Add this method to safely update tracking space for new scenarios
-    private void UpdateTrackingSpaceForScenario(Vector3 newVirtualPosition, Vector3 roadDirection)
-    {
-        var rm = FindObjectOfType<RedirectionManager>();
-        if (rm == null || !rm.physicalSpaceCalibrated) return;
+    //private void UpdateTrackingSpaceForScenario(Vector3 newVirtualPosition, Vector3 roadDirection)
+    //{
+    //    var rm = FindObjectOfType<RedirectionManager>();
+    //    if (rm == null || !rm.physicalSpaceCalibrated) return;
 
-        Debug.Log("Updating tracking space for new scenario while preserving physical space");
+    //    Debug.Log("Updating tracking space for new scenario while preserving physical space");
 
-        // Calculate the offset needed to place the player at the new virtual position
-        Vector3 currentHeadPos = rm.headTransform.position;
-        Vector3 currentRealPos = rm.GetPosReal(currentHeadPos);
+    //    // Calculate the offset needed to place the player at the new virtual position
+    //    Vector3 currentHeadPos = rm.headTransform.position;
+    //    Vector3 currentRealPos = rm.GetPosReal(currentHeadPos);
 
-        // The new tracking space position should place the player at the desired virtual location
-        // while keeping their physical position in the room the same
-        Vector3 newTrackingSpacePos = newVirtualPosition - currentRealPos;
-        newTrackingSpacePos.y = 0; // Keep at ground level
+    //    // The new tracking space position should place the player at the desired virtual location
+    //    // while keeping their physical position in the room the same
+    //    Vector3 newTrackingSpacePos = newVirtualPosition - currentRealPos;
+    //    newTrackingSpacePos.y = 0; // Keep at ground level
 
-        // Update tracking space position
-        rm.trackingSpace.position = newTrackingSpacePos;
+    //    // Update tracking space position
+    //    rm.trackingSpace.position = newTrackingSpacePos;
 
-        // Update rotation to align with road direction while preserving physical space
-        float roadAngle = Mathf.Atan2(roadDirection.x, roadDirection.z) * Mathf.Rad2Deg;
-        rm.trackingSpace.rotation = Quaternion.Euler(0, roadAngle, 0);
+    //    // Update rotation to align with road direction while preserving physical space
+    //    float roadAngle = Mathf.Atan2(roadDirection.x, roadDirection.z) * Mathf.Rad2Deg;
+    //    rm.trackingSpace.rotation = Quaternion.Euler(0, roadAngle, 0);
 
-        Debug.Log($"Updated tracking space position: {newTrackingSpacePos}");
-        Debug.Log($"Updated tracking space rotation: {roadAngle}°");
+    //    Debug.Log($"Updated tracking space position: {newTrackingSpacePos}");
+    //    Debug.Log($"Updated tracking space rotation: {roadAngle}°");
 
-        // Verify the player is at the correct virtual position
-        Vector3 verifyVirtualPos = rm.headTransform.position;
-        Vector3 verifyRealPos = rm.GetPosReal(verifyVirtualPos);
+    //    // Verify the player is at the correct virtual position
+    //    Vector3 verifyVirtualPos = rm.headTransform.position;
+    //    Vector3 verifyRealPos = rm.GetPosReal(verifyVirtualPos);
 
-        Debug.Log($"Verification - Virtual pos: {verifyVirtualPos}, Real pos: {verifyRealPos}");
-    }
+    //    Debug.Log($"Verification - Virtual pos: {verifyVirtualPos}, Real pos: {verifyRealPos}");
+    //}
 
     // Helper method to clear visual markers if persistentRDW isn't available
     private void ClearVisualMarkers()

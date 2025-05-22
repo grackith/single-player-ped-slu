@@ -81,7 +81,7 @@ public class MovementManager : MonoBehaviour
             return;
 
         UpdateSimulatedWaypointIfRequired();
-        simulatedWalker.UpdateSimulatedWalker();
+        //simulatedWalker.UpdateSimulatedWalker();
         if (IfInvalidData())
         {
             Debug.LogError(string.Format("InvalidData! experimentIterator = {0}, userid = {1}", generalManager.experimentIterator, avatarId));
@@ -430,15 +430,18 @@ public class MovementManager : MonoBehaviour
         waypointsFilePath = avatar.waypointsFilePath;
         samplingIntervals = avatar.samplingIntervals;
         samplingIntervalsFilePath = avatar.samplingIntervalsFilePath;
+
         if (generalManager.movementController.Equals(GlobalConfiguration.MovementController.HMD))
         {
-            //HMD mode, set as current position and direction
+            // HMD mode - real human experiment
             virtualInitPose = new InitialPose(Utilities.FlattenedPos2D(rm.headTransform.position), Utilities.FlattenedDir2D(rm.headTransform.forward));
             physicalInitPose = virtualInitPose;
+
+            Debug.Log("HMD Mode: Using current head position as initial pose");
         }
         else
         {
-            //auto simulation and keyboard controll mode, apply initial positions and directions
+            // Simulation mode - apply initial positions and directions
             virtualInitPose = avatar.virtualInitPose;
             physicalInitPose = avatar.physicalInitPose;
         }
@@ -446,10 +449,8 @@ public class MovementManager : MonoBehaviour
         ifInvalid = false;
         ifMissionComplete = false;
 
-        //Set virtual path
-
-        //Set virtual path
-        if (pathSeedChoice == PathSeedChoice.VEPath)//jon: newly added VE Path
+        // Set virtual path
+        if (pathSeedChoice == PathSeedChoice.VEPath)
         {
             vePath = GameObject.Find(avatar.vePathName).GetComponent<VEPath>();
             if (vePath)
@@ -461,12 +462,14 @@ public class MovementManager : MonoBehaviour
         {
             waypoints = GetRealWaypoints(waypoints, virtualInitPose.initialPosition, virtualInitPose.initialForward, out float sumOfDistances, out float sumOfRotations);
         }
-        //Set priority, large priority call early
+
+        // Set priority
         rm.priority = this.avatarId;
 
         InstantiateSimulationPrefab();
+
         // Set First Waypoint Position and Enable It
-        if (pathSeedChoice == PathSeedChoice.VEPath)//jon: when using VEPath
+        if (pathSeedChoice == PathSeedChoice.VEPath)
         {
             rm.targetWaypoint = vePathWaypoints[0];
         }
@@ -477,7 +480,7 @@ public class MovementManager : MonoBehaviour
         waypointIterator = 0;
         accumulatedWaypointTime = 0;
 
-        // Enabling/Disabling Redirectors
+        // Enable/Disable Redirectors
         rm.redirectorChoice = RedirectionManager.RedirectorToRedirectorChoice(rm.redirectorType);
         rm.resetterChoice = RedirectionManager.ResetterToResetChoice(rm.resetterType);
         rm.UpdateRedirector(rm.redirectorType);
@@ -495,29 +498,49 @@ public class MovementManager : MonoBehaviour
             ((SeparateSpace_Redirector)rm.redirector).InitializePositionSquares();
         }
 
-        // Stop Trail Drawing and Delete Virtual Path
-        rm.trailDrawer.enabled = false;
-
         // Setup Trail Drawing
+        rm.trailDrawer.enabled = false;
         rm.trailDrawer.enabled = true;
-        // Enable Waypoint
+
+        // Enable Waypoints
         rm.targetWaypoint.gameObject.SetActive(true);
         vm.realWaypoint.gameObject.SetActive(true);
 
-        // Resetting User and World Positions and Orientations
-        transform.position = Vector3.zero;
-        transform.rotation = Quaternion.identity;
-        // ESSENTIAL BUG FOUND: If you set the user first and then the redirection recipient, then the user will be moved, so you have to make sure to do it afterwards!
-        //Debug.Log("Target User Position: " + setup.initialPose.initialPosition.ToString("f4"));
+        // CRITICAL FIX: Separate HMD and simulation positioning
+        if (generalManager.movementController.Equals(GlobalConfiguration.MovementController.HMD))
+        {
+            // HMD Mode - Real Human: DON'T move anything, use current positions
+            Debug.Log("HMD Mode: Keeping current head and tracking space positions");
 
-        rm.headTransform.position = Utilities.UnFlatten(virtualInitPose.initialPosition, rm.headTransform.position.y);
-        rm.headTransform.rotation = Quaternion.LookRotation(Utilities.UnFlatten(virtualInitPose.initialForward), Vector3.up);
+            // Only initialize the system, don't move transforms
+            rm.Initialize();
+            vm.DestroyAll();
+            vm.GenerateTrackingSpaceMesh(generalManager.physicalSpaces);
 
-        rm.Initialize();//initialize when restart a experiment 
-        vm.DestroyAll();
-        vm.GenerateTrackingSpaceMesh(generalManager.physicalSpaces);
-        rm.trackingSpace.position = Utilities.UnFlatten(virtualInitPose.initialPosition - physicalInitPose.initialPosition);
-        rm.trackingSpace.eulerAngles = new Vector3(0, Mathf.Atan2(virtualInitPose.initialForward.y, virtualInitPose.initialForward.x) - Mathf.Atan2(physicalInitPose.initialForward.y, physicalInitPose.initialForward.x), 0);
+            // CRITICAL: DO NOT move tracking space for real humans!
+            // The tracking space should only be set when user presses 'R' to calibrate
+            Debug.Log("HMD Mode: Tracking space left unchanged for real user calibration");
+        }
+        else
+        {
+            // Simulation Mode - Reset positions for virtual avatar
+            transform.position = Vector3.zero;
+            transform.rotation = Quaternion.identity;
+
+            // Move simulated head to initial position
+            rm.headTransform.position = Utilities.UnFlatten(virtualInitPose.initialPosition, rm.headTransform.position.y);
+            rm.headTransform.rotation = Quaternion.LookRotation(Utilities.UnFlatten(virtualInitPose.initialForward), Vector3.up);
+
+            rm.Initialize();
+            vm.DestroyAll();
+            vm.GenerateTrackingSpaceMesh(generalManager.physicalSpaces);
+
+            // Move tracking space for simulation
+            rm.trackingSpace.position = Utilities.UnFlatten(virtualInitPose.initialPosition - physicalInitPose.initialPosition);
+            rm.trackingSpace.eulerAngles = new Vector3(0, Mathf.Atan2(virtualInitPose.initialForward.y, virtualInitPose.initialForward.x) - Mathf.Atan2(physicalInitPose.initialForward.y, physicalInitPose.initialForward.x), 0);
+
+            Debug.Log("Simulation Mode: Set tracking space position for virtual avatar");
+        }
 
         rm.trailDrawer.BeginTrailDrawing();
     }
