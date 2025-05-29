@@ -49,6 +49,15 @@ public class ScenarioManager : MonoBehaviour
     [Header("Scenarios")]
     public Scenario[] scenarios;
 
+    [Header("Bus Configuration")]
+    public AITrafficCar busPrefab;
+    public AITrafficWaypointRoute initialRoute; // Main route
+    public AITrafficWaypointRoute intersectionRoute; // NEW: Intersection route
+    public AITrafficWaypointRoute busStopRoute; // Bus stop route
+    private Coroutine busSpawnCoroutine;
+    private BusSpawnerSimple BusSpawnerSimple;
+    //public AITrafficWaypointRoute busRoute;
+
     [Header("UI Configuration")]
     public GameObject researcherUI;
 
@@ -60,11 +69,7 @@ public class ScenarioManager : MonoBehaviour
     public UnityEvent onScenarioStarted;
     public UnityEvent onScenarioEnded;
 
-    [Header("Bus Configuration")]
-    public AITrafficCar busPrefab; // Assign your bus prefab in the inspector
-    public AITrafficWaypointRoute defaultBusRoute; // Default route if scenario doesn't specify one
-    private Coroutine busSpawnCoroutine;
-    private BusSpawnerSimple BusSpawnerSimple;
+
 
     [Header("Redirected Walking")]
     public GlobalConfiguration rdwGlobalConfiguration;
@@ -93,7 +98,7 @@ public class ScenarioManager : MonoBehaviour
         get { return _instance; }
     }
 
-    public AITrafficWaypointRoute busRoute;
+    
     #endregion
 
     #region Unity Lifecycle Methods
@@ -295,10 +300,13 @@ public class ScenarioManager : MonoBehaviour
 
             // Assign default values if available
             BusSpawnerSimple.busPrefab = busPrefab;
-            BusSpawnerSimple.initialRoute = defaultBusRoute;
-            BusSpawnerSimple.busStopRoute = busRoute;
+            BusSpawnerSimple.initialRoute = initialRoute;
+            BusSpawnerSimple.intersectionRoute = intersectionRoute;
+            BusSpawnerSimple.busStopRoute = busStopRoute;
+
         }
     }
+
     private IEnumerator DelayedTrackingSpaceInitialization(TrackingSpaceManager manager)
     {
         // Wait a short delay to allow other components to initialize
@@ -694,11 +702,11 @@ public class ScenarioManager : MonoBehaviour
             return;
         }
 
-        // Get any bus route
-        AITrafficWaypointRoute busRoute = null;
-        if (this.busRoute != null)
+    // Get any bus route
+    AITrafficWaypointRoute busStopRoute = null;
+        if (this.busStopRoute != null)
         {
-            busRoute = this.busRoute;
+            busStopRoute = this.busStopRoute;
         }
         else
         {
@@ -708,37 +716,37 @@ public class ScenarioManager : MonoBehaviour
             {
                 if (route.name.ToLower().Contains("bus"))
                 {
-                    busRoute = route;
+                    busStopRoute = route;
                     break;
                 }
             }
         }
 
-        if (busRoute == null)
+        if (busStopRoute == null)
         {
             Debug.LogError("No bus route found!");
             return;
         }
 
         // Get first waypoint position
-        if (busRoute.waypointDataList.Count == 0)
+        if (busStopRoute.waypointDataList.Count == 0)
         {
             Debug.LogError("Bus route has no waypoints!");
             return;
         }
 
         // Get spawn position
-        Vector3 spawnPos = busRoute.waypointDataList[0]._transform.position;
+        Vector3 spawnPos = busStopRoute.waypointDataList[0]._transform.position;
         spawnPos.y += 1f; // Raise slightly to avoid ground collision
 
         // Spawn the bus directly
-        GameObject busObject = Instantiate(busPrefab.gameObject, spawnPos, busRoute.waypointDataList[0]._transform.rotation);
+        GameObject busObject = Instantiate(busPrefab.gameObject, spawnPos, busStopRoute.waypointDataList[0]._transform.rotation);
         AITrafficCar busCar = busObject.GetComponent<AITrafficCar>();
         if (busCar != null)
         {
-            busCar.RegisterCar(busRoute);
+            busCar.RegisterCar(busStopRoute);
             busCar.StartDriving();
-            Debug.Log($"Bus spawned at {spawnPos} on route {busRoute.name}");
+            Debug.Log($"Bus spawned at {spawnPos} on route {busStopRoute.name}");
         }
         else
         {
@@ -2294,16 +2302,17 @@ public class ScenarioManager : MonoBehaviour
             AITrafficWaypointRoute mainRoute = scenario.scenarioBusRoute;
             if (mainRoute == null)
             {
-                mainRoute = defaultBusRoute;
+                mainRoute = initialRoute;
                 Debug.Log("Using default bus route (scenario route is null)");
             }
 
             // Set routes and trigger spawn
-            if (mainRoute != null && busRoute != null)
+            if (mainRoute != null && busStopRoute != null)
             {
                 // Log route status
                 Debug.Log($"Main route '{mainRoute.name}' registered: {mainRoute.isRegistered}");
-                Debug.Log($"Bus stop route '{busRoute.name}' registered: {busRoute.isRegistered}");
+                Debug.Log($"Intersection route '{intersectionRoute.name}' registered: {intersectionRoute.isRegistered}");
+                Debug.Log($"Bus stop route '{busStopRoute.name}' registered: {busStopRoute.isRegistered}");
 
                 // Force register routes if needed
                 if (!mainRoute.isRegistered)
@@ -2313,17 +2322,18 @@ public class ScenarioManager : MonoBehaviour
                     Debug.Log($"Registered main route: {mainRoute.name}");
                 }
 
-                if (!busRoute.isRegistered)
+                if (!busStopRoute.isRegistered)
                 {
-                    AITrafficController.Instance.RegisterAITrafficWaypointRoute(busRoute);
-                    busRoute.RegisterRoute();
-                    Debug.Log($"Registered bus stop route: {busRoute.name}");
+                    AITrafficController.Instance.RegisterAITrafficWaypointRoute(busStopRoute);
+                    busStopRoute.RegisterRoute();
+                    Debug.Log($"Registered bus stop route: {busStopRoute.name}");
                 }
 
                 // Set up routes
                 busSpawner.initialRoute = mainRoute;
-                busSpawner.busStopRoute = busRoute;
-                busSpawner.SetupBusRoutes(mainRoute, busRoute);
+                busSpawner.intersectionRoute = intersectionRoute;
+                busSpawner.busStopRoute = busStopRoute;
+                busSpawner.SetupBusRoutes(initialRoute, intersectionRoute, busStopRoute);
 
                 // Trigger spawn with delay
                 Debug.Log($"Triggering bus spawn with {scenario.busSpawnDelay} seconds delay");
@@ -2335,7 +2345,7 @@ public class ScenarioManager : MonoBehaviour
             {
                 Debug.LogError("Missing routes for bus setup!");
                 if (mainRoute == null) Debug.LogError("Main route is null");
-                if (busRoute == null) Debug.LogError("Bus stop route is null");
+                if (busStopRoute == null) Debug.LogError("Bus stop route is null");
                 return false;
             }
         }

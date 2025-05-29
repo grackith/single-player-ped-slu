@@ -24,8 +24,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Water
-  m_Shader: {fileID: -6465566751694194690, guid: 5863fe7081398894eb32a9fcb48c7def,
-    type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: 5863fe7081398894eb32a9fcb48c7def, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
@@ -37,10 +36,9 @@ Material:
   m_LightmapFlags: 0
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
+  m_CustomRenderQueue: 2950
   stringTagMap:
     MotionVector: User
-    RenderType: Transparent
   disabledShaderPasses:
   - MOTIONVECTORS
   - TransparentDepthPrepass
@@ -69,6 +67,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _MotionChaos_1f4d3cb1f0a344089fd3c6febd16558e_Texture2D_136265602_Texture2D:
         m_Texture: {fileID: 2800000, guid: e220c46188701b44eb4a84306d3e6e05, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MotionChaos_7f07fb75828f49ea852ffda569df28ee_Texture2D_2817692635_Texture2D:
+        m_Texture: {fileID: 2800000, guid: cd93c6b740bc9f349889cec601c6f7f0, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SampleTexture2D_065ee1f11d4c46aaa975350c9eb06afd_Texture_1:
@@ -186,7 +188,6 @@ Material:
     - _RippleScale: {r: 0.45, g: 0.35, b: 0.17, a: 0.4}
     - _RippleSpeed: {r: -0.4, g: 0.02, b: -0.1, a: -0.4}
   m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!114 &1596086379957803595
 MonoBehaviour:
   m_ObjectHideFlags: 11

@@ -125,50 +125,116 @@ public class RedirectionManager : MonoBehaviour
 
     void Awake()
     {
+        // Initialize redirection types
         redirectorType = RedirectorChoiceToRedirector(redirectorChoice);
         resetterType = ResetterChoiceToResetter(resetterChoice);
 
+        // Get component references with null checking
         globalConfiguration = GetComponentInParent<GlobalConfiguration>();
         visualizationManager = GetComponent<VisualizationManager>();
         networkManager = globalConfiguration?.GetComponentInChildren<NetworkManager>(true);
-
-        body = transform.Find("Body");
-        trackingSpace = transform.Find("Tracking Space");
-        simulatedHead = GetSimulatedAvatarHead();
-
-        movementManager = this.gameObject.GetComponent<MovementManager>();
-
-        // Update redirector and resetter
-        UpdateRedirector(redirectorType);
-        UpdateResetter(resetterType);
-
+        movementManager = GetComponent<MovementManager>();
         trailDrawer = GetComponent<TrailDrawer>();
 
+        // Find child transforms
+        body = transform.Find("Body");
+        trackingSpace = transform.Find("Tracking Space");
+
+        // Try to get simulated avatar head (may be null in real VR)
+        simulatedHead = GetSimulatedAvatarHead();
+
+        // Initialize simulation-specific components only if simulated head exists
         if (simulatedHead != null)
         {
+            Debug.Log("RedirectionManager: Running in simulation mode");
             simulatedWalker = simulatedHead.GetComponent<SimulatedWalker>();
             keyboardController = simulatedHead.GetComponent<KeyboardController>();
-        }
 
-        if (body != null)
-            bodyHeadFollower = body.GetComponent<HeadFollower>();
-
-        SetReferenceForResetter();
-
-        // CRITICAL: Set up head transform for HMD mode
-        if (globalConfiguration != null && globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
-        {
-            SetupHMDHeadTransform();
-        }
-        else if (simulatedHead != null)
-        {
+            // In simulation mode, use simulated head as head transform
             headTransform = simulatedHead;
         }
+        else
+        {
+            Debug.Log("RedirectionManager: Running in real VR mode - no simulated head found");
+            simulatedWalker = null;
+            keyboardController = null;
+        }
 
-        // Resetter needs ResetTrigger to be initialized before initializing itself
+        // Set up body head follower if body exists
+        if (body != null)
+        {
+            bodyHeadFollower = body.GetComponent<HeadFollower>();
+        }
+
+        // Update redirector and resetter with error handling
+        try
+        {
+            UpdateRedirector(redirectorType);
+            UpdateResetter(resetterType);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error updating redirector/resetter: {ex.Message}");
+        }
+
+        // Set reference for resetter
+        SetReferenceForResetter();
+
+        // CRITICAL: Set up head transform based on movement controller mode
+        if (globalConfiguration != null)
+        {
+            if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
+            {
+                Debug.Log("RedirectionManager: Setting up HMD head transform for real VR");
+                SetupHMDHeadTransform();
+
+                // Verify HMD head transform was set up correctly
+                if (headTransform == null)
+                {
+                    Debug.LogError("HMD head transform setup failed! This will cause issues in VR mode.");
+                    // Try to find XR camera as fallback
+                    FindFallbackHeadTransform();
+                }
+                else
+                {
+                    Debug.Log($"HMD head transform successfully set to: {headTransform.name}");
+                }
+            }
+            else if (simulatedHead != null)
+            {
+                // Already set above, but ensuring consistency
+                headTransform = simulatedHead;
+                Debug.Log("RedirectionManager: Using simulated head transform");
+            }
+            else
+            {
+                Debug.LogWarning("No valid head transform found for non-HMD mode!");
+            }
+        }
+        else
+        {
+            Debug.LogError("GlobalConfiguration is null! Cannot determine movement controller mode.");
+        }
+
+        // Initialize resetter after head transform is set up
         if (resetter != null)
-            resetter.Initialize();
+        {
+            try
+            {
+                resetter.Initialize();
+                Debug.Log("Resetter initialized successfully");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error initializing resetter: {ex.Message}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("No resetter found - reset functionality may not work");
+        }
 
+        // Initialize state variables
         samePosTime = 0;
         gt = curvature = gr = 1;
         isRotating = false;
@@ -176,7 +242,91 @@ public class RedirectionManager : MonoBehaviour
         touchWaypoint = false;
 
         // Make sure we have a target waypoint
-        GetTargetWaypoint();
+        try
+        {
+            GetTargetWaypoint();
+            Debug.Log("Target waypoint initialized");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error getting target waypoint: {ex.Message}");
+        }
+
+        // Final validation
+        ValidateSetup();
+    }
+
+    /// <summary>
+    /// Try to find a fallback head transform if HMD setup failed
+    /// </summary>
+    private void FindFallbackHeadTransform()
+    {
+        Debug.Log("Attempting to find fallback head transform...");
+
+        // Try to find XR Origin camera
+        var xrOrigin = FindObjectOfType<Unity.XR.CoreUtils.XROrigin>();
+        if (xrOrigin != null && xrOrigin.Camera != null)
+        {
+            headTransform = xrOrigin.Camera.transform;
+            Debug.Log($"Using XR Origin camera as fallback: {headTransform.name}");
+            return;
+        }
+
+        // Try to find main camera
+        if (Camera.main != null)
+        {
+            headTransform = Camera.main.transform;
+            Debug.Log($"Using main camera as fallback: {headTransform.name}");
+            return;
+        }
+
+        // Try to find any camera with VR tags
+        Camera[] cameras = FindObjectsOfType<Camera>();
+        foreach (var cam in cameras)
+        {
+            if (cam.name.ToLower().Contains("center") ||
+                cam.name.ToLower().Contains("eye") ||
+                cam.name.ToLower().Contains("head"))
+            {
+                headTransform = cam.transform;
+                Debug.Log($"Using camera with VR-like name as fallback: {headTransform.name}");
+                return;
+            }
+        }
+
+        Debug.LogError("No suitable fallback head transform found!");
+    }
+
+    /// <summary>
+    /// Validate that the setup is correct for the current mode
+    /// </summary>
+    private void ValidateSetup()
+    {
+        bool isSimulationMode = simulatedHead != null;
+        bool isHMDMode = globalConfiguration?.movementController == GlobalConfiguration.MovementController.HMD;
+
+        Debug.Log($"RedirectionManager Setup Validation:");
+        Debug.Log($"- Simulation Mode: {isSimulationMode}");
+        Debug.Log($"- HMD Mode: {isHMDMode}");
+        Debug.Log($"- Head Transform: {(headTransform != null ? headTransform.name : "NULL")}");
+        Debug.Log($"- Redirector: {(redirector != null ? redirector.GetType().Name : "NULL")}");
+        Debug.Log($"- Resetter: {(resetter != null ? resetter.GetType().Name : "NULL")}");
+
+        // Critical validation
+        if (headTransform == null)
+        {
+            Debug.LogError("CRITICAL: headTransform is null! Redirection will not work!");
+        }
+
+        if (isHMDMode && isSimulationMode)
+        {
+            Debug.LogWarning("Both HMD and Simulation mode detected - this may cause conflicts");
+        }
+
+        if (!isHMDMode && !isSimulationMode)
+        {
+            Debug.LogError("Neither HMD nor Simulation mode properly set up!");
+        }
     }
 
     void Start()

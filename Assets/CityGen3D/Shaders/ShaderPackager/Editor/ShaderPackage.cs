@@ -117,13 +117,27 @@ namespace CityGen3D.ShaderPackager
                     e.shaderSrc = JBooth.BetterShaders.BetterShaderImporterEditor.BuildExportShader(JBooth.BetterShaders.ShaderBuilder.RenderPipeline.HDRP2022, optionOverrides, assetPath);
                     e.srpTarget = ShaderPackage.SRPTarget.HDRP;
                     e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2022_2;
-                    e.UnityVersionMax = ShaderPackage.UnityVersion.Max;
+                    e.UnityVersionMax = ShaderPackage.UnityVersion.Unity2022_3;
 
                     e = new ShaderPackage.Entry();
                     entries.Add(e);
                     e.shaderSrc = JBooth.BetterShaders.BetterShaderImporterEditor.BuildExportShader(JBooth.BetterShaders.ShaderBuilder.RenderPipeline.URP2022, optionOverrides, assetPath);
                     e.srpTarget = ShaderPackage.SRPTarget.URP;
                     e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2022_2;
+                    e.UnityVersionMax = ShaderPackage.UnityVersion.Unity2022_3;
+
+                    e = new ShaderPackage.Entry();
+                    entries.Add( e );
+                    e.shaderSrc = JBooth.BetterShaders.BetterShaderImporterEditor.BuildExportShader( JBooth.BetterShaders.ShaderBuilder.RenderPipeline.HDRP2023, optionOverrides, assetPath );
+                    e.srpTarget = ShaderPackage.SRPTarget.HDRP;
+                    e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2023_2;
+                    e.UnityVersionMax = ShaderPackage.UnityVersion.Max;
+
+                    e = new ShaderPackage.Entry();
+                    entries.Add( e );
+                    e.shaderSrc = JBooth.BetterShaders.BetterShaderImporterEditor.BuildExportShader( JBooth.BetterShaders.ShaderBuilder.RenderPipeline.URP2023, optionOverrides, assetPath );
+                    e.srpTarget = ShaderPackage.SRPTarget.URP;
+                    e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2023_2;
                     e.UnityVersionMax = ShaderPackage.UnityVersion.Max;
                 }
                 else if (assetPath.EndsWith(".stackedshader"))
@@ -147,21 +161,35 @@ namespace CityGen3D.ShaderPackager
                     entries.Add(e);
                     e.shaderSrc = JBooth.BetterShaders.StackedShaderImporterEditor.BuildExportShader(JBooth.BetterShaders.ShaderBuilder.RenderPipeline.HDRP2021, optionOverrides, assetPath);
                     e.srpTarget = ShaderPackage.SRPTarget.HDRP;
-                    e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2022_1;
-                    e.UnityVersionMax = ShaderPackage.UnityVersion.Max;
+                    e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2021_2;
+                    e.UnityVersionMax = ShaderPackage.UnityVersion.Unity2022_1;
 
                     e = new ShaderPackage.Entry();
                     entries.Add(e);
                     e.shaderSrc = JBooth.BetterShaders.StackedShaderImporterEditor.BuildExportShader(JBooth.BetterShaders.ShaderBuilder.RenderPipeline.URP2022, optionOverrides, assetPath);
                     e.srpTarget = ShaderPackage.SRPTarget.URP;
                     e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2022_2;
-                    e.UnityVersionMax = ShaderPackage.UnityVersion.Max;
+                    e.UnityVersionMax = ShaderPackage.UnityVersion.Unity2022_3;
 
                     e = new ShaderPackage.Entry();
                     entries.Add(e);
                     e.shaderSrc = JBooth.BetterShaders.StackedShaderImporterEditor.BuildExportShader(JBooth.BetterShaders.ShaderBuilder.RenderPipeline.HDRP2022, optionOverrides, assetPath);
                     e.srpTarget = ShaderPackage.SRPTarget.HDRP;
                     e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2022_2;
+                    e.UnityVersionMax = ShaderPackage.UnityVersion.Unity2022_3;
+
+                    e = new ShaderPackage.Entry();
+                    entries.Add( e );
+                    e.shaderSrc = JBooth.BetterShaders.StackedShaderImporterEditor.BuildExportShader( JBooth.BetterShaders.ShaderBuilder.RenderPipeline.URP2023, optionOverrides, assetPath );
+                    e.srpTarget = ShaderPackage.SRPTarget.URP;
+                    e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2023_2;
+                    e.UnityVersionMax = ShaderPackage.UnityVersion.Max;
+
+                    e = new ShaderPackage.Entry();
+                    entries.Add( e );
+                    e.shaderSrc = JBooth.BetterShaders.StackedShaderImporterEditor.BuildExportShader( JBooth.BetterShaders.ShaderBuilder.RenderPipeline.HDRP2023, optionOverrides, assetPath );
+                    e.srpTarget = ShaderPackage.SRPTarget.HDRP;
+                    e.UnityVersionMin = ShaderPackage.UnityVersion.Unity2023_2;
                     e.UnityVersionMax = ShaderPackage.UnityVersion.Max;
                 }
             }
@@ -210,7 +238,13 @@ namespace CityGen3D.ShaderPackager
             curVersion = UnityVersion.Unity2022_2;
 #endif
 #if UNITY_2022_3_OR_NEWER
-      curVersion = UnityVersion.Unity2022_3;
+            curVersion = UnityVersion.Unity2022_3;
+#endif
+#if UNITY_2023_2_OR_NEWER
+            curVersion = UnityVersion.Unity2023_2;
+#endif
+#if UNITY_2023_3_OR_NEWER
+            curVersion = UnityVersion.Unity2023_3;
 #endif
 
             SRPTarget target = SRPTarget.Standard;

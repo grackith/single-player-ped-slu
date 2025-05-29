@@ -1,0 +1,2 @@
+Both .PSB files can be opened with Photoshop.
+You will have access to all Skyboxes layers.

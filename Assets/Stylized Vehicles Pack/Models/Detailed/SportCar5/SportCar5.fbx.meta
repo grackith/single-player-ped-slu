@@ -1,91 +1,257 @@
 fileFormatVersion: 2
 guid: c4052161ed7aca042a0e16c3d312b47b
 ModelImporter:
-  serializedVersion: 23
-  fileIDToRecycleName:
-    100000: BL
-    100002: BR
-    100004: FL
-    100006: FR
-    100008: //RootNode
-    100010: SportCar5
-    100012: SportCar5.001
-    100014: SportCar5.002
-    100016: door_fl
-    100018: door_fr
-    100020: steering_wheel
-    100022: WindowB
-    100024: WindowF
-    100026: WindowFL
-    100028: WindowFR
-    100030: WindowL
-    100032: WindowR
-    400000: BL
-    400002: BR
-    400004: FL
-    400006: FR
-    400008: //RootNode
-    400010: SportCar5
-    400012: SportCar5.001
-    400014: SportCar5.002
-    400016: door_fl
-    400018: door_fr
-    400020: steering_wheel
-    400022: WindowB
-    400024: WindowF
-    400026: WindowFL
-    400028: WindowFR
-    400030: WindowL
-    400032: WindowR
-    2100000: PixelColors
-    2300000: BL
-    2300002: BR
-    2300004: FL
-    2300006: FR
-    2300008: SportCar5
-    2300010: SportCar5.001
-    2300012: SportCar5.002
-    2300014: door_fl
-    2300016: door_fr
-    2300018: steering_wheel
-    2300020: WindowB
-    2300022: WindowF
-    2300024: WindowFL
-    2300026: WindowFR
-    2300028: WindowL
-    2300030: WindowR
-    3300000: BL
-    3300002: BR
-    3300004: FL
-    3300006: FR
-    3300008: SportCar5
-    3300010: SportCar5.001
-    3300012: SportCar5.002
-    3300014: door_fl
-    3300016: door_fr
-    3300018: steering_wheel
-    3300020: WindowB
-    3300022: WindowF
-    3300024: WindowFL
-    3300026: WindowFR
-    3300028: WindowL
-    3300030: WindowR
-    4300000: FR
-    4300002: BR
-    4300004: BL
-    4300006: FL
-    4300008: SportCar5
-    4300010: SportCar5.002
-    4300012: SportCar5.001
-    4300014: door_fr
-    4300016: door_fl
-    4300018: steering_wheel
-    4300020: WindowB
-    4300022: WindowL
-    4300024: WindowR
-    4300026: WindowFR
-    4300028: WindowFL
-    4300030: WindowF
+  serializedVersion: 22200
+  internalIDToNameTable:
+  - first:
+      1: 100000
+    second: BL
+  - first:
+      1: 100002
+    second: BR
+  - first:
+      1: 100004
+    second: FL
+  - first:
+      1: 100006
+    second: FR
+  - first:
+      1: 100008
+    second: //RootNode
+  - first:
+      1: 100010
+    second: SportCar5
+  - first:
+      1: 100012
+    second: SportCar5.001
+  - first:
+      1: 100014
+    second: SportCar5.002
+  - first:
+      1: 100016
+    second: door_fl
+  - first:
+      1: 100018
+    second: door_fr
+  - first:
+      1: 100020
+    second: steering_wheel
+  - first:
+      1: 100022
+    second: WindowB
+  - first:
+      1: 100024
+    second: WindowF
+  - first:
+      1: 100026
+    second: WindowFL
+  - first:
+      1: 100028
+    second: WindowFR
+  - first:
+      1: 100030
+    second: WindowL
+  - first:
+      1: 100032
+    second: WindowR
+  - first:
+      4: 400000
+    second: BL
+  - first:
+      4: 400002
+    second: BR
+  - first:
+      4: 400004
+    second: FL
+  - first:
+      4: 400006
+    second: FR
+  - first:
+      4: 400008
+    second: //RootNode
+  - first:
+      4: 400010
+    second: SportCar5
+  - first:
+      4: 400012
+    second: SportCar5.001
+  - first:
+      4: 400014
+    second: SportCar5.002
+  - first:
+      4: 400016
+    second: door_fl
+  - first:
+      4: 400018
+    second: door_fr
+  - first:
+      4: 400020
+    second: steering_wheel
+  - first:
+      4: 400022
+    second: WindowB
+  - first:
+      4: 400024
+    second: WindowF
+  - first:
+      4: 400026
+    second: WindowFL
+  - first:
+      4: 400028
+    second: WindowFR
+  - first:
+      4: 400030
+    second: WindowL
+  - first:
+      4: 400032
+    second: WindowR
+  - first:
+      21: 2100000
+    second: PixelColors
+  - first:
+      23: 2300000
+    second: BL
+  - first:
+      23: 2300002
+    second: BR
+  - first:
+      23: 2300004
+    second: FL
+  - first:
+      23: 2300006
+    second: FR
+  - first:
+      23: 2300008
+    second: SportCar5
+  - first:
+      23: 2300010
+    second: SportCar5.001
+  - first:
+      23: 2300012
+    second: SportCar5.002
+  - first:
+      23: 2300014
+    second: door_fl
+  - first:
+      23: 2300016
+    second: door_fr
+  - first:
+      23: 2300018
+    second: steering_wheel
+  - first:
+      23: 2300020
+    second: WindowB
+  - first:
+      23: 2300022
+    second: WindowF
+  - first:
+      23: 2300024
+    second: WindowFL
+  - first:
+      23: 2300026
+    second: WindowFR
+  - first:
+      23: 2300028
+    second: WindowL
+  - first:
+      23: 2300030
+    second: WindowR
+  - first:
+      33: 3300000
+    second: BL
+  - first:
+      33: 3300002
+    second: BR
+  - first:
+      33: 3300004
+    second: FL
+  - first:
+      33: 3300006
+    second: FR
+  - first:
+      33: 3300008
+    second: SportCar5
+  - first:
+      33: 3300010
+    second: SportCar5.001
+  - first:
+      33: 3300012
+    second: SportCar5.002
+  - first:
+      33: 3300014
+    second: door_fl
+  - first:
+      33: 3300016
+    second: door_fr
+  - first:
+      33: 3300018
+    second: steering_wheel
+  - first:
+      33: 3300020
+    second: WindowB
+  - first:
+      33: 3300022
+    second: WindowF
+  - first:
+      33: 3300024
+    second: WindowFL
+  - first:
+      33: 3300026
+    second: WindowFR
+  - first:
+      33: 3300028
+    second: WindowL
+  - first:
+      33: 3300030
+    second: WindowR
+  - first:
+      43: 4300000
+    second: FR
+  - first:
+      43: 4300002
+    second: BR
+  - first:
+      43: 4300004
+    second: BL
+  - first:
+      43: 4300006
+    second: FL
+  - first:
+      43: 4300008
+    second: SportCar5
+  - first:
+      43: 4300010
+    second: SportCar5.002
+  - first:
+      43: 4300012
+    second: SportCar5.001
+  - first:
+      43: 4300014
+    second: door_fr
+  - first:
+      43: 4300016
+    second: door_fl
+  - first:
+      43: 4300018
+    second: steering_wheel
+  - first:
+      43: 4300020
+    second: WindowB
+  - first:
+      43: 4300022
+    second: WindowL
+  - first:
+      43: 4300024
+    second: WindowR
+  - first:
+      43: 4300026
+    second: WindowFR
+  - first:
+      43: 4300028
+    second: WindowFL
+  - first:
+      43: 4300030
+    second: WindowF
   externalObjects:
   - first:
       type: UnityEngine:Material
@@ -103,7 +269,7 @@ ModelImporter:
       name: PixelColors
     second: {fileID: 2100000, guid: 63ac1dac8c25fd64aabb42d0c70d366d, type: 2}
   materials:
-    importMaterials: 1
+    materialImportMode: 1
     materialName: 0
     materialSearch: 2
     materialLocation: 0
@@ -112,6 +278,7 @@ ModelImporter:
     bakeSimulation: 0
     resampleCurves: 1
     optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
     motionNodeName: 
     rigImportErrors: 
     rigImportWarnings: 
@@ -136,25 +303,36 @@ ModelImporter:
     meshCompression: 0
     addColliders: 0
     useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
     importVisibility: 1
     importBlendShapes: 1
     importCameras: 1
     importLights: 1
+    nodeNameCollisionStrategy: 0
+    fileIdsGeneration: 1
     swapUVChannels: 0
-    generateSecondaryUV: 0
+    generateSecondaryUV: 1
     useFileUnits: 1
-    optimizeMeshForGPU: 1
     keepQuads: 0
     weldVertices: 1
+    bakeAxisConversion: 0
     preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
     secondaryUVAreaDistortion: 15.000001
     secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 0
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
     secondaryUVPackMargin: 4
     useFileScale: 1
-    previousCalculatedGlobalScale: 1
-    hasPreviousCalculatedGlobalScale: 0
+    strictVertexDataChecks: 0
   tangentSpace:
     normalSmoothAngle: 60
     normalImportMode: 0
@@ -163,10 +341,10 @@ ModelImporter:
     legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 1
     blendShapeNormalImportMode: 1
     normalSmoothingSource: 0
+  referencedClips: []
   importAnimation: 1
-  copyAvatar: 0
   humanDescription:
-    serializedVersion: 2
+    serializedVersion: 3
     human: []
     skeleton: []
     armTwist: 0.5
@@ -176,13 +354,19 @@ ModelImporter:
     armStretch: 0.05
     legStretch: 0.05
     feetSpacing: 0
+    globalScale: 1
     rootMotionBoneName: 
     hasTranslationDoF: 0
     hasExtraRoot: 0
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 0
   humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 0
+  importBlendShapeDeformPercent: 0
+  remapMaterialsIfMaterialImportModeIsNone: 1
   additionalBone: 0
   userData: 
   assetBundleName: 

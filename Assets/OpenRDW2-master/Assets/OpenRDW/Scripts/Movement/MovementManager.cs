@@ -69,8 +69,36 @@ public class MovementManager : MonoBehaviour
         generalManager = GetComponentInParent<GlobalConfiguration>();
         redirectionManager = GetComponent<RedirectionManager>();
         visualizationManager = GetComponent<VisualizationManager>();
-        simulatedWalker = transform.Find("Simulated User").Find("Head").GetComponent<SimulatedWalker>();
+
+        // Only try to find SimulatedWalker if we're in simulation mode
+        Transform simulatedUserTransform = transform.Find("Simulated User");
+        if (simulatedUserTransform != null)
+        {
+            // We're in simulation mode - find the simulated walker
+            Transform simulatedHead = simulatedUserTransform.Find("Head");
+            if (simulatedHead != null)
+            {
+                simulatedWalker = simulatedHead.GetComponent<SimulatedWalker>();
+                Debug.Log("Found SimulatedWalker - running in simulation mode");
+            }
+            else
+            {
+                Debug.LogWarning("Simulated User found but no Head child - check hierarchy");
+            }
+        }
+        else
+        {
+            // We're in real VR mode - simulatedWalker will remain null
+            Debug.Log("No Simulated User found - running in real VR mode");
+            simulatedWalker = null;
+        }
+
+        // Load crystal resource
         crystal = Resources.Load("Crystalsv01") as GameObject;
+        if (crystal == null)
+        {
+            Debug.LogWarning("Crystal resource 'Crystalsv01' not found in Resources folder");
+        }
     }
 
     //one step movement

@@ -8,7 +8,9 @@ public class BusSpawnerSimple : MonoBehaviour
     [Header("Bus Configuration")]
     public AITrafficCar busPrefab;
     public AITrafficWaypointRoute initialRoute; // Main route
+    public AITrafficWaypointRoute intersectionRoute; // NEW: Intersection route
     public AITrafficWaypointRoute busStopRoute; // Bus stop route
+
     public AITrafficVehicleType busType = AITrafficVehicleType.MicroBus;
 
     [Header("Spawn Settings")]
@@ -29,9 +31,9 @@ public class BusSpawnerSimple : MonoBehaviour
     void Start()
     {
         // Initialize route connections on start
-        if (initialRoute != null && busStopRoute != null)
+        if (initialRoute != null && intersectionRoute != null && busStopRoute != null)
         {
-            SetupBusRoutes(initialRoute, busStopRoute);
+            SetupBusRoutes(initialRoute, intersectionRoute, busStopRoute);
         }
 
         if (spawnOnStart)
@@ -354,78 +356,82 @@ public class BusSpawnerSimple : MonoBehaviour
     }
 
     // Setup route connections
-    public void SetupBusRoutes(AITrafficWaypointRoute initialRoute, AITrafficWaypointRoute busStopRoute)
+    public void SetupBusRoutes(AITrafficWaypointRoute initialRoute, AITrafficWaypointRoute intersectionRoute, AITrafficWaypointRoute busStopRoute)
     {
-        if (initialRoute == null || busStopRoute == null) return;
+        if (initialRoute == null || intersectionRoute == null || busStopRoute == null) return;
 
-        // 1. Make sure routes accept MicroBus type
+        // 1. Make sure all routes accept MicroBus type
         EnsureRouteHasVehicleType(initialRoute, busType);
+        EnsureRouteHasVehicleType(intersectionRoute, busType);
         EnsureRouteHasVehicleType(busStopRoute, busType);
 
-        // 2. Connect routes if they're different
-        if (initialRoute != busStopRoute)
+        // 2. Connect initialRoute → intersectionRoute
+        ConnectTwoRoutes(initialRoute, intersectionRoute, false); // Don't stop at intersection entry
+
+        // 3. Connect intersectionRoute → busStopRoute
+        ConnectTwoRoutes(intersectionRoute, busStopRoute, false); // Don't stop at bus stop entry
+
+        // 4. Set the last waypoint of bus stop route to stop the bus
+        SetFinalStopWaypoint(busStopRoute);
+    }
+
+    // Helper method to connect two routes
+    private void ConnectTwoRoutes(AITrafficWaypointRoute fromRoute, AITrafficWaypointRoute toRoute, bool shouldStop)
+    {
+        if (fromRoute.waypointDataList.Count > 0 && toRoute.waypointDataList.Count > 0)
         {
-            // Connect last waypoint of initialRoute to first waypoint of busStopRoute
-            if (initialRoute.waypointDataList.Count > 0 && busStopRoute.waypointDataList.Count > 0)
+            int lastIndex = fromRoute.waypointDataList.Count - 1;
+            AITrafficWaypoint lastWaypoint = fromRoute.waypointDataList[lastIndex]._waypoint;
+            AITrafficWaypoint firstTargetWaypoint = toRoute.waypointDataList[0]._waypoint;
+
+            if (lastWaypoint != null && firstTargetWaypoint != null)
             {
-                int lastIndex = initialRoute.waypointDataList.Count - 1;
-                AITrafficWaypoint lastWaypoint = initialRoute.waypointDataList[lastIndex]._waypoint;
-                AITrafficWaypoint firstBusStopWaypoint = busStopRoute.waypointDataList[0]._waypoint;
+                // CRITICAL CHANGE: Preserve existing connections
+                List<AITrafficWaypoint> existingConnections = new List<AITrafficWaypoint>();
 
-                if (lastWaypoint != null && firstBusStopWaypoint != null)
+                // Add existing connections first
+                if (lastWaypoint.onReachWaypointSettings.newRoutePoints != null)
                 {
-                    // CRITICAL CHANGE: Preserve existing connections
-                    List<AITrafficWaypoint> existingConnections = new List<AITrafficWaypoint>();
-
-                    // Add existing connections first
-                    if (lastWaypoint.onReachWaypointSettings.newRoutePoints != null)
-                    {
-                        existingConnections.AddRange(lastWaypoint.onReachWaypointSettings.newRoutePoints);
-                    }
-
-                    // Add the bus stop if it doesn't already exist
-                    if (!existingConnections.Contains(firstBusStopWaypoint))
-                    {
-                        existingConnections.Add(firstBusStopWaypoint);
-                    }
-
-                    // Update connections
-                    lastWaypoint.onReachWaypointSettings.newRoutePoints = existingConnections.ToArray();
-                    lastWaypoint.onReachWaypointSettings.stopDriving = false;
-                    lastWaypoint.onReachWaypointSettings.parentRoute = initialRoute;
-
-                    // Log all connections
-                    string connectionList = "";
-                    foreach (var point in lastWaypoint.onReachWaypointSettings.newRoutePoints)
-                    {
-                        if (point != null && point.onReachWaypointSettings.parentRoute != null)
-                        {
-                            connectionList += point.onReachWaypointSettings.parentRoute.name + ", ";
-                        }
-                    }
-                    Debug.Log($"Connected routes: {initialRoute.name} has connections to: {connectionList}");
-
-                    // Set up vehicle filtering
-                    AITrafficWaypointVehicleFilter filter = lastWaypoint.GetComponent<AITrafficWaypointVehicleFilter>();
-                    if (filter == null)
-                    {
-                        filter = lastWaypoint.gameObject.AddComponent<AITrafficWaypointVehicleFilter>();
-                        filter.allowedVehicleTypes = new AITrafficVehicleType[] { AITrafficVehicleType.MicroBus };
-                        Debug.Log($"Added vehicle filter to waypoint {lastWaypoint.name}");
-                    }
-
-                    // Set the last waypoint of bus stop route to stop the bus
-                    int lastBusStopIndex = busStopRoute.waypointDataList.Count - 1;
-                    if (lastBusStopIndex >= 0)
-                    {
-                        AITrafficWaypoint lastBusStopWaypoint = busStopRoute.waypointDataList[lastBusStopIndex]._waypoint;
-                        if (lastBusStopWaypoint != null)
-                        {
-                            lastBusStopWaypoint.onReachWaypointSettings.stopDriving = true;
-                            Debug.Log("Set last bus stop waypoint to stop the bus");
-                        }
-                    }
+                    existingConnections.AddRange(lastWaypoint.onReachWaypointSettings.newRoutePoints);
                 }
+
+                // Add the target waypoint if it doesn't already exist
+                if (!existingConnections.Contains(firstTargetWaypoint))
+                {
+                    existingConnections.Add(firstTargetWaypoint);
+                }
+
+                // Update connections
+                lastWaypoint.onReachWaypointSettings.newRoutePoints = existingConnections.ToArray();
+                lastWaypoint.onReachWaypointSettings.stopDriving = shouldStop;
+                lastWaypoint.onReachWaypointSettings.parentRoute = fromRoute;
+
+                // Log connection
+                Debug.Log($"Connected {fromRoute.name} → {toRoute.name}");
+
+                // Set up vehicle filtering for bus-only routes
+                AITrafficWaypointVehicleFilter filter = lastWaypoint.GetComponent<AITrafficWaypointVehicleFilter>();
+                if (filter == null)
+                {
+                    filter = lastWaypoint.gameObject.AddComponent<AITrafficWaypointVehicleFilter>();
+                    filter.allowedVehicleTypes = new AITrafficVehicleType[] { AITrafficVehicleType.MicroBus };
+                    Debug.Log($"Added vehicle filter to waypoint {lastWaypoint.name}");
+                }
+            }
+        }
+    }
+
+    // Helper method to set the final stop waypoint
+    private void SetFinalStopWaypoint(AITrafficWaypointRoute busStopRoute)
+    {
+        int lastBusStopIndex = busStopRoute.waypointDataList.Count - 1;
+        if (lastBusStopIndex >= 0)
+        {
+            AITrafficWaypoint lastBusStopWaypoint = busStopRoute.waypointDataList[lastBusStopIndex]._waypoint;
+            if (lastBusStopWaypoint != null)
+            {
+                lastBusStopWaypoint.onReachWaypointSettings.stopDriving = true;
+                Debug.Log("Set last bus stop waypoint to stop the bus");
             }
         }
     }
