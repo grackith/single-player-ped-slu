@@ -28,6 +28,7 @@ Material:
   - _METALLICSPECGLOSSMAP
   - _NORMALMAP
   - _SPECGLOSSMAP
+  - _SPECULARHIGHLIGHTS_OFF
   m_InvalidKeywords:
   - EFFECT_BUMP
   - EFFECT_EXTRA_TEX
@@ -216,7 +217,7 @@ Material:
     - _SmoothnessPower: 0.5
     - _SmoothnessTextureChannel: 0
     - _Specular: 0.5
-    - _SpecularHighlights: 1
+    - _SpecularHighlights: 0
     - _SquashAmount: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
