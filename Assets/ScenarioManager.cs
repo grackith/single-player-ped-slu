@@ -91,6 +91,11 @@ public class ScenarioManager : MonoBehaviour
     //public DataExportHelper dataExportHelper;
     public bool enableDataDebugControls = true;
 
+    [Header("Lighting Preservation")]
+    private Light masterDirectionalLight;
+    private UnityEngine.Rendering.Volume masterGlobalVolume;
+    private LightmapSettings masterLightmapSettings;
+
     // Singleton instance
     private static ScenarioManager _instance;
     public static ScenarioManager Instance
@@ -135,6 +140,26 @@ public class ScenarioManager : MonoBehaviour
 
 
     // Helper method to get objects in DontDestroyOnLoad scene
+
+    private void OptimizeForVR()
+    {
+        // Reduce rendering load
+        QualitySettings.shadowDistance = 50f; // Reduce from default
+        QualitySettings.shadowResolution = ShadowResolution.Medium;
+        QualitySettings.shadows = ShadowQuality.HardOnly;
+
+        // Optimize texture streaming
+        QualitySettings.streamingMipmapsActive = true;
+        QualitySettings.streamingMipmapsMemoryBudget = 512;
+
+        // Reduce particle density if any
+        QualitySettings.particleRaycastBudget = 64;
+
+        // Target 90 FPS for VR
+        Application.targetFrameRate = 90;
+
+        Debug.Log("Applied VR optimizations");
+    }
     private GameObject[] GetDontDestroyOnLoadObjects()
     {
         GameObject temp = null;
@@ -231,6 +256,8 @@ public class ScenarioManager : MonoBehaviour
 
     private void Start()
     {
+        OptimizeForVR();
+        StoreMasterLighting();
         // Find or assign GlobalConfiguration
         if (rdwGlobalConfiguration == null)
         {
@@ -773,6 +800,7 @@ public class ScenarioManager : MonoBehaviour
 
         private void Update()
         {
+
             timer -= Time.deltaTime;
             if (timer <= 0f && spawner != null)
             {
@@ -794,14 +822,15 @@ public class ScenarioManager : MonoBehaviour
     // Modify your ScenarioManager's Update method with these alternative hotkeys
     private void Update()
     {
-        // Only process inputs if not transitioning
-        if (isTransitioning)
-            return;
+        if (isTransitioning) return;
 
-        // UPDATED: OpenRDW standard input handling
-        HandleOpenRDWInputs();
-        HandleScenarioInputs();
-        HandleDiagnosticInputs();
+        // Only check inputs every few frames to reduce CPU load
+        if (Time.frameCount % 3 == 0) // Check every 3rd frame
+        {
+            HandleOpenRDWInputs();
+            HandleScenarioInputs();
+            HandleDiagnosticInputs();
+        }
     }
 
     private void HandleOpenRDWInputs()
@@ -2117,6 +2146,13 @@ public class ScenarioManager : MonoBehaviour
             try
             {
                 SceneManager.SetActiveScene(loadedScene);
+                // Instead, just ensure the researcher scene remains active for lighting
+                //Scene researcherScene = SceneManager.GetSceneByName("s.researcher");
+                //if (researcherScene.IsValid())
+                //{
+                //    SceneManager.SetActiveScene(researcherScene);
+                //    Debug.Log("Kept researcher scene active to preserve lighting");
+                //}
             }
             catch (System.Exception ex)
             {
@@ -3633,6 +3669,7 @@ public class ScenarioManager : MonoBehaviour
     }
     private void ConfigureScenarioScene(Scene scene)
     {
+        PreserveMasterLighting(scene);
         // Find new traffic components
         AITrafficController newController = FindObjectOfType<AITrafficController>();
         AITrafficLightManager[] lightManagers = FindObjectsOfType<AITrafficLightManager>();
@@ -3663,8 +3700,53 @@ public class ScenarioManager : MonoBehaviour
             newController.InitializeNativeLists();
             newController.RebuildTransformArrays();
         }
+
+        StartCoroutine(RestoreMasterLightingAfterFrame());
     }
     // Add this to ScenarioManager.cs
+
+    private IEnumerator RestoreMasterLightingAfterFrame()
+    {
+        // Wait for scene to fully activate
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+
+        // Now restore master lighting settings
+        if (masterDirectionalLight != null)
+        {
+            // Disable any new directional lights
+            Light[] allLights = FindObjectsOfType<Light>();
+            foreach (var light in allLights)
+            {
+                if (light.type == LightType.Directional &&
+                    light != masterDirectionalLight)
+                {
+                    light.gameObject.SetActive(false);
+                    Debug.Log($"Disabled duplicate directional light: {light.name}");
+                }
+            }
+
+            // Ensure master light is active
+            masterDirectionalLight.gameObject.SetActive(true);
+        }
+
+        if (masterGlobalVolume != null)
+        {
+            // Disable any new global volumes
+            var volumes = FindObjectsOfType<UnityEngine.Rendering.Volume>();
+            foreach (var volume in volumes)
+            {
+                if (volume.isGlobal && volume != masterGlobalVolume)
+                {
+                    volume.gameObject.SetActive(false);
+                    Debug.Log($"Disabled duplicate global volume: {volume.name}");
+                }
+            }
+
+            // Ensure master volume is active
+            masterGlobalVolume.gameObject.SetActive(true);
+        }
+    }
 
     #endregion
 
@@ -3705,6 +3787,67 @@ public class ScenarioManager : MonoBehaviour
             researcherUI.SetActive(true);
         }
     }
+
+    private void StoreMasterLighting()
+    {
+        // Store the master directional light
+        Light[] allLights = FindObjectsOfType<Light>();
+        foreach (var light in allLights)
+        {
+            if (light.type == LightType.Directional &&
+                light.gameObject.scene.name == "s.researcher")
+            {
+                masterDirectionalLight = light;
+                break;
+            }
+        }
+
+        // Store master global volume
+        var volumes = FindObjectsOfType<UnityEngine.Rendering.Volume>();
+        foreach (var volume in volumes)
+        {
+            if (volume.isGlobal &&
+                volume.gameObject.scene.name == "s.researcher")
+            {
+                masterGlobalVolume = volume;
+                break;
+            }
+        }
+
+        Debug.Log("Stored master lighting components");
+    }
+    private void PreserveMasterLighting(Scene newScene)
+    {
+        Debug.Log("Preserving master lighting settings");
+
+        // Find and disable any duplicate directional lights in the new scene
+        GameObject[] rootObjects = newScene.GetRootGameObjects();
+        foreach (var rootObj in rootObjects)
+        {
+            Light[] lights = rootObj.GetComponentsInChildren<Light>();
+            foreach (var light in lights)
+            {
+                if (light.type == LightType.Directional)
+                {
+                    Debug.Log($"Disabling duplicate directional light: {light.name}");
+                    light.gameObject.SetActive(false);
+                }
+            }
+
+            // Also handle Volume components if using URP
+            UnityEngine.Rendering.Volume[] volumes = rootObj.GetComponentsInChildren<UnityEngine.Rendering.Volume>();
+            foreach (var volume in volumes)
+            {
+                if (volume.isGlobal)
+                {
+                    Debug.Log($"Disabling duplicate global volume: {volume.name}");
+                    volume.gameObject.SetActive(false);
+                }
+            }
+        }
+    }
+
+
 
     /// <summary>
     /// Get the full hierarchical path of a GameObject
