@@ -215,7 +215,7 @@ public class BusSpawnerSimple : MonoBehaviour
 
             // Check if this is a vehicle (AITrafficCar or with specific layer)
             if (collider.GetComponent<AITrafficCar>() != null ||
-                collider.CompareTag("Player"))
+                collider.CompareTag("vehicle"))
             {
                 // Found a vehicle in the spawning area
                 Debug.Log($"Spawn area blocked by {collider.name}");

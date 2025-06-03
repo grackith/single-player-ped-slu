@@ -55,6 +55,10 @@
         public AITrafficWaypointRoute waypointRoute;
         // Add near the top of AITrafficCar class
 
+        private float turningStartTime;
+        private float minimumTurningDuration = 3.0f; // Stay in turning mode for at least 3 seconds
+
+
 
         // Used when vehicle type filtering is active
         private List<AITrafficWaypoint> waypointsToIgnore = new List<AITrafficWaypoint>();
@@ -77,6 +81,8 @@
         private Vector3 goToPointWhenStoppedVector3;
 
         private int randomIndex;
+        [HideInInspector]
+        public bool isTurning { get; private set; }
         // Add this to AITrafficCar.cs
         //private bool routeControlDisabled = false;
 
@@ -89,8 +95,86 @@
         /// <summary>
         /// Returns current acceleration input as a float 0-1.
         /// </summary>
-        /// <returns></returns>
+        /// <returns></returns>FUpdateTurningState
         /// // Add this field to AITrafficCar class
+        /// 
+        // Add these fields to your AITrafficCar class (near the top with other private fields)
+
+
+        private void UpdateTurningState()
+        {
+            if (waypointRoute != null && currentWaypointIndex >= 0 && currentWaypointIndex < waypointRoute.waypointDataList.Count - 1)
+            {
+                Vector3 currentDirection = transform.forward;
+                Vector3 waypointDirection = (waypointRoute.waypointDataList[currentWaypointIndex + 1]._transform.position - transform.position).normalized;
+
+                float turnAngle = Vector3.Angle(currentDirection, waypointDirection);
+                bool wasTurning = isTurning;
+
+                // Start turning when angle is greater than 30 degrees
+                if (!isTurning && turnAngle > 30f)
+                {
+                    isTurning = true;
+                    turningStartTime = Time.time; // Record when we started turning
+                    Debug.Log($"Car {name}: STARTED turning (angle: {turnAngle:F1}°)");
+                }
+                // Only stop turning after minimum duration AND angle is reasonable
+                else if (isTurning)
+                {
+                    float timeTurning = Time.time - turningStartTime;
+
+                    if (timeTurning >= minimumTurningDuration && turnAngle < 20f)
+                    {
+                        isTurning = false;
+                        Debug.Log($"Car {name}: FINISHED turning after {timeTurning:F1}s (angle: {turnAngle:F1}°)");
+                    }
+                    else
+                    {
+                        // Still turning - log occasionally for debugging
+                        if (Time.frameCount % 60 == 0) // Every ~1 second at 60fps
+                        {
+                            Debug.Log($"Car {name}: Still turning... {timeTurning:F1}s (angle: {turnAngle:F1}°)");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (isTurning)
+                {
+                    Debug.Log($"Car {name}: No valid route data, setting isTurning to false");
+                }
+                isTurning = false;
+            }
+        }
+        public void ReinitializeTurningDetection()
+        {
+            // Force update the turning state after scene transitions
+            if (waypointRoute != null && waypointRoute.waypointDataList != null && waypointRoute.waypointDataList.Count > 0)
+            {
+                // Find closest waypoint index
+                float closestDistance = float.MaxValue;
+                int closestIndex = 0;
+
+                for (int i = 0; i < waypointRoute.waypointDataList.Count; i++)
+                {
+                    if (waypointRoute.waypointDataList[i]._transform != null)
+                    {
+                        float distance = Vector3.Distance(transform.position, waypointRoute.waypointDataList[i]._transform.position);
+                        if (distance < closestDistance)
+                        {
+                            closestDistance = distance;
+                            closestIndex = i;
+                        }
+                    }
+                }
+
+                currentWaypointIndex = closestIndex;
+                Debug.Log($"Car {name}: Reinitialized turning detection, closest waypoint index: {closestIndex}");
+            }
+        }
+        // Add this to your Update() method, or create one if it doesn't exist
+
         private bool initialSpawnCompleted = false;
 
         // Add this method to AITrafficCar class
@@ -180,16 +264,10 @@
         // Replace your StartDriving method with this
         public void StartDriving()
         {
-            //// Safety check
-            //if (waypointRoute == null)
-            //{
-            //    Debug.LogError($"Car {name} has no waypoint route assigned!");
-            //    return;
-            //}
-
-            if (waypointRoute.waypointDataList == null || waypointRoute.waypointDataList.Count == 0)
+            // Safety checks
+            if (waypointRoute == null || waypointRoute.waypointDataList == null || waypointRoute.waypointDataList.Count == 0)
             {
-                Debug.LogError($"Car {name}: Route {waypointRoute.name} has no waypoints!");
+                Debug.LogError($"Car {name}: Cannot start driving - no valid route!");
                 return;
             }
 
@@ -198,6 +276,8 @@
             {
                 RegisterCar(waypointRoute);
             }
+
+            // CRITICAL: Always sync traffic light awareness when starting
             if (waypointRoute != null && AITrafficController.Instance != null && assignedIndex >= 0)
             {
                 AITrafficController.Instance.Set_RouteInfo(assignedIndex, waypointRoute.routeInfo);
@@ -208,24 +288,21 @@
             isDriving = true;
             isActiveInTraffic = true;
 
-            // Initialize with first waypoint
-            currentWaypointIndex = 0;
-
-            // Update controller with safety checks
+            // Update controller state
             if (AITrafficController.Instance != null && assignedIndex >= 0)
             {
-                // Verify controller arrays have space for this car
-                if (assignedIndex >= AITrafficController.Instance.carCount)
-                {
-                    Debug.LogError($"Car {name}: assignedIndex {assignedIndex} exceeds AITrafficController.carCount {AITrafficController.Instance.carCount}");
-                    return;
-                }
-
                 AITrafficController.Instance.Set_IsDrivingArray(assignedIndex, true);
 
-                if (currentWaypointIndex < waypointRoute.waypointDataList.Count &&
-                    waypointRoute.waypointDataList[currentWaypointIndex]._waypoint != null)
+                // Get current position on route
+                int currentIndex = AITrafficController.Instance.GetCurrentRoutePointIndex(assignedIndex);
+                if (currentIndex >= 0 && currentIndex < waypointRoute.waypointDataList.Count)
                 {
+                    currentWaypointIndex = currentIndex;
+                }
+                else
+                {
+                    // Find nearest waypoint if current index is invalid
+                    currentWaypointIndex = FindNearestWaypointIndex();
                     AITrafficController.Instance.Set_CurrentRoutePointIndexArray(
                         assignedIndex,
                         currentWaypointIndex,
@@ -233,7 +310,36 @@
                 }
             }
 
-            // Ensure drive target exists
+            // CRITICAL: Ensure drive target is properly positioned
+            EnsureDriveTargetPosition();
+
+            Debug.Log($"Car {name} started driving on route {waypointRoute.name}");
+        }
+
+        private int FindNearestWaypointIndex()
+        {
+            float closestDistance = float.MaxValue;
+            int nearestIndex = 0;
+
+            for (int i = 0; i < waypointRoute.waypointDataList.Count; i++)
+            {
+                if (waypointRoute.waypointDataList[i]._transform == null) continue;
+
+                float distance = Vector3.Distance(transform.position,
+                                                 waypointRoute.waypointDataList[i]._transform.position);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    nearestIndex = i;
+                }
+            }
+
+            return nearestIndex;
+        }
+
+        private void EnsureDriveTargetPosition()
+        {
+            // Find or create drive target
             Transform driveTarget = transform.Find("DriveTarget");
             if (driveTarget == null)
             {
@@ -241,19 +347,19 @@
                 driveTarget.SetParent(transform);
             }
 
-            // Position drive target at first waypoint
-            if (waypointRoute.waypointDataList.Count > 0 &&
-                waypointRoute.waypointDataList[0]._transform != null)
+            // Position drive target at next waypoint
+            int nextWaypointIndex = Mathf.Min(currentWaypointIndex + 1, waypointRoute.waypointDataList.Count - 1);
+
+            if (nextWaypointIndex < waypointRoute.waypointDataList.Count &&
+                waypointRoute.waypointDataList[nextWaypointIndex]._transform != null)
             {
-                driveTarget.position = waypointRoute.waypointDataList[0]._transform.position;
+                driveTarget.position = waypointRoute.waypointDataList[nextWaypointIndex]._transform.position;
             }
             else
             {
                 // Fallback - position ahead of car
                 driveTarget.position = transform.position + transform.forward * 10f;
             }
-
-            Debug.Log($"Car {name} started driving on route {waypointRoute.name}");
         }
 
         // Add this method to your AITrafficCar class
@@ -715,6 +821,8 @@
         {
             try
             {
+                Debug.Log($"[WAYPOINT] Car {name} reached waypoint {onReachWaypointSettings.waypointIndexnumber} on route {onReachWaypointSettings.parentRoute.name}");
+
                 // Always update route info to maintain traffic light awareness
                 if (onReachWaypointSettings.parentRoute != null && AITrafficController.Instance != null)
                 {
@@ -726,22 +834,42 @@
                     // CRITICAL: Update route info first to maintain traffic light awareness
                     AITrafficController.Instance.Set_RouteInfo(assignedIndex, onReachWaypointSettings.parentRoute.routeInfo);
 
-                    // CRITICAL ADDITION: Check if this is a traffic light waypoint
+                    // MODIFIED: Traffic light check - only for GREEN lights
                     AITrafficWaypoint currentWaypoint = onReachWaypointSettings.waypoint;
-                    if (currentWaypoint != null &&
-                        currentWaypoint.isTrafficLightWaypoint &&
-                        onReachWaypointSettings.parentRoute.routeInfo.stopForTrafficLight)
+                    if (currentWaypoint != null && currentWaypoint.isTrafficLightWaypoint)
                     {
-                        // Stop for red light
-                        StopDriving();
-                        Debug.Log($"Car {name} stopped at traffic light waypoint {currentWaypoint.name}");
-                        return; // Exit early for traffic light waypoints
+                        Debug.Log($"[WAYPOINT] Car {name} reached traffic light waypoint {currentWaypoint.name}");
+
+                        // Check traffic light state
+                        bool shouldStopForLight = false;
+                        if (onReachWaypointSettings.parentRoute.routeInfo != null)
+                        {
+                            shouldStopForLight = onReachWaypointSettings.parentRoute.routeInfo.stopForTrafficLight;
+                        }
+                        else
+                        {
+                            shouldStopForLight = onReachWaypointSettings.parentRoute.stopForTrafficLight;
+                        }
+
+                        if (shouldStopForLight)
+                        {
+                            // Car reached a RED traffic light waypoint - this shouldn't happen with our new system
+                            Debug.LogWarning($"[WAYPOINT] Car {name} reached RED traffic light waypoint {currentWaypoint.name} - this should have been caught earlier!");
+                            StopDriving();
+                            return;
+                        }
+                        else
+                        {
+                            Debug.Log($"Car {name} passed through GREEN traffic light waypoint {currentWaypoint.name}");
+                        }
                     }
 
-                    // Original waypoint processing code...
+                    // Always position drive target ahead when reaching any waypoint
+                    PositionDriveTargetAhead(onReachWaypointSettings);
+
+                    // Continue with normal waypoint processing...
                     onReachWaypointSettings.OnReachWaypointEvent.Invoke();
                     AITrafficController.Instance.Set_SpeedLimitArray(assignedIndex, onReachWaypointSettings.speedLimit);
-
                     AITrafficController.Instance.Set_RouteProgressArray(assignedIndex, onReachWaypointSettings.waypointIndexnumber - 1);
                     AITrafficController.Instance.Set_WaypointDataListCountArray(assignedIndex);
 
@@ -756,7 +884,6 @@
                         {
                             if (onReachWaypointSettings.newRoutePoints[i] == null) continue;
 
-                            // Check for vehicle type compatibility
                             if (useVehicleTypeFiltering)
                             {
                                 for (int j = 0; j < onReachWaypointSettings.newRoutePoints[i].onReachWaypointSettings.parentRoute.vehicleTypes.Length; j++)
@@ -770,39 +897,29 @@
                             }
                             else
                             {
-                                // If not filtering by vehicle type, all routes are valid
                                 newRoutePointsMatchingType.Add(i);
                             }
                         }
 
-                        // Choose next route if we have compatible options
                         if (newRoutePointsMatchingType.Count > 0 &&
                             onReachWaypointSettings.waypointIndexnumber != onReachWaypointSettings.parentRoute.waypointDataList.Count)
                         {
-                            // Choose a random compatible route
                             randomIndex = Random.Range(0, newRoutePointsMatchingType.Count);
                             if (randomIndex == newRoutePointsMatchingType.Count) randomIndex -= 1;
                             randomIndex = newRoutePointsMatchingType[randomIndex];
 
-                            // Update local reference
                             waypointRoute = onReachWaypointSettings.newRoutePoints[randomIndex].onReachWaypointSettings.parentRoute;
-
-                            // Update controller state
                             AITrafficController.Instance.Set_WaypointRoute(assignedIndex, waypointRoute);
                             AITrafficController.Instance.Set_RouteInfo(assignedIndex, waypointRoute.routeInfo);
                             AITrafficController.Instance.Set_RouteProgressArray(assignedIndex,
                                 onReachWaypointSettings.newRoutePoints[randomIndex].onReachWaypointSettings.waypointIndexnumber - 1);
-                            AITrafficController.Instance.Set_CurrentRoutePointIndexArray
-                                (
+                            AITrafficController.Instance.Set_CurrentRoutePointIndexArray(
                                 assignedIndex,
                                 onReachWaypointSettings.newRoutePoints[randomIndex].onReachWaypointSettings.waypointIndexnumber - 1,
-                                onReachWaypointSettings.newRoutePoints[randomIndex]
-                                );
+                                onReachWaypointSettings.newRoutePoints[randomIndex]);
                         }
-                        // If we've reached the end of the route, always choose a new route
                         else if (onReachWaypointSettings.waypointIndexnumber == onReachWaypointSettings.parentRoute.waypointDataList.Count)
                         {
-                            // Choose randomly among available new routes
                             if (newRoutePointsMatchingType.Count > 0)
                             {
                                 randomIndex = Random.Range(0, newRoutePointsMatchingType.Count);
@@ -811,52 +928,38 @@
                             }
                             else
                             {
-                                // Fall back to any route if none match our type
                                 randomIndex = Random.Range(0, onReachWaypointSettings.newRoutePoints.Length);
                                 if (randomIndex == onReachWaypointSettings.newRoutePoints.Length) randomIndex -= 1;
                             }
 
-                            // Update local reference
                             waypointRoute = onReachWaypointSettings.newRoutePoints[randomIndex].onReachWaypointSettings.parentRoute;
-
-                            // Update controller
                             AITrafficController.Instance.Set_WaypointRoute(assignedIndex, waypointRoute);
                             AITrafficController.Instance.Set_RouteInfo(assignedIndex, waypointRoute.routeInfo);
                             AITrafficController.Instance.Set_RouteProgressArray(assignedIndex,
                                 onReachWaypointSettings.newRoutePoints[randomIndex].onReachWaypointSettings.waypointIndexnumber - 1);
-                            AITrafficController.Instance.Set_CurrentRoutePointIndexArray
-                                (
+                            AITrafficController.Instance.Set_CurrentRoutePointIndexArray(
                                 assignedIndex,
                                 onReachWaypointSettings.newRoutePoints[randomIndex].onReachWaypointSettings.waypointIndexnumber - 1,
-                                onReachWaypointSettings.newRoutePoints[randomIndex]
-                                );
+                                onReachWaypointSettings.newRoutePoints[randomIndex]);
                         }
                         else
                         {
-                            // Simple progression to next waypoint on current route
-                            AITrafficController.Instance.Set_CurrentRoutePointIndexArray
-                            (
-                            assignedIndex,
-                            onReachWaypointSettings.waypointIndexnumber,
-                            onReachWaypointSettings.waypoint
-                            );
+                            AITrafficController.Instance.Set_CurrentRoutePointIndexArray(
+                                assignedIndex,
+                                onReachWaypointSettings.waypointIndexnumber,
+                                onReachWaypointSettings.waypoint);
                         }
                     }
                     else if (onReachWaypointSettings.waypointIndexnumber < onReachWaypointSettings.parentRoute.waypointDataList.Count)
                     {
-                        // Simple progression to next waypoint on current route when no connections
-                        AITrafficController.Instance.Set_CurrentRoutePointIndexArray
-                            (
+                        AITrafficController.Instance.Set_CurrentRoutePointIndexArray(
                             assignedIndex,
                             onReachWaypointSettings.waypointIndexnumber,
-                            onReachWaypointSettings.waypoint
-                            );
+                            onReachWaypointSettings.waypoint);
                     }
 
-                    // Update route point position
                     AITrafficController.Instance.Set_RoutePointPositionArray(assignedIndex);
 
-                    // Handle stop instruction if present
                     if (onReachWaypointSettings.stopDriving)
                     {
                         StopDriving();
@@ -867,7 +970,6 @@
                         }
                         else
                         {
-                            // If stopTime is 0, this is a permanent stop - log it
                             Debug.Log($"{name} reached final stop at {onReachWaypointSettings.parentRoute.name}");
                         }
                     }
@@ -875,8 +977,95 @@
             }
             catch (System.Exception ex)
             {
-                string routeName = onReachWaypointSettings.parentRoute?.name ?? "unknown route";
+                string routeName = "unknown route";
+
+                try
+                {
+                    if (onReachWaypointSettings.parentRoute != null)
+                    {
+                        routeName = onReachWaypointSettings.parentRoute.name;
+                    }
+                }
+                catch
+                {
+                    // If we can't even access the route name, just use the default
+                }
+
                 Debug.LogError($"Car {name}: Exception in OnReachedWaypoint: {ex.Message}");
+            }
+        }
+
+        private void PositionDriveTargetAhead(AITrafficWaypointSettings currentWaypointSettings)
+        {
+            Transform driveTarget = transform.Find("DriveTarget");
+            if (driveTarget == null)
+            {
+                driveTarget = new GameObject("DriveTarget").transform;
+                driveTarget.SetParent(transform);
+            }
+
+            // Find the NEXT waypoint after the current traffic light waypoint
+            int nextWaypointIndex = currentWaypointSettings.waypointIndexnumber; // This is 1-based
+
+            if (nextWaypointIndex < currentWaypointSettings.parentRoute.waypointDataList.Count)
+            {
+                // Position drive target at the NEXT waypoint
+                Vector3 nextWaypointPos = currentWaypointSettings.parentRoute.waypointDataList[nextWaypointIndex]._transform.position;
+                driveTarget.position = nextWaypointPos;
+                Debug.Log($"Car {name}: Drive target positioned AHEAD at waypoint {nextWaypointIndex + 1}");
+            }
+            else
+            {
+                // At end of route, position ahead of car
+                driveTarget.position = transform.position + transform.forward * 10f;
+                Debug.Log($"Car {name}: Drive target positioned ahead (end of route)");
+            }
+        }
+
+        private void PositionDriveTargetNormally(AITrafficWaypointSettings currentWaypointSettings)
+        {
+            Transform driveTarget = transform.Find("DriveTarget");
+            if (driveTarget == null)
+            {
+                driveTarget = new GameObject("DriveTarget").transform;
+                driveTarget.SetParent(transform);
+            }
+
+            // Position at next waypoint in sequence
+            int nextIndex = currentWaypointSettings.waypointIndexnumber; // 1-based
+            if (nextIndex < currentWaypointSettings.parentRoute.waypointDataList.Count)
+            {
+                driveTarget.position = currentWaypointSettings.parentRoute.waypointDataList[nextIndex]._transform.position;
+            }
+            else
+            {
+                driveTarget.position = transform.position + transform.forward * 10f;
+            }
+        }
+
+        private void PositionDriveTargetForNewRoute()
+        {
+            Transform driveTarget = transform.Find("DriveTarget");
+            if (driveTarget == null)
+            {
+                driveTarget = new GameObject("DriveTarget").transform;
+                driveTarget.SetParent(transform);
+            }
+
+            // Get current waypoint index from controller
+            if (AITrafficController.Instance != null && assignedIndex >= 0)
+            {
+                int currentIndex = AITrafficController.Instance.GetCurrentRoutePointIndex(assignedIndex);
+                if (currentIndex >= 0 && currentIndex < waypointRoute.waypointDataList.Count - 1)
+                {
+                    // Position at next waypoint
+                    driveTarget.position = waypointRoute.waypointDataList[currentIndex + 1]._transform.position;
+                }
+                else if (waypointRoute.waypointDataList.Count > 0)
+                {
+                    // Position at first waypoint of new route
+                    driveTarget.position = waypointRoute.waypointDataList[0]._transform.position;
+                }
             }
         }
 
@@ -930,6 +1119,11 @@
 
             Debug.Log($"Car {name} (type {vehicleType}) changed to route {onReachWaypointSettings.parentRoute.name}");
         }
+        void Update()
+        {
+            UpdateTurningState();
+        }
+
         // Add to your AITrafficCar.cs
         // Add to your AITrafficCar.cs
         public void ForceWaypointPathUpdate()

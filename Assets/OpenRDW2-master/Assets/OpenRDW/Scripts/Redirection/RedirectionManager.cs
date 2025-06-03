@@ -1628,6 +1628,8 @@ public class RedirectionManager : MonoBehaviour
         }
     }
 
+    
+
     // Add these methods to the RedirectionManager.cs file
     public void ToggleTrackingSpaceVisualization()
     {
@@ -1639,55 +1641,55 @@ public class RedirectionManager : MonoBehaviour
             Debug.Log($"Tracking space visualization: {!current}");
 
             // Create dimensional markers to show actual space
-            if (!current)
-            {
-                CreateCornerMarkers();
-            }
+            //if (!current)
+            //{
+            //    CreateCornerMarkers();
+            //}
         }
     }
 
-    private void CreateCornerMarkers()
-    {
-        if (trackingSpace == null || globalConfiguration == null ||
-            globalConfiguration.physicalSpaces == null ||
-            globalConfiguration.physicalSpaces.Count == 0)
-            return;
+    //private void CreateCornerMarkers()
+    //{
+    //    if (trackingSpace == null || globalConfiguration == null ||
+    //        globalConfiguration.physicalSpaces == null ||
+    //        globalConfiguration.physicalSpaces.Count == 0)
+    //        return;
 
-        var physicalSpace = globalConfiguration.physicalSpaces[0];
+    //    var physicalSpace = globalConfiguration.physicalSpaces[0];
 
-        // Create markers at each corner
-        int i = 0;
-        foreach (var point in physicalSpace.trackingSpace)
-        {
-            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            marker.name = $"Corner_{i++}";
-            Vector3 worldPos = trackingSpace.TransformPoint(new Vector3(point.x, 0, point.y));
-            marker.transform.position = worldPos;
-            marker.transform.localScale = Vector3.one * 0.2f;
-            marker.GetComponent<Renderer>().material.color = Color.green;
+    //    // Create markers at each corner
+    //    int i = 0;
+    //    foreach (var point in physicalSpace.trackingSpace)
+    //    {
+    //        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+    //        marker.name = $"Corner_{i++}";
+    //        Vector3 worldPos = trackingSpace.TransformPoint(new Vector3(point.x, 0, point.y));
+    //        marker.transform.position = worldPos;
+    //        marker.transform.localScale = Vector3.one * 0.2f;
+    //        marker.GetComponent<Renderer>().material.color = Color.green;
 
-            // Add text labels with coordinates
-            GameObject text = new GameObject("Label");
-            text.transform.position = worldPos + Vector3.up * 0.3f;
-            TextMesh textMesh = text.AddComponent<TextMesh>();
-            textMesh.text = $"({point.x:F2}, {point.y:F2})";
-            textMesh.fontSize = 50;
-            textMesh.characterSize = 0.05f;
-            textMesh.anchor = TextAnchor.MiddleCenter;
+    //        // Add text labels with coordinates
+    //        GameObject text = new GameObject("Label");
+    //        text.transform.position = worldPos + Vector3.up * 0.3f;
+    //        TextMesh textMesh = text.AddComponent<TextMesh>();
+    //        textMesh.text = $"({point.x:F2}, {point.y:F2})";
+    //        textMesh.fontSize = 50;
+    //        textMesh.characterSize = 0.05f;
+    //        textMesh.anchor = TextAnchor.MiddleCenter;
 
-            Destroy(marker, 30f); // Clean up after 30 seconds
-            Destroy(text, 30f);
-        }
+    //        Destroy(marker, 30f); // Clean up after 30 seconds
+    //        Destroy(text, 30f);
+    //    }
 
-        // Create central marker
-        GameObject center = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        center.transform.position = trackingSpace.position + Vector3.up * 0.01f;
-        center.transform.localScale = new Vector3(0.5f, 0.02f, 0.5f);
-        center.GetComponent<Renderer>().material.color = Color.red;
-        Destroy(center, 30f);
+    //    // Create central marker
+    //    GameObject center = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+    //    center.transform.position = trackingSpace.position + Vector3.up * 0.01f;
+    //    center.transform.localScale = new Vector3(0.5f, 0.02f, 0.5f);
+    //    center.GetComponent<Renderer>().material.color = Color.red;
+    //    Destroy(center, 30f);
 
-        Debug.Log($"Created tracking space markers: Green spheres=corners, Red cylinder=center");
-    }
+    //    Debug.Log($"Created tracking space markers: Green spheres=corners, Red cylinder=center");
+    //}
 
     // Add this method to RedirectionManager.cs
     public void LogTrackingSpaceInfo()

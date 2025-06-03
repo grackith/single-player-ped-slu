@@ -99,6 +99,16 @@ public class VRResearchDataCollector : MonoBehaviour
 
     void Awake()
     {
+        // FIX: Initialize StringBuilders FIRST to prevent null reference
+        if (debugLogBuilder == null)
+            debugLogBuilder = new StringBuilder();
+        if (participantDataBuilder == null)
+            participantDataBuilder = new StringBuilder();
+        if (vehicleDataBuilder == null)
+            vehicleDataBuilder = new StringBuilder();
+        if (eyeTrackingDataBuilder == null)
+            eyeTrackingDataBuilder = new StringBuilder();
+
         DontDestroyOnLoad(this.gameObject);
 
         timeBetweenSamples = 1f / samplingRate;
@@ -469,7 +479,8 @@ public class VRResearchDataCollector : MonoBehaviour
 
                 dataPointsCollected++;
 
-                if (dataPointsCollected % 100 == 0)
+                // CHANGED: Save less frequently to avoid I/O hitches
+                if (dataPointsCollected % 300 == 0) // Every 30 seconds instead of 10
                 {
                     SaveAllData();
                     DebugLog($"Periodic save completed. Total data points: {dataPointsCollected}");
@@ -542,7 +553,14 @@ public class VRResearchDataCollector : MonoBehaviour
     {
         float timestamp = Time.time;
 
-        if (Time.frameCount % 300 == 0)
+        // REMOVED PROBLEMATIC LINE:
+        // if (Time.frameCount % 300 == 0)
+        // {
+        //     SetupVehicleTracking(); // This was causing issues every 5 seconds!
+        // }
+
+        // Only rebuild vehicle tracking if we have no vehicles or on scene changes
+        if (vehicleTrackingList.Count == 0)
         {
             SetupVehicleTracking();
         }

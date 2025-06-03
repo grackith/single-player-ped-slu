@@ -273,6 +273,11 @@ public class PersistentRDW : MonoBehaviour
 
     private void CreateSimpleCornerMarkers(float width, float length)
     {
+        if (!TrackingSpaceVisualizationController.ShouldShowCornerMarkers())
+        {
+            Debug.Log("PersistentRDW: Simple corner markers disabled by master control");
+            return;
+        }
         if (redirectionManager == null || redirectionManager.trackingSpace == null ||
             globalConfig == null || globalConfig.physicalSpaces == null ||
             globalConfig.physicalSpaces.Count == 0)
@@ -579,10 +584,20 @@ public class PersistentRDW : MonoBehaviour
     // NEW METHOD: Create direction indicators to show tracking space alignment
 
     // Add this to PersistentRDW or another manager class
-    
+
 
     private void CreateDirectionIndicators(Transform trackingSpace, float width, float length, Vector3 roadDirection = default)
     {
+        // CHECK MASTER CONTROL FIRST
+        if (!TrackingSpaceVisualizationController.ShouldShowDirectionIndicators())
+        {
+            Debug.Log("PersistentRDW: Direction indicators disabled by master control");
+            return;
+        }
+
+        // Your existing CreateDirectionIndicators code here...
+        Debug.Log("PersistentRDW: Creating direction indicators (master control allows)");
+        // ... rest of existing method
         // Create forward direction indicator (blue) - along LONG dimension
         GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
         forwardMarker.name = "ForwardDirection";
@@ -875,7 +890,7 @@ public class PersistentRDW : MonoBehaviour
                 }
 
                 // Create persistent corners and markers
-                StartCoroutine(CreatePersistentVisualizations(vm));
+                //StartCoroutine(CreatePersistentVisualizations(vm));
             }
         }
 
@@ -1182,7 +1197,7 @@ public class PersistentRDW : MonoBehaviour
         // Only update if we need to
         if (Time.frameCount % 10 == 0) // Update every 10 frames to reduce overhead
         {
-            UpdateTrackingSpaceVisualization();
+            //UpdateTrackingSpaceVisualization();
         }
     }
     // Add this to your PersistentRDW class
@@ -1680,7 +1695,7 @@ public class PersistentRDW : MonoBehaviour
         }
 
         // Create visual indicators
-        CreateDirectionIndicators(rm.trackingSpace, width, length, roadDirection);
+        //CreateDirectionIndicators(rm.trackingSpace, width, length, roadDirection);
 
         Debug.Log("Road alignment complete with physical space preservation");
     }

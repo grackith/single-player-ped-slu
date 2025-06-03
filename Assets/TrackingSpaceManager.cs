@@ -18,8 +18,8 @@ public class TrackingSpaceManager : MonoBehaviour
     public Transform headTransform; // Usually Main Camera under XR Origin
 
     [Header("Visual Feedback Settings")]
-    public bool showBoundaryMarkers = true;
-    public bool showDirectionIndicators = true;
+    public bool showBoundaryMarkers = false;
+    public bool showDirectionIndicators = false;
 
     [Header("Anti-Drift Settings")]
     public float driftCheckInterval = 3.0f; // Check every 3 seconds
@@ -163,7 +163,7 @@ public class TrackingSpaceManager : MonoBehaviour
         // UPDATED: Don't auto-calibrate on scenario start - just update visuals
         if (hasBeenCalibrated && showBoundaryMarkers)
         {
-            CreatePermanentBoundaryMarkers();
+            //CreatePermanentBoundaryMarkers();
         }
     }
 
@@ -440,19 +440,19 @@ public class TrackingSpaceManager : MonoBehaviour
     /// <summary>
     /// Force refresh of all visual elements
     /// </summary>
-    public void RefreshVisualElements()
-    {
-        if (showBoundaryMarkers)
-        {
-            CreatePermanentBoundaryMarkers();
-        }
+    //public void RefreshVisualElements()
+    //{
+    //    if (showBoundaryMarkers)
+    //    {
+    //        CreatePermanentBoundaryMarkers();
+    //    }
 
-        // Also trigger RedirectionManager visualization if available
-        if (redirectionManager != null && redirectionManager.visualizationManager != null)
-        {
-            redirectionManager.visualizationManager.ChangeTrackingSpaceVisibility(true);
-        }
+    //    // Also trigger RedirectionManager visualization if available
+    //    if (redirectionManager != null && redirectionManager.visualizationManager != null)
+    //    {
+    //        redirectionManager.visualizationManager.ChangeTrackingSpaceVisibility(true);
+    //    }
 
-        Debug.Log("TrackingSpaceManager: Refreshed visual elements");
-    }
+    //    Debug.Log("TrackingSpaceManager: Refreshed visual elements");
+    //}
 }

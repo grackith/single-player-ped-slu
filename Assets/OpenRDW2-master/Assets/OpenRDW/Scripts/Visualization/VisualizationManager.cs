@@ -8,46 +8,69 @@ using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
 
 public class VisualizationManager : MonoBehaviour
 {
+    [Header("Reference Line Settings")]
+    [Tooltip("Enable/disable tracking space reference lines")]
+    public bool showReferenceLines = true;
+
+    [Tooltip("Height of reference lines above ground (negative values put them below ground)")]
+    [Range(-2f, 2f)]
+    public float referenceLineHeight = -0.5f; // Default: 50cm below ground
+
+    [Tooltip("Thickness of reference lines")]
+    [Range(0.01f, 0.2f)]
+    public float referenceLineWidth = 0.05f;
+
+    [Tooltip("Color of reference lines")]
+    public Color referenceLineColor = new Color(1f, 0f, 0f, 0.8f); // Semi-transparent red
+
+    [Tooltip("Show corner markers")]
+    public bool showCornerMarkers = true;
+
+    [Tooltip("Size of corner markers")]
+    [Range(0.1f, 1f)]
+    public float cornerMarkerSize = 0.2f;
+
+    // Store reference to line objects for easy management
+    private List<GameObject> referenceLineObjects = new List<GameObject>();
+    private List<GameObject> cornerMarkerObjects = new List<GameObject>();
+
     [HideInInspector]
     public GlobalConfiguration generalManager;
-
     [HideInInspector]
     public RedirectionManager redirectionManager;
     [HideInInspector]
     public MovementManager movementManager;
-    //if this avatar is visible
+
     [HideInInspector]
     public bool ifVisible;
     [HideInInspector]
-    public Camera cameraTopReal; // stay still relative to the physical space
+    public Camera cameraTopReal;
     [HideInInspector]
-    public HeadFollower headFollower;//headFollower
+    public HeadFollower headFollower;
     private List<Transform> obstacleParents;
     private List<Transform> bufferParents;
     [HideInInspector]
-    public List<GameObject> bufferRepresentations; // buffer gameobjects
-
+    public List<GameObject> bufferRepresentations;
     [HideInInspector]
-    public List<GameObject> avatarBufferRepresentations; // gameobject of avatar Buffer, index represents the buffer of the avatar with avatarId
+    public List<GameObject> avatarBufferRepresentations;
     [HideInInspector]
-    public List<Transform> otherAvatarRepresentations;//Other avatars' representations
-
+    public List<Transform> otherAvatarRepresentations;
     private GlobalConfiguration globalConfiguration;
     [HideInInspector]
-    public List<GameObject> allPlanes; // now we have more than one tracking space
+    public List<GameObject> allPlanes;
     [HideInInspector]
-    public Transform realWaypoint; // the waypoint in presentation in physical space
+    public Transform realWaypoint;
 
     [Header("target line")]
-    public bool drawTargetLine;//jon: whether a line should be drawn between the avatar and its current target point
+    public bool drawTargetLine;
     public Color targetLineColor;
     public float targetLineWidth = 0.5f;
     [HideInInspector]
     public LineRenderer targetLine;
 
-    // Fix the layer issue in VisualizationManager.Awake()
     void Awake()
     {
+        // Your existing Awake code...
         ifVisible = true;
         generalManager = GetComponentInParent<GlobalConfiguration>();
         redirectionManager = GetComponent<RedirectionManager>();
@@ -57,18 +80,20 @@ public class VisualizationManager : MonoBehaviour
 
         obstacleParents = new List<Transform>();
         bufferParents = new List<Transform>();
-
         bufferRepresentations = new List<GameObject>();
         avatarBufferRepresentations = new List<GameObject>();
         allPlanes = new List<GameObject>();
 
+        // Initialize reference line collections
+        referenceLineObjects = new List<GameObject>();
+        cornerMarkerObjects = new List<GameObject>();
+
+        // Set up target line (your existing code)
         if (drawTargetLine)
         {
             if (transform.Find("Target Line") == null)
             {
                 GameObject obj = new GameObject("Target Line");
-
-                // Fix the layer assignment
                 int virtualLayer = LayerMask.NameToLayer("Virtual");
                 if (virtualLayer >= 0 && virtualLayer <= 31)
                 {
@@ -77,7 +102,7 @@ public class VisualizationManager : MonoBehaviour
                 else
                 {
                     Debug.LogWarning("Virtual layer not found, using default layer");
-                    obj.layer = 0; // Default layer
+                    obj.layer = 0;
                 }
 
                 targetLine = obj.AddComponent<LineRenderer>();
@@ -101,6 +126,306 @@ public class VisualizationManager : MonoBehaviour
             targetLine = null;
         }
     }
+
+    // Add this method to create reference lines at custom height
+    
+
+  
+    // Add context menu for easy testing in editor
+    [ContextMenu("Refresh Reference Lines")]
+    public void RefreshReferenceLines()
+    {
+        UpdateReferenceLines();
+    }
+
+    [ContextMenu("Hide Reference Lines")]
+    public void HideReferenceLines()
+    {
+        showReferenceLines = false;
+        ClearReferenceLines();
+        Debug.Log("VisualizationManager: Reference lines hidden via context menu");
+    }
+
+    [ContextMenu("Show Reference Lines")]
+    public void ShowReferenceLines()
+    {
+        showReferenceLines = true;
+        CreateReferenceLines();
+        Debug.Log("VisualizationManager: Reference lines shown via context menu");
+    }
+
+    [ContextMenu("Force Clear All Reference Lines")]
+    public void ForceClearAllReferenceLines()
+    {
+        // Clear our own reference lines
+        ClearReferenceLines();
+
+        // Also clear any other visualization objects that might be conflicting
+        ClearConflictingVisualizations();
+
+        Debug.Log("VisualizationManager: Force cleared all reference lines");
+    }
+
+    private void ClearConflictingVisualizations()
+    {
+        // Clear common names used by other systems
+        string[] conflictingNames = new string[] {
+            "ForwardDirection", "RightDirection", "TrackingSpaceCenter", "DirectionLabel",
+            "FrontRightCorner", "FrontLeftCorner", "BackLeftCorner", "BackRightCorner"
+        };
+
+        foreach (string name in conflictingNames)
+        {
+            GameObject obj = GameObject.Find(name);
+            if (obj != null)
+            {
+                Debug.Log($"VisualizationManager: Clearing conflicting object: {name}");
+                if (Application.isPlaying)
+                {
+                    Destroy(obj);
+                }
+                else
+                {
+                    DestroyImmediate(obj);
+                }
+            }
+        }
+
+        // Clear objects that might be created by ScenarioManager
+        for (int i = 0; i < 10; i++)
+        {
+            GameObject corner = GameObject.Find($"Corner_{i}");
+            if (corner != null)
+            {
+                Debug.Log($"VisualizationManager: Clearing corner: Corner_{i}");
+                if (Application.isPlaying)
+                {
+                    Destroy(corner);
+                }
+                else
+                {
+                    DestroyImmediate(corner);
+                }
+            }
+        }
+    }
+
+    // Override your existing GenerateTrackingSpaceMesh to include reference lines
+    public void GenerateTrackingSpaceMesh(List<SingleSpace> physicalSpaces)
+    {
+        // Your existing code for generating tracking space mesh...
+        EnsureInitialized();
+
+        if (physicalSpaces == null || physicalSpaces.Count == 0)
+        {
+            Debug.LogError("physicalSpaces is null or empty in GenerateTrackingSpaceMesh");
+            return;
+        }
+
+        // Clear reference lines first to prevent conflicts with other systems
+        ClearReferenceLines();
+
+        DestroyAll();
+
+        // Re-initialize collections after destroying
+        allPlanes = new List<GameObject>();
+        obstacleParents = new List<Transform>();
+        bufferParents = new List<Transform>();
+        bufferRepresentations = new List<GameObject>();
+
+        // Generate the actual tracking space meshes
+        for (int i = 0; i < physicalSpaces.Count; i++)
+        {
+            var space = physicalSpaces[i];
+
+            if (space == null || space.trackingSpace == null || space.trackingSpace.Count == 0)
+            {
+                Debug.LogError($"Invalid physical space at index {i}");
+                continue;
+            }
+
+            // Generate tracking space plane
+            var trackingSpaceMesh = TrackingSpaceGenerator.GeneratePolygonMesh(space.trackingSpace);
+            if (trackingSpaceMesh == null) continue;
+
+            var newTrackingSpace = new GameObject("Plane" + allPlanes.Count);
+            newTrackingSpace.transform.SetParent(transform);
+            newTrackingSpace.transform.localPosition = Vector3.zero;
+            newTrackingSpace.transform.rotation = Quaternion.identity;
+
+            var meshFilter = newTrackingSpace.AddComponent<MeshFilter>();
+            meshFilter.mesh = trackingSpaceMesh;
+
+            var planeMr = newTrackingSpace.AddComponent<MeshRenderer>();
+            if (generalManager != null && generalManager.trackingSpacePlaneMat != null)
+            {
+                planeMr.material = new Material(generalManager.trackingSpacePlaneMat);
+            }
+            else
+            {
+                Material fallbackMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (fallbackMat.shader == null)
+                    fallbackMat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+                fallbackMat.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                planeMr.material = fallbackMat;
+            }
+
+            allPlanes.Add(newTrackingSpace);
+
+            // Set as tracking space for the right avatar
+            if (movementManager != null && movementManager.physicalSpaceIndex == allPlanes.Count - 1)
+            {
+                if (redirectionManager != null)
+                {
+                    redirectionManager.trackingSpace = newTrackingSpace.transform;
+                    Debug.Log($"Set tracking space for avatar {movementManager.avatarId}");
+                }
+            }
+
+            // Generate obstacles and buffers (abbreviated for space)
+            var obstacleParent = new GameObject("ObstacleParent").transform;
+            obstacleParent.SetParent(allPlanes[i].transform);
+            obstacleParent.localPosition = new Vector3(0, GlobalConfiguration.obstacleParentHeight, 0);
+            obstacleParent.rotation = Quaternion.identity;
+            obstacleParents.Add(obstacleParent);
+
+            if (space.obstaclePolygons != null)
+            {
+                TrackingSpaceGenerator.GenerateObstacleMesh(
+                    space.obstaclePolygons, obstacleParent,
+                    generalManager != null ? generalManager.obstacleColor : Color.red,
+                    generalManager != null ? generalManager.if3dObstacle : false,
+                    generalManager != null ? generalManager.obstacleHeight : 1f);
+            }
+
+            // Generate buffers
+            var bufferParent = new GameObject("BufferParent").transform;
+            bufferParent.SetParent(allPlanes[i].transform);
+            bufferParent.localPosition = new Vector3(0, GlobalConfiguration.bufferParentHeight, 0);
+            bufferParent.rotation = Quaternion.identity;
+            bufferParents.Add(bufferParent);
+
+            var trackingSpaceBufferMesh = TrackingSpaceGenerator.GenerateBufferMesh(
+                space.trackingSpace, true,
+                generalManager != null ? generalManager.RESET_TRIGGER_BUFFER : 0.5f);
+
+            if (trackingSpaceBufferMesh != null)
+            {
+                AddBufferMesh(trackingSpaceBufferMesh, bufferParent);
+            }
+
+            if (space.obstaclePolygons != null)
+            {
+                foreach (var obstaclePoints in space.obstaclePolygons)
+                {
+                    if (obstaclePoints != null && obstaclePoints.Count > 0)
+                    {
+                        var obstacleBufferMesh = TrackingSpaceGenerator.GenerateBufferMesh(
+                            obstaclePoints, false,
+                            generalManager != null ? generalManager.RESET_TRIGGER_BUFFER : 0.5f);
+
+                        if (obstacleBufferMesh != null)
+                        {
+                            AddBufferMesh(obstacleBufferMesh, bufferParent);
+                        }
+                    }
+                }
+            }
+        }
+
+        // ADD: Generate reference lines after creating the tracking space
+        if (showReferenceLines)
+        {
+            StartCoroutine(GenerateReferenceLinesAfterFrame());
+        }
+
+        Debug.Log($"Generated tracking space with {allPlanes.Count} planes and {bufferRepresentations.Count} buffer meshes");
+    }
+
+    private IEnumerator GenerateReferenceLinesAfterFrame()
+    {
+        yield return null; // Wait one frame for tracking space to be fully set up
+        CreateReferenceLines();
+    }
+
+    // Your existing methods remain the same...
+    public void EnsureInitialized()
+    {
+        // Your existing code...
+        if (obstacleParents == null)
+        {
+            obstacleParents = new List<Transform>();
+        }
+
+        if (bufferParents == null)
+        {
+            bufferParents = new List<Transform>();
+        }
+
+        if (bufferRepresentations == null)
+        {
+            bufferRepresentations = new List<GameObject>();
+        }
+
+        if (avatarBufferRepresentations == null)
+        {
+            avatarBufferRepresentations = new List<GameObject>();
+        }
+
+        if (allPlanes == null)
+        {
+            allPlanes = new List<GameObject>();
+        }
+
+        if (otherAvatarRepresentations == null)
+        {
+            otherAvatarRepresentations = new List<Transform>();
+        }
+
+        // Initialize reference line collections
+        if (referenceLineObjects == null)
+        {
+            referenceLineObjects = new List<GameObject>();
+        }
+
+        if (cornerMarkerObjects == null)
+        {
+            cornerMarkerObjects = new List<GameObject>();
+        }
+
+        // Your existing reference setup code...
+        if (generalManager == null)
+        {
+            generalManager = GetComponentInParent<GlobalConfiguration>();
+        }
+
+        if (redirectionManager == null)
+        {
+            redirectionManager = GetComponent<RedirectionManager>();
+        }
+
+        if (movementManager == null)
+        {
+            movementManager = GetComponent<MovementManager>();
+        }
+
+        if (headFollower == null)
+        {
+            Transform bodyTransform = transform.Find("Body");
+            if (bodyTransform != null)
+            {
+                headFollower = bodyTransform.GetComponent<HeadFollower>();
+            }
+        }
+
+        Debug.Log("VisualizationManager collections initialized");
+    }
+
+    // Update the DestroyAll method to include reference lines
+
+
+    // Add validation in OnValidate to update lines when values change in editor
+
     // Add this method to your VisualizationManager.cs class
     // Place it somewhere after the Awake method but before the methods that use these collections
 
@@ -112,8 +437,17 @@ public class VisualizationManager : MonoBehaviour
 
     void Start()
     {
-        // Call InitializeInOrder() with a small delay to ensure proper sequence
-        StartCoroutine(InitializeInOrder());
+        // Only initialize if master control allows
+        if (TrackingSpaceVisualizationController.ShouldShowAnyVisualization())
+        {
+            StartCoroutine(InitializeInOrder());
+        }
+        else
+        {
+            Debug.Log("VisualizationManager: Initialization skipped due to master control");
+            // Still ensure basic initialization without visuals
+            EnsureInitialized();
+        }
     }
     private IEnumerator InitializeInOrder()
     {
@@ -133,6 +467,208 @@ public class VisualizationManager : MonoBehaviour
 
         Debug.Log("VisualizationManager: Ordered initialization complete");
     }
+    public void CreateReferenceLines()
+    {
+        // CHECK MASTER CONTROL FIRST
+        if (!TrackingSpaceVisualizationController.ShouldShowReferenceLines())
+        {
+            Debug.Log("VisualizationManager: Reference lines disabled by master control");
+            return;
+        }
+
+        // Also respect local setting
+        if (!showReferenceLines)
+        {
+            Debug.Log("VisualizationManager: Reference lines disabled by local setting");
+            return;
+        }
+
+        Debug.Log("VisualizationManager: Creating reference lines (master control allows)");
+        // ... rest of existing method
+        if (!showReferenceLines || generalManager == null ||
+            generalManager.physicalSpaces == null || generalManager.physicalSpaces.Count == 0)
+        {
+            return;
+        }
+
+        // Clear existing reference lines
+        ClearReferenceLines();
+
+        var physicalSpace = generalManager.physicalSpaces[0];
+        if (physicalSpace.trackingSpace == null || physicalSpace.trackingSpace.Count < 3)
+        {
+            return;
+        }
+
+        // Create a parent object for organization
+        GameObject referenceParent = new GameObject("Reference Lines");
+        referenceParent.transform.SetParent(transform);
+        referenceParent.transform.localPosition = Vector3.zero;
+        referenceParent.transform.localRotation = Quaternion.identity;
+        referenceLineObjects.Add(referenceParent);
+
+        // Create lines between each pair of points
+        for (int i = 0; i < physicalSpace.trackingSpace.Count; i++)
+        {
+            Vector2 point1 = physicalSpace.trackingSpace[i];
+            Vector2 point2 = physicalSpace.trackingSpace[(i + 1) % physicalSpace.trackingSpace.Count];
+
+            CreateReferenceLine(point1, point2, referenceParent.transform, i);
+        }
+
+        // Create corner markers if enabled
+        if (showCornerMarkers)
+        {
+            CreateCornerMarkers(referenceParent.transform);
+        }
+    }
+
+    private void CreateReferenceLine(Vector2 start, Vector2 end, Transform parent, int index)
+    {
+        GameObject line = new GameObject($"Reference Line {index}");
+        line.transform.SetParent(parent);
+
+        // Calculate line properties
+        Vector3 startPos = new Vector3(start.x, referenceLineHeight, start.y);
+        Vector3 endPos = new Vector3(end.x, referenceLineHeight, end.y);
+        Vector3 midPoint = (startPos + endPos) / 2f;
+        float distance = Vector3.Distance(startPos, endPos);
+
+        // Position and orient the line
+        line.transform.position = midPoint;
+        line.transform.LookAt(endPos);
+
+        // Create the visual representation using a scaled cube
+        GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        visual.transform.SetParent(line.transform);
+        visual.transform.localPosition = Vector3.zero;
+        visual.transform.localRotation = Quaternion.identity;
+        visual.transform.localScale = new Vector3(referenceLineWidth, referenceLineWidth, distance);
+
+        // Apply material
+        Renderer renderer = visual.GetComponent<Renderer>();
+        Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        if (mat.shader == null)
+        {
+            mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+        }
+        mat.color = referenceLineColor;
+        renderer.material = mat;
+
+        // Remove collider to prevent interference
+        Destroy(visual.GetComponent<Collider>());
+
+        referenceLineObjects.Add(line);
+    }
+
+
+
+    private void CreateCornerMarkers(Transform parent)
+    {
+        // CHECK MASTER CONTROL FIRST
+        if (!TrackingSpaceVisualizationController.ShouldShowCornerMarkers())
+        {
+            Debug.Log("VisualizationManager: Corner markers disabled by master control");
+            return;
+        }
+
+        // Also respect local setting
+        if (!showCornerMarkers)
+        {
+            Debug.Log("VisualizationManager: Corner markers disabled by local setting");
+            return;
+        }
+
+        Debug.Log("VisualizationManager: Creating corner markers (master control allows)");
+        // ... rest of existing method
+        if (generalManager == null || generalManager.physicalSpaces == null ||
+            generalManager.physicalSpaces.Count == 0)
+        {
+            return;
+        }
+
+        var physicalSpace = generalManager.physicalSpaces[0];
+
+        for (int i = 0; i < physicalSpace.trackingSpace.Count; i++)
+        {
+            Vector2 point = physicalSpace.trackingSpace[i];
+
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            marker.name = $"Corner Marker {i}";
+            marker.transform.SetParent(parent);
+            marker.transform.position = new Vector3(point.x, referenceLineHeight, point.y);
+            marker.transform.localScale = Vector3.one * cornerMarkerSize;
+
+            // Apply material
+            Renderer renderer = marker.GetComponent<Renderer>();
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (mat.shader == null)
+            {
+                mat = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+            }
+            mat.color = referenceLineColor;
+            renderer.material = mat;
+
+            // Remove collider
+            Destroy(marker.GetComponent<Collider>());
+
+            cornerMarkerObjects.Add(marker);
+        }
+    }
+
+    public void ClearReferenceLines()
+    {
+        // Clear reference lines
+        foreach (var line in referenceLineObjects)
+        {
+            if (line != null)
+            {
+                // Use Destroy instead of DestroyImmediate for safety
+                if (Application.isPlaying)
+                {
+                    Destroy(line);
+                }
+                else
+                {
+                    // In editor, use DestroyImmediate but safely
+                    DestroyImmediate(line);
+                }
+            }
+        }
+        referenceLineObjects.Clear();
+
+        // Clear corner markers
+        foreach (var marker in cornerMarkerObjects)
+        {
+            if (marker != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(marker);
+                }
+                else
+                {
+                    DestroyImmediate(marker);
+                }
+            }
+        }
+        cornerMarkerObjects.Clear();
+    }
+
+    public void UpdateReferenceLines()
+    {
+        if (showReferenceLines)
+        {
+            CreateReferenceLines();
+        }
+        else
+        {
+            ClearReferenceLines();
+        }
+    }
+
+
+
     public void EnsureTrackingSpaces()
     {
         if (generalManager == null || generalManager.physicalSpaces == null || generalManager.physicalSpaces.Count == 0)
@@ -201,67 +737,7 @@ public class VisualizationManager : MonoBehaviour
             Debug.LogWarning("VisualizationManager: Cannot set up visualization - physical spaces not available");
         }
     }
-    public void EnsureInitialized()
-    {
-        // Initialize collections if they're null
-        if (obstacleParents == null)
-        {
-            obstacleParents = new List<Transform>();
-        }
-
-        if (bufferParents == null)
-        {
-            bufferParents = new List<Transform>();
-        }
-
-        if (bufferRepresentations == null)
-        {
-            bufferRepresentations = new List<GameObject>();
-        }
-
-        if (avatarBufferRepresentations == null)
-        {
-            avatarBufferRepresentations = new List<GameObject>();
-        }
-
-        if (allPlanes == null)
-        {
-            allPlanes = new List<GameObject>();
-        }
-
-        if (otherAvatarRepresentations == null)
-        {
-            otherAvatarRepresentations = new List<Transform>();
-        }
-
-        // Ensure references are set
-        if (generalManager == null)
-        {
-            generalManager = GetComponentInParent<GlobalConfiguration>();
-        }
-
-        if (redirectionManager == null)
-        {
-            redirectionManager = GetComponent<RedirectionManager>();
-        }
-
-        if (movementManager == null)
-        {
-            movementManager = GetComponent<MovementManager>();
-        }
-
-        if (headFollower == null)
-        {
-            Transform bodyTransform = transform.Find("Body");
-            if (bodyTransform != null)
-            {
-                headFollower = bodyTransform.GetComponent<HeadFollower>();
-            }
-        }
-
-        Debug.Log("VisualizationManager collections initialized");
-    }
-
+    
     public void SetRealTargetVisibility(bool visible)
     {
         realWaypoint.GetComponent<MeshRenderer>().enabled = visible;
@@ -370,6 +846,10 @@ public class VisualizationManager : MonoBehaviour
 
     public void DestroyAll()
     {
+        // Clear reference lines first
+        ClearReferenceLines();
+
+        // Your existing destruction code...
         foreach (var plane in allPlanes)
         {
             Destroy(plane);
@@ -377,6 +857,29 @@ public class VisualizationManager : MonoBehaviour
         foreach (var otherAvatar in otherAvatarRepresentations)
         {
             Destroy(otherAvatar.gameObject);
+        }
+    }
+
+    void OnValidate()
+    {
+        // Only update during play mode or if explicitly requested
+        if (Application.isPlaying)
+        {
+            UpdateReferenceLines();
+        }
+        else
+        {
+            // In editor mode, delay the update to avoid OnValidate issues
+            if (!Application.isPlaying)
+            {
+                UnityEditor.EditorApplication.delayCall += () =>
+                {
+                    if (this != null) // Check if object still exists
+                    {
+                        UpdateReferenceLines();
+                    }
+                };
+            }
         }
     }
     // Add this method to VisualizationManager to help debug the issue
@@ -474,211 +977,8 @@ public class VisualizationManager : MonoBehaviour
         TrackingSpaceGenerator.GenerateObstacleMesh(virtualSpace.obstaclePolygons, obstacleParent, generalManager.virtualObstacleColor, generalManager.if3dObstacle, generalManager.obstacleHeight);
     }
 
-    public void GenerateTrackingSpaceMesh(List<SingleSpace> physicalSpaces)
-    {
-        // Call the initialization method first
-        EnsureInitialized();
+    
 
-        // Null checks for physicalSpaces
-        if (physicalSpaces == null || physicalSpaces.Count == 0)
-        {
-            Debug.LogError("physicalSpaces is null or empty in GenerateTrackingSpaceMesh");
-            return;
-        }
-
-        // Clear existing visualization
-        DestroyAll();
-
-        // Re-initialize collections after destroying
-        allPlanes = new List<GameObject>();
-        obstacleParents = new List<Transform>();
-        bufferParents = new List<Transform>();
-        bufferRepresentations = new List<GameObject>();
-
-        if (generalManager == null)
-        {
-            Debug.LogError("generalManager is null in GenerateTrackingSpaceMesh");
-            generalManager = GetComponentInParent<GlobalConfiguration>();
-            if (generalManager == null)
-            {
-                Debug.LogError("Could not find GlobalConfiguration component");
-                return;
-            }
-        }
-
-        if (movementManager == null)
-        {
-            Debug.LogError("movementManager is null in GenerateTrackingSpaceMesh");
-            movementManager = GetComponent<MovementManager>();
-            if (movementManager == null)
-            {
-                Debug.LogError("Could not find MovementManager component");
-                return;
-            }
-        }
-
-        if (redirectionManager == null)
-        {
-            Debug.LogError("redirectionManager is null in GenerateTrackingSpaceMesh");
-            redirectionManager = GetComponent<RedirectionManager>();
-            if (redirectionManager == null)
-            {
-                Debug.LogError("Could not find RedirectionManager component");
-                return;
-            }
-        }
-
-        // Initialize collections
-        allPlanes = new List<GameObject>();
-        obstacleParents = new List<Transform>();
-        bufferParents = new List<Transform>();
-        bufferRepresentations = new List<GameObject>();
-
-        // Create a fallback material if needed
-        Material fallbackMaterial = null;
-        if (generalManager.trackingSpacePlaneMat == null)
-        {
-            Debug.LogWarning("trackingSpacePlaneMat is null, creating fallback material");
-            fallbackMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            if (fallbackMaterial.shader == null)
-            {
-                fallbackMaterial = new Material(Shader.Find("Legacy Shaders/Diffuse"));
-            }
-            fallbackMaterial.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-        }
-
-        for (int i = 0; i < physicalSpaces.Count; i++)
-        {
-            var space = physicalSpaces[i];
-
-            // Check if space is valid
-            if (space == null)
-            {
-                Debug.LogError($"Physical space at index {i} is null");
-                continue;
-            }
-
-            if (space.trackingSpace == null || space.trackingSpace.Count == 0)
-            {
-                Debug.LogError($"Tracking space at index {i} is null or empty");
-                continue;
-            }
-
-            // Generate tracking space plane
-            var trackingSpaceMesh = TrackingSpaceGenerator.GeneratePolygonMesh(space.trackingSpace);
-            if (trackingSpaceMesh == null)
-            {
-                Debug.LogError($"Failed to generate mesh for tracking space at index {i}");
-                continue;
-            }
-
-            var newTrackingSpace = new GameObject("Plane" + allPlanes.Count);
-            newTrackingSpace.transform.SetParent(transform);
-            newTrackingSpace.transform.localPosition = Vector3.zero;
-            newTrackingSpace.transform.rotation = Quaternion.identity;
-
-            var meshFilter = newTrackingSpace.AddComponent<MeshFilter>();
-            meshFilter.mesh = trackingSpaceMesh;
-
-            var planeMr = newTrackingSpace.AddComponent<MeshRenderer>();
-            if (generalManager.trackingSpacePlaneMat != null)
-            {
-                planeMr.material = new Material(generalManager.trackingSpacePlaneMat);
-            }
-            else
-            {
-                planeMr.material = fallbackMaterial;
-            }
-
-            allPlanes.Add(newTrackingSpace);
-
-            // Set as tracking space for the right avatar
-            if (movementManager.physicalSpaceIndex == allPlanes.Count - 1)
-            {
-                redirectionManager.trackingSpace = newTrackingSpace.transform;
-                Debug.Log($"Set tracking space for avatar {movementManager.avatarId}");
-            }
-
-            // Generate obstacle parent
-            var obstacleParent = new GameObject("ObstacleParent").transform;
-            obstacleParent.SetParent(allPlanes[i].transform);
-            obstacleParent.localPosition = new Vector3(0, GlobalConfiguration.obstacleParentHeight, 0);
-            obstacleParent.rotation = Quaternion.identity;
-            obstacleParents.Add(obstacleParent);
-
-            // Check if obstacle polygons are valid
-            if (space.obstaclePolygons != null)
-            {
-                try
-                {
-                    TrackingSpaceGenerator.GenerateObstacleMesh(
-                        space.obstaclePolygons,
-                        obstacleParent,
-                        generalManager.obstacleColor,
-                        generalManager.if3dObstacle,
-                        generalManager.obstacleHeight);
-                }
-                catch (System.Exception e)
-                {
-                    Debug.LogError($"Error generating obstacle mesh: {e.Message}");
-                }
-            }
-
-            // Generate buffer parent
-            var bufferParent = new GameObject("BufferParent").transform;
-            bufferParent.SetParent(allPlanes[i].transform);
-            bufferParent.localPosition = new Vector3(0, GlobalConfiguration.bufferParentHeight, 0);
-            bufferParent.rotation = Quaternion.identity;
-            bufferParents.Add(bufferParent);
-
-            // Generate tracking space buffer
-            try
-            {
-                var trackingSpaceBufferMesh = TrackingSpaceGenerator.GenerateBufferMesh(
-                    space.trackingSpace,
-                    true,
-                    generalManager.RESET_TRIGGER_BUFFER);
-
-                if (trackingSpaceBufferMesh != null)
-                {
-                    AddBufferMesh(trackingSpaceBufferMesh, bufferParent);
-                }
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"Error generating tracking space buffer: {e.Message}");
-            }
-
-            // Generate obstacle buffers
-            if (space.obstaclePolygons != null)
-            {
-                foreach (var obstaclePoints in space.obstaclePolygons)
-                {
-                    if (obstaclePoints != null && obstaclePoints.Count > 0)
-                    {
-                        try
-                        {
-                            var obstacleBufferMesh = TrackingSpaceGenerator.GenerateBufferMesh(
-                                obstaclePoints,
-                                false,
-                                generalManager.RESET_TRIGGER_BUFFER);
-
-                            if (obstacleBufferMesh != null)
-                            {
-                                AddBufferMesh(obstacleBufferMesh, bufferParent);
-                            }
-                        }
-                        catch (System.Exception e)
-                        {
-                            Debug.LogError($"Error generating obstacle buffer: {e.Message}");
-                        }
-                    }
-                }
-            }
-        }
-
-        Debug.Log($"Generated tracking space with {allPlanes.Count} planes and {bufferRepresentations.Count} buffer meshes");
-    }
 
     public GameObject AddBufferMesh(Mesh bufferMesh, Transform bufferParent)
     {
@@ -705,6 +1005,8 @@ public class VisualizationManager : MonoBehaviour
     //visualization relative, update other avatar representations...
     // Add this debug method to VisualizationManager
     [ContextMenu("Debug Target Line")]
+
+    // Add context menu for easy testing in editor
     public void DebugTargetLine()
     {
         Debug.Log("=== Target Line Debug ===");
@@ -1285,6 +1587,15 @@ public class VisualizationManager : MonoBehaviour
     }
     public void EnablePersistentTrackingSpaceVisualization()
     {
+        // CHECK MASTER CONTROL FIRST
+        if (!TrackingSpaceVisualizationController.ShouldShowAnyVisualization())
+        {
+            Debug.Log("PersistentRDW: Persistent visualization disabled by master control");
+            return;
+        }
+
+        Debug.Log("PersistentRDW: Enabling persistent tracking space visualization (master control allows)");
+        // ... rest of existing method
         // Make sure tracking space visualization is visible
         ChangeTrackingSpaceVisibility(true);
 
@@ -1355,7 +1666,7 @@ public class VisualizationManager : MonoBehaviour
         }
 
         // Also update any markers if they exist (optional)
-        CreateAlignmentVisualizations();
+        //CreateAlignmentVisualizations();
     }
 
 }

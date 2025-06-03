@@ -96,6 +96,12 @@ public class ScenarioManager : MonoBehaviour
     private UnityEngine.Rendering.Volume masterGlobalVolume;
     private LightmapSettings masterLightmapSettings;
 
+    // ADD: Flag to control whether ScenarioManager should handle visualizations
+    [Header("Visualization Control")]
+    [Tooltip("Disable ScenarioManager's tracking space visualization to let VisualizationManager handle it")]
+    public bool disableScenarioManagerVisualization = true;
+
+
     // Singleton instance
     private static ScenarioManager _instance;
     public static ScenarioManager Instance
@@ -880,7 +886,20 @@ public class ScenarioManager : MonoBehaviour
 
     private void HandleDiagnosticInputs()
     {
-        // C key - Manual calibration (replaces your old complex calibration)
+        // V key - Toggle master visualization control
+        if (Input.GetKeyDown(KeyCode.V))
+        {
+            Debug.Log("V key pressed - Toggling MASTER visualization control");
+            TrackingSpaceVisualizationController.Instance.ToggleMasterVisualization();
+        }
+
+        // X key - Force clear all visualizations
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            Debug.Log("X key pressed - Force clearing ALL visualizations via master control");
+            TrackingSpaceVisualizationController.ClearAllVisualizations();
+        }
+        // C key - Manual calibration
         if (Input.GetKeyDown(KeyCode.C))
         {
             Debug.Log("C key pressed - Performing manual RDW calibration");
@@ -895,16 +914,7 @@ public class ScenarioManager : MonoBehaviour
             }
         }
 
-        // V key - Toggle tracking space visualization
-        if (Input.GetKeyDown(KeyCode.V))
-        {
-            Debug.Log("V key pressed - Toggling tracking space visualization");
-            var rm = FindRedirectionManager();
-            if (rm != null)
-            {
-                rm.ToggleTrackingSpaceVisualization();
-            }
-        }
+        
 
         // D key - Diagnostic information
         if (Input.GetKeyDown(KeyCode.D))
@@ -1136,6 +1146,15 @@ public class ScenarioManager : MonoBehaviour
 
     private void CreateTrackingSpaceVisualizations(Transform trackingSpace)
     {
+        // CHECK MASTER CONTROL AND LOCAL SETTING
+        if (disableScenarioManagerVisualization || !TrackingSpaceVisualizationController.ShouldShowAnyVisualization())
+        {
+            Debug.Log("ScenarioManager: Tracking space visualization disabled");
+            return;
+        }
+
+        Debug.Log("ScenarioManager: Creating tracking space visualizations (master control allows)");
+        // ... rest of existing method (only if you want ScenarioManager to create any)
         if (trackingSpace == null) return;
 
         // Create tracking space center indicator
@@ -1163,38 +1182,192 @@ public class ScenarioManager : MonoBehaviour
 
         Debug.Log("Created temporary tracking space visualizations");
     }
-
-    private IEnumerator SafeVisualizationRefresh()
+    private void ClearAllScenarioManagerVisualizations()
     {
-        // Find all visualization managers
-        VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
+        Debug.Log("Clearing all ScenarioManager-created visualizations");
 
-        if (visualManagers.Length == 0)
-        {
-            Debug.LogWarning("No VisualizationManager found!");
-            yield break;
-        }
+        // Clear by common names used by ScenarioManager
+        string[] markerNames = new string[] {
+            "ForwardDirection", "RightDirection", "TrackingSpaceCenter", "DirectionLabel",
+            "FrontRightCorner", "FrontLeftCorner", "BackLeftCorner", "BackRightCorner"
+        };
 
-        foreach (var vm in visualManagers)
+        foreach (string name in markerNames)
         {
-            if (vm != null)
+            GameObject obj = GameObject.Find(name);
+            if (obj != null)
             {
-                // First ensure tracking space is visible - outside try/catch
-                vm.ChangeTrackingSpaceVisibility(true);
-
-                // Wait a frame to let this take effect
-                yield return null;
-
-                // Now process refresh in smaller steps - outside try/catch
-                yield return StartCoroutine(SafeRefreshVisualization(vm));
+                Debug.Log($"Destroying ScenarioManager marker: {name}");
+                if (Application.isPlaying)
+                {
+                    Destroy(obj);
+                }
+                else
+                {
+                    DestroyImmediate(obj);
+                }
             }
         }
-        ForceTrackingSpaceDimensions();
 
-        
+        // Clear by name pattern
+        for (int i = 0; i < 10; i++)
+        {
+            GameObject marker = GameObject.Find($"Corner_{i}");
+            if (marker != null)
+            {
+                Debug.Log($"Destroying corner marker: Corner_{i}");
+                if (Application.isPlaying)
+                {
+                    Destroy(marker);
+                }
+                else
+                {
+                    DestroyImmediate(marker);
+                }
+            }
+
+            GameObject scenarioMarker = GameObject.Find($"ScenarioManager_Corner_{i}");
+            if (scenarioMarker != null)
+            {
+                Debug.Log($"Destroying scenario marker: ScenarioManager_Corner_{i}");
+                if (Application.isPlaying)
+                {
+                    Destroy(scenarioMarker);
+                }
+                else
+                {
+                    DestroyImmediate(scenarioMarker);
+                }
+            }
+        }
+
+        // Clear by tag if it exists
+        try
+        {
+            GameObject[] taggedMarkers = GameObject.FindGameObjectsWithTag("CornerMarker");
+            foreach (var marker in taggedMarkers)
+            {
+                if (marker != null)
+                {
+                    Debug.Log($"Destroying tagged marker: {marker.name}");
+                    if (Application.isPlaying)
+                    {
+                        Destroy(marker);
+                    }
+                    else
+                    {
+                        DestroyImmediate(marker);
+                    }
+                }
+            }
+        }
+        catch (System.Exception)
+        {
+            // Tag might not exist, that's ok
+        }
+
+        // Clear any objects with "Tracking" in the name that aren't part of the main system
+        GameObject[] allObjects = FindObjectsOfType<GameObject>();
+        foreach (var obj in allObjects)
+        {
+            if (obj.name.Contains("Tracking") && obj.name.Contains("Marker"))
+            {
+                Debug.Log($"Destroying tracking marker: {obj.name}");
+                if (Application.isPlaying)
+                {
+                    Destroy(obj);
+                }
+                else
+                {
+                    DestroyImmediate(obj);
+                }
+            }
+        }
+    }
+    private IEnumerator SafeVisualizationRefresh()
+    {
+        if (disableScenarioManagerVisualization)
+        {
+            Debug.Log("ScenarioManager visualization disabled - using VisualizationManager only");
+
+            // Clear any existing ScenarioManager visualizations
+            ClearAllScenarioManagerVisualizations();
+
+            // Let VisualizationManager handle everything
+            VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
+            foreach (var vm in visualManagers)
+            {
+                if (vm != null)
+                {
+                    vm.EnsureInitialized();
+                    vm.EnsureTrackingSpaces();
+
+                    // Force the settings
+                    vm.referenceLineHeight = -0.5f; // Below ground
+                    vm.showReferenceLines = false; // TURN OFF by default
+                    vm.UpdateReferenceLines();
+
+                    Debug.Log("VisualizationManager configured by ScenarioManager");
+                }
+            }
+        }
+        else
+        {
+            // Your original complex visualization logic (keep as fallback)
+            Debug.Log("Using ScenarioManager's original visualization system");
+            // Your original visualization code (only if NOT using VisualizationManager)
+            VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
+
+            if (visualManagers.Length == 0)
+            {
+                Debug.LogWarning("No VisualizationManager found!");
+                yield break;
+            }
+
+            foreach (var vm in visualManagers)
+            {
+                if (vm != null)
+                {
+                    // First ensure tracking space is visible - outside try/catch
+                    vm.ChangeTrackingSpaceVisibility(true);
+
+                    // Wait a frame to let this take effect
+                    yield return null;
+
+                    // Now process refresh in smaller steps - outside try/catch
+                    yield return StartCoroutine(SafeRefreshVisualization(vm));
+                }
+            }
+        }
+
+        ForceTrackingSpaceDimensions();
+        yield return null;
     }
 
     // Add this to ScenarioManager.cs
+
+    private void ClearExistingMarkers()
+    {
+        // Find all scenario manager markers
+        var existingMarkers = FindObjectsOfType<ScenarioManagerMarker>();
+        foreach (var marker in existingMarkers)
+        {
+            if (marker != null)
+            {
+                Destroy(marker.gameObject);
+            }
+        }
+
+        // Also clear by name pattern
+        for (int i = 0; i < 10; i++)
+        {
+            GameObject marker = GameObject.Find($"ScenarioManager_Corner_{i}");
+            if (marker != null)
+            {
+                Destroy(marker);
+            }
+        }
+    }
     public void ForceTrackingSpaceDimensions()
     {
         PersistentRDW persistentRDW = FindObjectOfType<PersistentRDW>();
@@ -1661,6 +1834,15 @@ public class ScenarioManager : MonoBehaviour
             }
         }
 
+        if (disableScenarioManagerVisualization)
+        {
+            yield return StartCoroutine(SetupVisualizationManagerOnly());
+        }
+        else
+        {
+            yield return StartCoroutine(SafeVisualizationRefresh());
+        }
+
         // 5. Wait for scene to load
         yield return new WaitForSeconds(0.5f);
 
@@ -1767,6 +1949,77 @@ public class ScenarioManager : MonoBehaviour
         // Final verification
         yield return new WaitForSeconds(1.0f);
         DebugTrafficSystem();
+    }
+
+    private IEnumerator SetupVisualizationManagerOnly()
+    {
+        Debug.Log("Setting up VisualizationManager-only visualization");
+
+        // First clear any ScenarioManager visualizations
+        ClearAllScenarioManagerVisualizations();
+        yield return null;
+
+        // Find and configure VisualizationManager
+        var vm = FindObjectOfType<VisualizationManager>();
+        if (vm != null)
+        {
+            vm.EnsureInitialized();
+            yield return null;
+
+            vm.EnsureTrackingSpaces();
+            yield return null;
+
+            // Configure settings - reference lines OFF by default
+            vm.referenceLineHeight = -0.5f; // Below ground when enabled
+            vm.referenceLineWidth = 0.05f;
+            vm.referenceLineColor = new Color(1f, 0f, 0f, 0.8f); // Red
+            vm.showReferenceLines = false; // OFF by default
+            vm.showCornerMarkers = false; // OFF by default
+            vm.cornerMarkerSize = 0.2f;
+
+            // Apply the settings
+            vm.UpdateReferenceLines();
+
+            Debug.Log("VisualizationManager setup complete - reference lines disabled by default");
+        }
+        else
+        {
+            Debug.LogError("No VisualizationManager found!");
+        }
+
+        yield return null;
+    }
+
+
+    private IEnumerator SetupVisualizationManagerForScenario()
+    {
+        var vm = FindObjectOfType<VisualizationManager>();
+        if (vm != null)
+        {
+            // Ensure proper initialization
+            vm.EnsureInitialized();
+            yield return null;
+
+            vm.EnsureTrackingSpaces();
+            yield return null;
+
+            // Configure for below-ground reference lines
+            vm.referenceLineHeight = -0.5f; // 50cm below ground
+            vm.referenceLineWidth = 0.05f;
+            vm.referenceLineColor = new Color(1f, 0f, 0f, 0.8f); // Semi-transparent red
+            vm.showReferenceLines = true;
+            vm.showCornerMarkers = true;
+            vm.cornerMarkerSize = 0.2f;
+
+            // Update the reference lines
+            vm.UpdateReferenceLines();
+
+            Debug.Log("VisualizationManager configured for scenario");
+        }
+        else
+        {
+            Debug.LogError("No VisualizationManager found for scenario setup!");
+        }
     }
 
     private IEnumerator PositionPlayerWithRDW(Scenario scenario)
@@ -1948,6 +2201,15 @@ public class ScenarioManager : MonoBehaviour
     // NEW: Helper method to create visual markers showing tracking space orientation
     private void CreateTrackingSpaceMarkers(RedirectionManager rm)
     {
+        // CHECK MASTER CONTROL
+        if (!TrackingSpaceVisualizationController.ShouldShowAnyVisualization())
+        {
+            Debug.Log("ScenarioManager: Tracking space markers disabled by master control");
+            return;
+        }
+
+        Debug.Log("ScenarioManager: Creating tracking space markers (master control allows)");
+        // ... rest of existing method
         if (rm == null || rm.trackingSpace == null || rdwGlobalConfiguration == null ||
             rdwGlobalConfiguration.physicalSpaces == null || rdwGlobalConfiguration.physicalSpaces.Count == 0)
             return;
@@ -3860,3 +4122,8 @@ public class ScenarioManager : MonoBehaviour
     #endregion
 }
 #endregion
+
+public class ScenarioManagerMarker : MonoBehaviour
+{
+    // This component just serves as a tag to identify markers created by ScenarioManager
+}

@@ -2034,139 +2034,13 @@
                 Debug.LogWarning("This may be due to insufficient routes, waypoints, or compatible vehicle types.");
             }
         }
-        //private void FixedUpdate()
-        //{
-        //    if (isInitialized)
-        //    {
-        //        if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
-        //        deltaTime = Time.deltaTime;
+       
+        
 
-        //        if (useYieldTriggers)
-        //        {
-        //            for (int i = 0; i < carCount; i++)
-        //            {
-        //                yieldForCrossTrafficNL[i] = false;
-        //                isTrafficLightWaypointNL[i] = false; // Reset flag
+       
 
-        //                if (currentWaypointList[i] != null)
-        //                {
-        //                    // Check if current waypoint is marked as traffic light waypoint
-        //                    isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
 
-        //                    if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute != null)
-        //                    {
-        //                        for (int j = 0; j < currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers.Count; j++)
-        //                        {
-        //                            if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers[j].yieldForTrafficLight == true)
-        //                            {
-        //                                yieldForCrossTrafficNL[i] = true;
-        //                                break;
-        //                            }
-        //                        }
-        //                    }
-        //                }
-
-        //                stopForTrafficLightNL[i] = carAIWaypointRouteInfo[i].stopForTrafficLight;
-        //            }
-        //        }
-        //        else
-        //        {
-        //            for (int i = 0; i < carCount; i++)
-        //            {
-        //                yieldForCrossTrafficNL[i] = false;
-        //                stopForTrafficLightNL[i] = carAIWaypointRouteInfo[i].stopForTrafficLight;
-
-        //                // Update traffic light waypoint flag even when not using yield triggers
-        //                isTrafficLightWaypointNL[i] = false;
-        //                if (currentWaypointList[i] != null)
-        //                {
-        //                    isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
-        //                }
-        //            }
-        //        }
-
-        //        // Setup and schedule the job
-        //        carAITrafficJob = new AITrafficCarJob
-        //        {
-        //            frontSensorLengthNA = frontSensorLengthNL,
-        //            currentRoutePointIndexNA = currentRoutePointIndexNL,
-        //            waypointDataListCountNA = waypointDataListCountNL,
-        //            carTransformPreviousPositionNA = carTransformPreviousPositionNL,
-        //            carTransformPositionNA = carTransformPositionNL,
-        //            finalRoutePointPositionNA = finalRoutePointPositionNL,
-        //            routePointPositionNA = routePointPositionNL,
-        //            isDrivingNA = isDrivingNL,
-        //            isActiveNA = isActiveNL,
-        //            canProcessNA = canProcessNL,
-        //            speedNA = speedNL,
-        //            deltaTime = deltaTime,
-        //            routeProgressNA = routeProgressNL,
-        //            topSpeedNA = topSpeedNL,
-        //            targetSpeedNA = targetSpeedNL,
-        //            speedLimitNA = speedLimitNL,
-        //            accelNA = accelNL,
-        //            localTargetNA = localTargetNL,
-        //            targetAngleNA = targetAngleNL,
-        //            steerAngleNA = steerAngleNL,
-        //            motorTorqueNA = motorTorqueNL,
-        //            accelerationInputNA = accelerationInputNL,
-        //            brakeTorqueNA = brakeTorqueNL,
-        //            moveHandBrakeNA = moveHandBrakeNL,
-        //            maxSteerAngle = maxSteerAngle,
-        //            overrideInputNA = overrideInputNL,
-        //            distanceToEndPointNA = distanceToEndPointNL,
-        //            overrideAccelerationPowerNA = overrideAccelerationPowerNL,
-        //            overrideBrakePowerNA = overrideBrakePowerNL,
-        //            isBrakingNA = isBrakingNL,
-        //            speedMultiplier = speedMultiplier,
-        //            steerSensitivity = steerSensitivity,
-        //            stopThreshold = stopThreshold,
-        //            frontHitDistanceNA = frontHitDistanceNL,
-        //            frontHitNA = frontHitNL,
-        //            stopForTrafficLightNA = stopForTrafficLightNL,
-        //            yieldForCrossTrafficNA = yieldForCrossTrafficNL,
-        //            accelerationPowerNA = accelerationPowerNL,
-        //            frontSensorTransformPositionNA = frontSensorTransformPositionNL,
-        //            isTrafficLightWaypointNA = isTrafficLightWaypointNL
-        //        };
-
-        //        jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
-        //        jobHandle.Complete();
-
-        //        // Rest of FixedUpdate method continues...
-
-        //        // Debug to check traffic light awareness
-        //        if (Time.frameCount % 300 == 0)
-        //        { // Log every 5 seconds at 60fps
-        //            Debug.Log("===== TRAFFIC LIGHT AWARENESS CHECK =====");
-        //            for (int i = 0; i < carCount; i++)
-        //            {
-        //                if (carList[i] != null && isDrivingNL[i])
-        //                {
-        //                    bool shouldStop = false;
-
-        //                    // Check route info directly
-        //                    if (carAIWaypointRouteInfo[i] != null)
-        //                    {
-        //                        shouldStop = carAIWaypointRouteInfo[i].stopForTrafficLight;
-        //                    }
-
-        //                    // Compare with the controller's native list value
-        //                    Debug.Log($"Car {carList[i].name} (ID: {i}): stopForTrafficLight={stopForTrafficLightNL[i]}, routeInfo.stopForTrafficLight={shouldStop}");
-
-        //                    // Force update if there's a mismatch
-        //                    if (shouldStop != stopForTrafficLightNL[i])
-        //                    {
-        //                        Debug.LogWarning($"Mismatch detected! Fixing stopForTrafficLight for car {i}");
-        //                        stopForTrafficLightNL[i] = shouldStop;
-        //                    }
-        //                }
-        //            }
-        //            Debug.Log("========================================");
-        //        }
-        //    }
-        //}
-
+        // Complete FixedUpdate method for AITrafficController.cs
         private void FixedUpdate()
         {
             if (isInitialized)
@@ -2180,16 +2054,20 @@
 
                 if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
                 deltaTime = Time.deltaTime;
+
+                // NEW: Check for upcoming traffic lights BEFORE processing movement
+                CheckForUpcomingTrafficLights();
+
+                // Process traffic light and yield trigger logic
                 if (useYieldTriggers)
                 {
                     for (int i = 0; i < carCount; i++)
                     {
                         yieldForCrossTrafficNL[i] = false;
-                        isTrafficLightWaypointNL[i] = false; // Reset flag
+                        isTrafficLightWaypointNL[i] = false;
 
                         if (currentWaypointList[i] != null)
                         {
-                            // Check if current waypoint is marked as traffic light waypoint
                             isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
 
                             if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute != null)
@@ -2204,7 +2082,9 @@
                                 }
                             }
                         }
-                        stopForTrafficLightNL[i] = carAIWaypointRouteInfo[i].stopForTrafficLight;
+
+                        // IMPROVED: Robust traffic light state detection
+                        stopForTrafficLightNL[i] = GetTrafficLightStateForCar(i);
                     }
                 }
                 else
@@ -2212,7 +2092,9 @@
                     for (int i = 0; i < carCount; i++)
                     {
                         yieldForCrossTrafficNL[i] = false;
-                        stopForTrafficLightNL[i] = carAIWaypointRouteInfo[i].stopForTrafficLight;
+
+                        // IMPROVED: Robust traffic light state detection
+                        stopForTrafficLightNL[i] = GetTrafficLightStateForCar(i);
 
                         // Update traffic light waypoint flag even when not using yield triggers
                         isTrafficLightWaypointNL[i] = false;
@@ -2223,7 +2105,7 @@
                     }
                 }
 
-                // CHANGED: Use AsArray() for all NativeList to NativeArray conversions
+                // Setup and schedule the main car AI job
                 carAITrafficJob = new AITrafficCarJob
                 {
                     frontSensorLengthNA = frontSensorLengthNL.AsArray(),
@@ -2270,9 +2152,10 @@
                 jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
                 jobHandle.Complete(); // Wait for completion before using results
 
+                // Process sensor data and setup boxcast commands
                 for (int i = 0; i < carCount; i++) // operate on results
                 {
-                    /// Front Sensor
+                    // Front Sensor setup
                     if (frontSensorFacesTarget)
                     {
                         if (currentWaypointList[i])
@@ -2288,15 +2171,17 @@
                     frontDirectionList[i] = frontTransformCached[i].forward;
                     frontRotationList[i] = frontTransformCached[i].rotation;
 
-                    // CHANGED: Updated BoxcastCommand constructor
+                    // Setup front sensor boxcast command
                     frontBoxcastCommands[i] = new BoxcastCommand(
                         frontSensorTransformPositionNL[i],
                         frontSensorSizeNL[i],
                         frontRotationList[i],
                         frontDirectionList[i],
-                        new QueryParameters(layerMask, false) // New constructor pattern
+                        new QueryParameters(layerMask, false),
+                        frontSensorLengthNL[i]
                     );
 
+                    // Setup side sensor boxcast commands for lane changing
                     if (useLaneChanging)
                     {
                         if (speedNL[i] > minSpeedToChangeLanes)
@@ -2307,85 +2192,152 @@
                                 leftDirectionList[i] = leftTransformCached[i].forward;
                                 leftRotationList[i] = leftTransformCached[i].rotation;
 
-                                // CHANGED: Updated BoxcastCommand constructor
                                 leftBoxcastCommands[i] = new BoxcastCommand(
                                     leftOriginList[i],
                                     sideSensorSizeNL[i],
                                     leftRotationList[i],
                                     leftDirectionList[i],
-                                    new QueryParameters(layerMask, false)
+                                    new QueryParameters(layerMask, false),
+                                    sideSensorLengthNL[i]
                                 );
 
                                 rightOriginList[i] = rightTransformCached[i].position;
                                 rightDirectionList[i] = rightTransformCached[i].forward;
                                 rightRotationList[i] = rightTransformCached[i].rotation;
 
-                                // CHANGED: Updated BoxcastCommand constructor
                                 rightBoxcastCommands[i] = new BoxcastCommand(
                                     rightOriginList[i],
                                     sideSensorSizeNL[i],
                                     rightRotationList[i],
                                     rightDirectionList[i],
-                                    new QueryParameters(layerMask, false)
+                                    new QueryParameters(layerMask, false),
+                                    sideSensorLengthNL[i]
                                 );
                             }
                         }
                     }
                 }
-                // do sensor jobs
+
+                // Execute sensor jobs
                 var handle = BoxcastCommand.ScheduleBatch(frontBoxcastCommands, frontBoxcastResults, 1, default);
                 handle.Complete();
                 handle = BoxcastCommand.ScheduleBatch(leftBoxcastCommands, leftBoxcastResults, 1, default);
                 handle.Complete();
                 handle = BoxcastCommand.ScheduleBatch(rightBoxcastCommands, rightBoxcastResults, 1, default);
                 handle.Complete();
+
+                // Process sensor results
                 for (int i = 0; i < carCount; i++) // operate on results
                 {
-                    // front
-                    frontHitNL[i] = frontBoxcastResults[i].collider == null ? false : true;
-                    if (frontHitNL[i])
+                    // Process front sensor results with improved traffic light detection
+                    bool hitDetected = frontBoxcastResults[i].collider != null;
+
+                    if (hitDetected)
                     {
-                        frontHitTransform[i] = frontBoxcastResults[i].transform; // cache transform lookup
-                        if (frontHitTransform[i] != frontPreviousHitTransform[i])
+                        frontHitTransform[i] = frontBoxcastResults[i].transform;
+
+                        // Check if we should ignore this collision BEFORE setting frontHitNL
+                        bool shouldIgnoreHit = false;
+
+                        // Check for traffic light waypoints in front sensor
+                        AITrafficWaypoint hitWaypoint = frontHitTransform[i].GetComponent<AITrafficWaypoint>();
+                        if (hitWaypoint != null && hitWaypoint.isTrafficLightWaypoint)
                         {
-                            frontPreviousHitTransform[i] = frontHitTransform[i];
+                            bool shouldStopForLight = false;
+                            if (hitWaypoint.onReachWaypointSettings.parentRoute.routeInfo != null)
+                            {
+                                shouldStopForLight = hitWaypoint.onReachWaypointSettings.parentRoute.routeInfo.stopForTrafficLight;
+                            }
+                            else
+                            {
+                                shouldStopForLight = hitWaypoint.onReachWaypointSettings.parentRoute.stopForTrafficLight;
+                            }
+
+                            if (shouldStopForLight && frontBoxcastResults[i].distance < 10f)
+                            {
+                                Debug.Log($"[SENSOR TRAFFIC] Car {carList[i].name} front sensor detected RED traffic light {frontBoxcastResults[i].distance:F1}m ahead");
+
+                                // Enhanced braking for red traffic lights
+                                overrideInputNL[i] = true;
+                                motorTorqueNL[i] = 0;
+                                brakeTorqueNL[i] = speedNL[i] * 3f; // Extra braking force for traffic lights
+
+                                // If very close to red light, stop completely
+                                if (frontBoxcastResults[i].distance < 4f)
+                                {
+                                    Set_IsDrivingArray(i, false);
+                                    Debug.Log($"[SENSOR TRAFFIC] Car {carList[i].name} stopped for red light");
+                                }
+                            }
                         }
-                        frontHitDistanceNL[i] = frontBoxcastResults[i].distance;
+
+                        // Turning collision filtering (your existing logic)
+                        if (i < carList.Count && carList[i] != null && carList[i].isTurning && frontHitTransform[i] != null)
+                        {
+                            if (frontHitTransform[i].CompareTag("vehicle"))
+                            {
+                                shouldIgnoreHit = true;
+                                Debug.Log($"Car {carList[i].name} is turning - IGNORING vehicle collision with {frontHitTransform[i].name} at distance {frontBoxcastResults[i].distance:F1}");
+                            }
+                            else if (frontHitTransform[i].CompareTag("Player"))
+                            {
+                                shouldIgnoreHit = false;
+                                Debug.Log($"Car {carList[i].name} is turning - BUT STILL detecting player {frontHitTransform[i].name}");
+                            }
+                        }
+
+                        if (shouldIgnoreHit)
+                        {
+                            frontHitNL[i] = false;
+                            frontHitDistanceNL[i] = frontSensorLengthNL[i];
+                        }
+                        else
+                        {
+                            frontHitNL[i] = true;
+                            if (frontHitTransform[i] != frontPreviousHitTransform[i])
+                            {
+                                frontPreviousHitTransform[i] = frontHitTransform[i];
+                            }
+                            frontHitDistanceNL[i] = frontBoxcastResults[i].distance;
+                        }
                     }
-                    else //ResetHitBox
+                    else // No collision detected
                     {
+                        frontHitNL[i] = false;
                         frontHitDistanceNL[i] = frontSensorLengthNL[i];
                     }
-                    // left
+
+                    // Process left sensor results
                     leftHitNL[i] = leftBoxcastResults[i].collider == null ? false : true;
                     if (leftHitNL[i])
                     {
-                        leftHitTransform[i] = leftBoxcastResults[i].transform; // Use actual result
-                        leftHitDistanceNL[i] = leftBoxcastResults[i].distance; // Use actual result
+                        leftHitTransform[i] = leftBoxcastResults[i].transform;
+                        leftHitDistanceNL[i] = leftBoxcastResults[i].distance;
                     }
-                    else //ResetHitBox
+                    else
                     {
                         leftHitDistanceNL[i] = sideSensorLengthNL[i];
                     }
-                    // right
+
+                    // Process right sensor results
                     rightHitNL[i] = rightBoxcastResults[i].collider == null ? false : true;
                     if (rightHitNL[i])
                     {
-                        rightHitTransform[i] = rightBoxcastResults[i].transform; // Use actual result
-                        rightHitDistanceNL[i] = rightBoxcastResults[i].distance; // Use actual result
+                        rightHitTransform[i] = rightBoxcastResults[i].transform;
+                        rightHitDistanceNL[i] = rightBoxcastResults[i].distance;
                     }
-                    else //ResetHitBox
+                    else
                     {
                         rightHitDistanceNL[i] = sideSensorLengthNL[i];
                     }
                 }
 
-                // Middle section - car control logic stays unchanged
+                // Process car control logic (lane changing, physics, etc.)
                 for (int i = 0; i < carCount; i++) // operate on results
                 {
                     if (isActiveNL[i] && canProcessNL[i])
                     {
-                        #region Lane Change
+                        #region Lane Change Logic
                         if (useLaneChanging && isDrivingNL[i])
                         {
                             if (speedNL[i] > minSpeedToChangeLanes)
@@ -2412,7 +2364,7 @@
 
                                         if (nextWaypoint != null)
                                         {
-                                            if (nextWaypoint.onReachWaypointSettings.laneChangePoints.Count > 0)  // take the first alternate route
+                                            if (nextWaypoint.onReachWaypointSettings.laneChangePoints.Count > 0)
                                             {
                                                 for (int j = 0; j < nextWaypoint.onReachWaypointSettings.laneChangePoints.Count; j++)
                                                 {
@@ -2434,7 +2386,6 @@
                                                         }
                                                     }
                                                 }
-
                                             }
                                         }
                                     }
@@ -2450,6 +2401,8 @@
                             }
                         }
                         #endregion
+
+                        // Physics and drag logic
                         if ((speedNL[i] == 0 || !overrideInputNL[i]))
                         {
                             rigidbodyList[i].drag = minDragNL[i];
@@ -2471,7 +2424,6 @@
                             else
                             {
                                 motorTorqueNL[i] = 0;
-                                //brakeTorqueNL[i] = (speedNL[i] * 0.5f);
                                 dragToAdd = Mathf.InverseLerp(5, 0, distanceToEndPointNL[i]);
                                 rigidbodyList[i].drag = dragToAdd;
                                 rigidbodyList[i].angularDrag = dragToAdd;
@@ -2479,6 +2431,7 @@
                             changeLaneTriggerTimer[i] = 0;
                         }
 
+                        // Wheel physics processing
                         for (int j = 0; j < 4; j++) // move
                         {
                             if (j == 0)
@@ -2516,6 +2469,7 @@
                             currentWheelCollider.sidewaysFriction = speedNL[i] < 1 ? lowSidewaysWheelFrictionCurve : highSidewaysWheelFrictionCurve;
                         }
 
+                        // Brake light logic
                         if ((frontHitNL[i] && speedNL[i] < (previousFrameSpeedNL[i] + 5)) || overrideDragNL[i])
                             isBrakingNL[i] = true;
 
@@ -2539,7 +2493,7 @@
                     }
                 }
 
-                // CHANGED: Use AsArray() for all job parameters
+                // Execute wheel and position jobs
                 carTransformpositionJob = new AITrafficCarPositionJob
                 {
                     canProcessNA = canProcessNL.AsArray(),
@@ -2549,7 +2503,6 @@
                 jobHandle = carTransformpositionJob.Schedule(carTAA);
                 jobHandle.Complete();
 
-                // CHANGED: Use AsArray() for all job parameters
                 frAITrafficCarWheelJob = new AITrafficCarWheelJob
                 {
                     canProcessNA = canProcessNL.AsArray(),
@@ -2560,7 +2513,6 @@
                 jobHandle = frAITrafficCarWheelJob.Schedule(frontRightWheelTAA);
                 jobHandle.Complete();
 
-                // CHANGED: Use AsArray() for all job parameters
                 flAITrafficCarWheelJob = new AITrafficCarWheelJob
                 {
                     canProcessNA = canProcessNL.AsArray(),
@@ -2571,7 +2523,6 @@
                 jobHandle = flAITrafficCarWheelJob.Schedule(frontLeftWheelTAA);
                 jobHandle.Complete();
 
-                // CHANGED: Use AsArray() for all job parameters
                 brAITrafficCarWheelJob = new AITrafficCarWheelJob
                 {
                     canProcessNA = canProcessNL.AsArray(),
@@ -2582,7 +2533,6 @@
                 jobHandle = brAITrafficCarWheelJob.Schedule(backRightWheelTAA);
                 jobHandle.Complete();
 
-                // CHANGED: Use AsArray() for all job parameters
                 blAITrafficCarWheelJob = new AITrafficCarWheelJob
                 {
                     canProcessNA = canProcessNL.AsArray(),
@@ -2593,10 +2543,10 @@
                 jobHandle = blAITrafficCarWheelJob.Schedule(backLeftWheelTAA);
                 jobHandle.Complete();
 
+                // Pooling system processing
                 if (usePooling)
                 {
                     centerPosition = centerPoint.position;
-                    // CHANGED: Use AsArray() for all job parameters
                     _AITrafficDistanceJob = new AITrafficDistanceJob
                     {
                         canProcessNA = canProcessNL.AsArray(),
@@ -2613,11 +2563,14 @@
                     };
                     jobHandle = _AITrafficDistanceJob.Schedule(carTAA);
                     jobHandle.Complete();
+
+                    // Update route densities
                     for (int i = 0; i < allWaypointRoutesList.Count; i++)
                     {
                         allWaypointRoutesList[i].previousDensity = allWaypointRoutesList[i].currentDensity;
                         allWaypointRoutesList[i].currentDensity = 0;
                     }
+
                     for (int i = 0; i < carCount; i++)
                     {
                         if (canProcessNL[i])
@@ -2651,505 +2604,206 @@
                             }
                         }
                     }
+
                     if (spawnTimer >= spawnRate) SpawnTraffic();
                     else spawnTimer += deltaTime;
                 }
             }
         }
-        //private void FixedUpdate()
-        //{
-        //    if (isInitialized)
-        //    {
-        //        // Add these validation checks
-        //        if (!driveTargetTAA.isCreated || driveTargetTAA.length == 0)
-        //        {
-        //            // Skip job scheduling this frame - arrays aren't ready
-        //            return;
-        //        }
 
+        // Add this supporting method for checking upcoming traffic lights
+        // Add this supporting method for checking upcoming traffic lights
+        // Add this supporting method for checking upcoming traffic lights
+        private void CheckForUpcomingTrafficLights()
+        {
+            for (int i = 0; i < carCount; i++)
+            {
+                // Skip invalid cars
+                if (i >= carList.Count || carList[i] == null) continue;
 
-        //        if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
-        //        deltaTime = Time.deltaTime;
-        //        if (useYieldTriggers)
-        //        {
-        //            for (int i = 0; i < carCount; i++)
-        //            {
-        //                yieldForCrossTrafficNL[i] = false;
-        //                isTrafficLightWaypointNL[i] = false; // Reset flag
+                // Skip if no route
+                if (i >= carRouteList.Count || carRouteList[i] == null) continue;
 
-        //                if (currentWaypointList[i] != null)
-        //                {
-        //                    // Check if current waypoint is marked as traffic light waypoint
-        //                    isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
+                var route = carRouteList[i];
+                if (route.waypointDataList == null || route.waypointDataList.Count == 0) continue;
 
-        //                    if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute != null)
-        //                    {
-        //                        for (int j = 0; j < currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers.Count; j++)
-        //                        {
-        //                            if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers[j].yieldForTrafficLight == true)
-        //                            {
-        //                                yieldForCrossTrafficNL[i] = true;
-        //                                break;
-        //                            }
-        //                        }
-        //                    }
-        //                }
-        //                stopForTrafficLightNL[i] = carAIWaypointRouteInfo[i].stopForTrafficLight;
-        //            }
-        //        }
-        //        else
-        //        {
-        //            for (int i = 0; i < carCount; i++)
-        //            {
-        //                yieldForCrossTrafficNL[i] = false;
-        //                stopForTrafficLightNL[i] = carAIWaypointRouteInfo[i].stopForTrafficLight;
+                // Get current waypoint index
+                int currentIndex = currentRoutePointIndexNL[i];
+                if (currentIndex < 0 || currentIndex >= route.waypointDataList.Count) continue;
 
-        //                // Update traffic light waypoint flag even when not using yield triggers
-        //                isTrafficLightWaypointNL[i] = false;
-        //                if (currentWaypointList[i] != null)
-        //                {
-        //                    isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
-        //                }
-        //                //frontSensorTransformPositionNL[i] = frontTransformCached[i].position; // make a job?
-        //            }
-        //        }
-        //        carAITrafficJob = new AITrafficCarJob
-        //        {
-        //            frontSensorLengthNA = frontSensorLengthNL,
-        //            currentRoutePointIndexNA = currentRoutePointIndexNL,
-        //            waypointDataListCountNA = waypointDataListCountNL,
-        //            carTransformPreviousPositionNA = carTransformPreviousPositionNL,
-        //            carTransformPositionNA = carTransformPositionNL,
-        //            finalRoutePointPositionNA = finalRoutePointPositionNL,
-        //            routePointPositionNA = routePointPositionNL,
-        //            isDrivingNA = isDrivingNL,
-        //            isActiveNA = isActiveNL,
-        //            canProcessNA = canProcessNL,
-        //            speedNA = speedNL,
-        //            deltaTime = deltaTime,
-        //            routeProgressNA = routeProgressNL,
-        //            topSpeedNA = topSpeedNL,
-        //            targetSpeedNA = targetSpeedNL,
-        //            speedLimitNA = speedLimitNL,
-        //            accelNA = accelNL,
-        //            localTargetNA = localTargetNL,
-        //            targetAngleNA = targetAngleNL,
-        //            steerAngleNA = steerAngleNL,
-        //            motorTorqueNA = motorTorqueNL,
-        //            accelerationInputNA = accelerationInputNL,
-        //            brakeTorqueNA = brakeTorqueNL,
-        //            moveHandBrakeNA = moveHandBrakeNL,
-        //            maxSteerAngle = maxSteerAngle,
-        //            overrideInputNA = overrideInputNL,
-        //            distanceToEndPointNA = distanceToEndPointNL,
-        //            overrideAccelerationPowerNA = overrideAccelerationPowerNL,
-        //            overrideBrakePowerNA = overrideBrakePowerNL,
-        //            isBrakingNA = isBrakingNL,
-        //            speedMultiplier = speedMultiplier,
-        //            steerSensitivity = steerSensitivity,
-        //            stopThreshold = stopThreshold,
-        //            frontHitDistanceNA = frontHitDistanceNL,
-        //            frontHitNA = frontHitNL,
-        //            stopForTrafficLightNA = stopForTrafficLightNL,
-        //            yieldForCrossTrafficNA = yieldForCrossTrafficNL,
-        //            accelerationPowerNA = accelerationPowerNL,
-        //            frontSensorTransformPositionNA = frontSensorTransformPositionNL,
-        //            isTrafficLightWaypointNA = isTrafficLightWaypointNL
-        //        };
-        //        jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
-        //        jobHandle.Complete(); // Wait for completion before using results
+                Vector3 carPosition = carTransformPositionNL[i];
+                bool foundRedLight = false;
 
-        //        for (int i = 0; i < carCount; i++) // operate on results
-        //        {
-        //            /// Front Sensor
-        //            if (frontSensorFacesTarget)
-        //            {
-        //                if (currentWaypointList[i])
-        //                {
-        //                    frontTransformCached[i].LookAt(currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.transform);
-        //                    frontSensorEulerAngles = frontTransformCached[i].rotation.eulerAngles;
-        //                    frontSensorEulerAngles.x = 0;
-        //                    frontSensorEulerAngles.z = 0;
-        //                    frontTransformCached[i].rotation = Quaternion.Euler(frontSensorEulerAngles);
-        //                }
-        //            }
-        //            frontSensorTransformPositionNL[i] = frontTransformCached[i].position;
-        //            frontDirectionList[i] = frontTransformCached[i].forward;
-        //            frontRotationList[i] = frontTransformCached[i].rotation;
-        //            frontBoxcastCommands[i] = new BoxcastCommand(frontSensorTransformPositionNL[i], frontSensorSizeNL[i], frontRotationList[i], frontDirectionList[i], frontSensorLengthNL[i], layerMask);
+                // Check MULTIPLE waypoints ahead, not just the next one
+                for (int lookAhead = 0; lookAhead < 3; lookAhead++) // Check current + next 2 waypoints
+                {
+                    int checkIndex = currentIndex + lookAhead;
+                    if (checkIndex >= route.waypointDataList.Count) break;
 
-        //            if (useLaneChanging)
-        //            {
-        //                if (speedNL[i] > minSpeedToChangeLanes)
-        //                {
-        //                    if ((forceChangeLanesNL[i] == true || frontHitNL[i] == true) && canChangeLanesNL[i] && isChangingLanesNL[i] == false)
-        //                    {
-        //                        leftOriginList[i] = leftTransformCached[i].position;
-        //                        leftDirectionList[i] = leftTransformCached[i].forward;
-        //                        leftRotationList[i] = leftTransformCached[i].rotation;
-        //                        leftBoxcastCommands[i] = new BoxcastCommand(leftOriginList[i], sideSensorSizeNL[i], leftRotationList[i], leftDirectionList[i], sideSensorLengthNL[i], layerMask);
+                    var waypointData = route.waypointDataList[checkIndex];
+                    if (waypointData._waypoint != null && waypointData._waypoint.isTrafficLightWaypoint)
+                    {
+                        Vector3 trafficLightPosition = waypointData._transform.position;
+                        float distanceToTrafficLight = Vector3.Distance(carPosition, trafficLightPosition);
 
-        //                        rightOriginList[i] = rightTransformCached[i].position;
-        //                        rightDirectionList[i] = rightTransformCached[i].forward;
-        //                        rightRotationList[i] = rightTransformCached[i].rotation;
-        //                        rightBoxcastCommands[i] = new BoxcastCommand(rightOriginList[i], sideSensorSizeNL[i], rightRotationList[i], rightDirectionList[i], sideSensorLengthNL[i], layerMask);
-        //                    }
-        //                }
-        //            }
-        //        }
-        //        // do sensor jobs
-        //        var handle = BoxcastCommand.ScheduleBatch(frontBoxcastCommands, frontBoxcastResults, 1, default);
-        //        handle.Complete();
-        //        handle = BoxcastCommand.ScheduleBatch(leftBoxcastCommands, leftBoxcastResults, 1, default);
-        //        handle.Complete();
-        //        handle = BoxcastCommand.ScheduleBatch(rightBoxcastCommands, rightBoxcastResults, 1, default);
-        //        handle.Complete();
-        //        for (int i = 0; i < carCount; i++) // operate on results
-        //        {
-        //            // front
-        //            frontHitNL[i] = frontBoxcastResults[i].collider == null ? false : true;
-        //            if (frontHitNL[i])
-        //            {
-        //                frontHitTransform[i] = frontBoxcastResults[i].transform; // cache transform lookup
-        //                if (frontHitTransform[i] != frontPreviousHitTransform[i])
-        //                {
-        //                    frontPreviousHitTransform[i] = frontHitTransform[i];
-        //                }
-        //                frontHitDistanceNL[i] = frontBoxcastResults[i].distance;
-        //            }
-        //            else //ResetHitBox
-        //            {
-        //                frontHitDistanceNL[i] = frontSensorLengthNL[i];
-        //            }
-        //            // left
-        //            leftHitNL[i] = leftBoxcastResults[i].collider == null ? false : true;
-        //            if (leftHitNL[i])
-        //            {
-        //                leftHitTransform[i] = leftBoxcastResults[i].transform; // Use actual result
-        //                leftHitDistanceNL[i] = leftBoxcastResults[i].distance; // Use actual result
-        //            }
-        //            else //ResetHitBox
-        //            {
-        //                leftHitDistanceNL[i] = sideSensorLengthNL[i];
-        //            }
-        //            // right
-        //            rightHitNL[i] = rightBoxcastResults[i].collider == null ? false : true;
-        //            if (rightHitNL[i])
-        //            {
-        //                rightHitTransform[i] = rightBoxcastResults[i].transform; // Use actual result
-        //                rightHitDistanceNL[i] = rightBoxcastResults[i].distance; // Use actual result
-        //            }
-        //            else //ResetHitBox
-        //            {
-        //                rightHitDistanceNL[i] = sideSensorLengthNL[i];
-        //            }
-        //        }
+                        // Increased stopping distance and different distances for different look-ahead
+                        float stoppingDistance = 15f - (lookAhead * 3f); // 15m, 12m, 9m for waypoints 0, 1, 2 ahead
 
-        //        for (int i = 0; i < carCount; i++) // operate on results
-        //        {
-        //            if (isActiveNL[i] && canProcessNL[i])
-        //            {
-        //                #region Lane Change
-        //                if (useLaneChanging && isDrivingNL[i])
-        //                {
-        //                    if (speedNL[i] > minSpeedToChangeLanes)
-        //                    {
-        //                        if (!canChangeLanesNL[i])
-        //                        {
-        //                            changeLaneCooldownTimer[i] += deltaTime;
-        //                            if (changeLaneCooldownTimer[i] > changeLaneCooldown)
-        //                            {
-        //                                canChangeLanesNL[i] = true;
-        //                                changeLaneCooldownTimer[i] = 0f;
-        //                            }
-        //                        }
+                        if (distanceToTrafficLight <= stoppingDistance)
+                        {
+                            // Check if light is red
+                            bool shouldStopForLight = false;
+                            if (route.routeInfo != null && route.routeInfo.enabled)
+                            {
+                                shouldStopForLight = route.routeInfo.stopForTrafficLight;
+                            }
+                            else
+                            {
+                                shouldStopForLight = route.stopForTrafficLight;
+                            }
 
-        //                        if ((forceChangeLanesNL[i] == true || frontHitNL[i] == true) && canChangeLanesNL[i] && isChangingLanesNL[i] == false)
-        //                        {
-        //                            changeLaneTriggerTimer[i] += Time.deltaTime;
-        //                            canTurnLeft = leftHitNL[i] == true ? false : true;
-        //                            canTurnRight = rightHitNL[i] == true ? false : true;
-        //                            if (changeLaneTriggerTimer[i] >= changeLaneTrigger || forceChangeLanesNL[i] == true)
-        //                            {
-        //                                canChangeLanesNL[i] = false;
-        //                                nextWaypoint = currentWaypointList[i];
+                            if (shouldStopForLight)
+                            {
+                                foundRedLight = true;
+                                Debug.Log($"[TRAFFIC AHEAD] Car {carList[i].name} stopping {distanceToTrafficLight:F1}m before RED traffic light (waypoint {checkIndex}, lookahead {lookAhead})");
 
-        //                                if (nextWaypoint != null)
-        //                                {
-        //                                    if (nextWaypoint.onReachWaypointSettings.laneChangePoints.Count > 0)  // take the first alternate route
-        //                                    {
-        //                                        for (int j = 0; j < nextWaypoint.onReachWaypointSettings.laneChangePoints.Count; j++)
-        //                                        {
-        //                                            if (
-        //                                                PossibleTargetDirection(carTAA[i], nextWaypoint.onReachWaypointSettings.laneChangePoints[j].transform) == -1 && canTurnLeft ||
-        //                                                PossibleTargetDirection(carTAA[i], nextWaypoint.onReachWaypointSettings.laneChangePoints[j].transform) == 1 && canTurnRight
-        //                                                )
-        //                                            {
-        //                                                for (int k = 0; k < nextWaypoint.onReachWaypointSettings.laneChangePoints[j].onReachWaypointSettings.parentRoute.vehicleTypes.Length; k++)
-        //                                                {
-        //                                                    if (carList[i].vehicleType == nextWaypoint.onReachWaypointSettings.laneChangePoints[j].onReachWaypointSettings.parentRoute.vehicleTypes[k])
-        //                                                    {
-        //                                                        carList[i].ChangeToRouteWaypoint(nextWaypoint.onReachWaypointSettings.laneChangePoints[j].onReachWaypointSettings);
-        //                                                        isChangingLanesNL[i] = true;
-        //                                                        canChangeLanesNL[i] = false;
-        //                                                        forceChangeLanesNL[i] = false;
-        //                                                        changeLaneTriggerTimer[i] = 0f;
-        //                                                    }
-        //                                                }
-        //                                            }
-        //                                        }
+                                // Stop the car immediately only if it's currently driving
+                                if (isDrivingNL[i])
+                                {
+                                    Set_IsDrivingArray(i, false);
 
-        //                                    }
-        //                                }
-        //                            }
-        //                        }
-        //                        else
-        //                        {
-        //                            changeLaneTriggerTimer[i] = 0f;
-        //                            leftHitNL[i] = false;
-        //                            rightHitNL[i] = false;
-        //                            leftHitDistanceNL[i] = sideSensorLengthNL[i];
-        //                            rightHitDistanceNL[i] = sideSensorLengthNL[i];
-        //                        }
-        //                    }
-        //                }
-        //                #endregion
-        //                if ((speedNL[i] == 0 || !overrideInputNL[i]))
-        //                {
-        //                    rigidbodyList[i].drag = minDragNL[i];
-        //                    rigidbodyList[i].angularDrag = minAngularDragNL[i];
-        //                }
-        //                else if (overrideInputNL[i])
-        //                {
-        //                    isBrakingNL[i] = true;
-        //                    if (frontHitNL[i])
-        //                    {
-        //                        motorTorqueNL[i] = 0;
-        //                        brakeTorqueNL[i] = Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i]) * (speedNL[i]);
-        //                        dragToAdd = Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i]) * ((speedNL[i]));
-        //                        if (frontHitDistanceNL[i] < 1) dragToAdd = targetSpeedNL[i] * (speedNL[i] * 50);
+                                    // CRITICAL: Position drive target AHEAD of the traffic light, not at it
+                                    Transform driveTarget = carList[i].transform.Find("DriveTarget");
+                                    if (driveTarget != null)
+                                    {
+                                        // Position drive target BEYOND the traffic light
+                                        if (checkIndex + 1 < route.waypointDataList.Count)
+                                        {
+                                            // Use the waypoint AFTER the traffic light
+                                            driveTarget.position = route.waypointDataList[checkIndex + 1]._transform.position;
+                                            Debug.Log($"[TRAFFIC AHEAD] Drive target positioned at waypoint {checkIndex + 1} (beyond traffic light)");
+                                        }
+                                        else
+                                        {
+                                            // No waypoint after traffic light, position ahead of car
+                                            driveTarget.position = carPosition + carList[i].transform.forward * 15f;
+                                            Debug.Log($"[TRAFFIC AHEAD] Drive target positioned ahead of car (no waypoint after traffic light)");
+                                        }
+                                    }
 
-        //                        rigidbodyList[i].drag = minDragNL[i] + (Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i]) * dragToAdd);
-        //                        rigidbodyList[i].angularDrag = minAngularDragNL[i] + Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i] * dragToAdd);
-        //                    }
-        //                    else
-        //                    {
-        //                        motorTorqueNL[i] = 0;
-        //                        //brakeTorqueNL[i] = (speedNL[i] * 0.5f);
-        //                        dragToAdd = Mathf.InverseLerp(5, 0, distanceToEndPointNL[i]);
-        //                        rigidbodyList[i].drag = dragToAdd;
-        //                        rigidbodyList[i].angularDrag = dragToAdd;
-        //                    }
-        //                    changeLaneTriggerTimer[i] = 0;
-        //                }
+                                    // Force stop physics immediately
+                                    if (i < rigidbodyList.Count && rigidbodyList[i] != null)
+                                    {
+                                        rigidbodyList[i].velocity = Vector3.zero;
+                                        rigidbodyList[i].angularVelocity = Vector3.zero;
+                                    }
+                                }
+                                break; // Stop checking further waypoints for this car
+                            }
+                        }
+                    }
+                }
 
-        //                for (int j = 0; j < 4; j++) // move
-        //                {
-        //                    if (j == 0)
-        //                    {
-        //                        currentWheelCollider = frontRightWheelColliderList[i];
-        //                        currentWheelCollider.steerAngle = steerAngleNL[i];
-        //                        currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-        //                        FRwheelPositionNL[i] = wheelPosition_Cached;
-        //                        FRwheelRotationNL[i] = wheelQuaternion_Cached;
-        //                    }
-        //                    else if (j == 1)
-        //                    {
-        //                        currentWheelCollider = frontLefttWheelColliderList[i];
-        //                        currentWheelCollider.steerAngle = steerAngleNL[i];
-        //                        currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-        //                        FLwheelPositionNL[i] = wheelPosition_Cached;
-        //                        FLwheelRotationNL[i] = wheelQuaternion_Cached;
-        //                    }
-        //                    else if (j == 2)
-        //                    {
-        //                        currentWheelCollider = backRighttWheelColliderList[i];
-        //                        currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-        //                        BRwheelPositionNL[i] = wheelPosition_Cached;
-        //                        BRwheelRotationNL[i] = wheelQuaternion_Cached;
-        //                    }
-        //                    else if (j == 3)
-        //                    {
-        //                        currentWheelCollider = backLeftWheelColliderList[i];
-        //                        currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-        //                        BLwheelPositionNL[i] = wheelPosition_Cached;
-        //                        BLwheelRotationNL[i] = wheelQuaternion_Cached;
-        //                    }
-        //                    currentWheelCollider.motorTorque = motorTorqueNL[i];
-        //                    currentWheelCollider.brakeTorque = brakeTorqueNL[i];
-        //                    currentWheelCollider.sidewaysFriction = speedNL[i] < 1 ? lowSidewaysWheelFrictionCurve : highSidewaysWheelFrictionCurve;
-        //                }
+                // CRITICAL: If no red light found nearby and car is not driving, restart it
+                if (!foundRedLight && !isDrivingNL[i])
+                {
+                    // Check if we were previously stopped for a traffic light
+                    // We'll restart the car if it's not driving and there's no red light ahead
+                    bool shouldRestart = true;
 
-        //                if ((frontHitNL[i] && speedNL[i] < (previousFrameSpeedNL[i] + 5)) || overrideDragNL[i])
-        //                    isBrakingNL[i] = true;
+                    // Additional check: make sure we're not stopped for other reasons
+                    if (overrideInputNL[i] && frontHitNL[i])
+                    {
+                        // Car is stopped due to obstacle, not traffic light
+                        shouldRestart = false;
+                    }
 
-        //                if (speedNL[i] + .5f > previousFrameSpeedNL[i] && speedNL[i] > 15 && frontHitNL[i])
-        //                    isBrakingNL[i] = false;
+                    // CRITICAL: Don't restart if car is supposed to stop at end of route (like buses)
+                    if (currentIndex >= route.waypointDataList.Count - 1)
+                    {
+                        var lastWaypoint = route.waypointDataList[route.waypointDataList.Count - 1];
+                        if (lastWaypoint._waypoint != null && lastWaypoint._waypoint.onReachWaypointSettings.stopDriving)
+                        {
+                            shouldRestart = false; // Respect the route's stop requirement
+                        }
+                    }
 
-        //                if (isBrakingNL[i])
-        //                {
-        //                    brakeTimeNL[i] += deltaTime;
-        //                    if (brakeTimeNL[i] > 0.15f)
-        //                    {
-        //                        brakeMaterial[i].SetColor(emissionColorName, brakeOnColor); //brakeMaterial[i].EnableKeyword("EMISSION");
-        //                    }
-        //                }
-        //                else
-        //                {
-        //                    brakeTimeNL[i] = 0f;
-        //                    brakeMaterial[i].SetColor(emissionColorName, brakeOffColor); //brakeMaterial[i].EnableKeyword("EMISSION");
-        //                }
-        //                previousFrameSpeedNL[i] = speedNL[i];
-        //            }
-        //        }
+                    if (shouldRestart)
+                    {
+                        Debug.Log($"[TRAFFIC LIGHT] Car {carList[i].name} resuming - no red lights detected");
+                        Set_IsDrivingArray(i, true);
+                    }
+                }
+            }
+        }
 
-        //        carTransformpositionJob = new AITrafficCarPositionJob
-        //        {
-        //            canProcessNA = canProcessNL,
-        //            carTransformPreviousPositionNA = carTransformPreviousPositionNL,
-        //            carTransformPositionNA = carTransformPositionNL,
-        //        };
-        //        jobHandle = carTransformpositionJob.Schedule(carTAA);
-        //        jobHandle.Complete();
+        // Supporting method for robust traffic light state detection
+        private bool GetTrafficLightStateForCar(int carIndex)
+        {
+            // Multiple fallback checks for robust traffic light detection
 
-        //        frAITrafficCarWheelJob = new AITrafficCarWheelJob
-        //        {
-        //            canProcessNA = canProcessNL,
-        //            wheelPositionNA = FRwheelPositionNL,
-        //            wheelQuaternionNA = FRwheelRotationNL,
-        //            speedNA = speedNL,
-        //        };
-        //        jobHandle = frAITrafficCarWheelJob.Schedule(frontRightWheelTAA);
-        //        jobHandle.Complete();
+            // Primary check: Use cached route info
+            if (carAIWaypointRouteInfo[carIndex] != null)
+            {
+                try
+                {
+                    // Check if component is still valid and enabled
+                    if (carAIWaypointRouteInfo[carIndex].enabled)
+                    {
+                        return carAIWaypointRouteInfo[carIndex].stopForTrafficLight;
+                    }
+                }
+                catch (System.Exception)
+                {
+                    // Component might be destroyed or invalid, continue to fallback
+                }
+            }
 
-        //        flAITrafficCarWheelJob = new AITrafficCarWheelJob
-        //        {
-        //            canProcessNA = canProcessNL,
-        //            wheelPositionNA = FLwheelPositionNL,
-        //            wheelQuaternionNA = FLwheelRotationNL,
-        //            speedNA = speedNL,
-        //        };
-        //        jobHandle = flAITrafficCarWheelJob.Schedule(frontLeftWheelTAA);
-        //        jobHandle.Complete();
+            // Fallback 1: Get from car's route directly
+            if (carIndex < carList.Count && carList[carIndex] != null && carList[carIndex].waypointRoute != null)
+            {
+                var route = carList[carIndex].waypointRoute;
 
-        //        brAITrafficCarWheelJob = new AITrafficCarWheelJob
-        //        {
-        //            canProcessNA = canProcessNL,
-        //            wheelPositionNA = BRwheelPositionNL,
-        //            wheelQuaternionNA = BRwheelRotationNL,
-        //            speedNA = speedNL,
-        //        };
-        //        jobHandle = brAITrafficCarWheelJob.Schedule(backRightWheelTAA);
-        //        jobHandle.Complete();
+                // Try route info component
+                if (route.routeInfo != null && route.routeInfo.enabled)
+                {
+                    // Update our cached reference
+                    carAIWaypointRouteInfo[carIndex] = route.routeInfo;
+                    return route.routeInfo.stopForTrafficLight;
+                }
 
-        //        blAITrafficCarWheelJob = new AITrafficCarWheelJob
-        //        {
-        //            canProcessNA = canProcessNL,
-        //            wheelPositionNA = BLwheelPositionNL,
-        //            wheelQuaternionNA = BLwheelRotationNL,
-        //            speedNA = speedNL,
-        //        };
-        //        jobHandle = blAITrafficCarWheelJob.Schedule(backLeftWheelTAA);
-        //        jobHandle.Complete();
+                // Try direct route property
+                return route.stopForTrafficLight;
+            }
 
-        //        if (usePooling)
-        //        {
-        //            centerPosition = centerPoint.position;
-        //            _AITrafficDistanceJob = new AITrafficDistanceJob
-        //            {
-        //                canProcessNA = canProcessNL,
-        //                playerPosition = centerPosition,
-        //                distanceToPlayerNA = distanceToPlayerNL,
-        //                isVisibleNA = isVisibleNL,
-        //                withinLimitNA = withinLimitNL,
-        //                cullDistance = cullHeadLight,
-        //                lightIsActiveNA = lightIsActiveNL,
-        //                outOfBoundsNA = outOfBoundsNL,
-        //                actizeZone = actizeZone,
-        //                spawnZone = spawnZone,
-        //                isDisabledNA = isDisabledNL,
-        //            };
-        //            jobHandle = _AITrafficDistanceJob.Schedule(carTAA);
-        //            jobHandle.Complete();
-        //            for (int i = 0; i < allWaypointRoutesList.Count; i++)
-        //            {
-        //                allWaypointRoutesList[i].previousDensity = allWaypointRoutesList[i].currentDensity;
-        //                allWaypointRoutesList[i].currentDensity = 0;
-        //            }
-        //            for (int i = 0; i < carCount; i++)
-        //            {
-        //                if (canProcessNL[i])
-        //                {
-        //                    if (isDisabledNL[i] == false)
-        //                    {
-        //                        carRouteList[i].currentDensity += 1;
-        //                        if (outOfBoundsNL[i])
-        //                        {
-        //                            MoveCarToPool(carList[i].assignedIndex);
-        //                        }
-        //                    }
-        //                    else if (outOfBoundsNL[i] == false)
-        //                    {
-        //                        if (lightIsActiveNL[i])
-        //                        {
-        //                            if (isEnabledNL[i] == false)
-        //                            {
-        //                                isEnabledNL[i] = true;
-        //                                headLight[i].enabled = true;
-        //                            }
-        //                        }
-        //                        else
-        //                        {
-        //                            if (isEnabledNL[i])
-        //                            {
-        //                                isEnabledNL[i] = false;
-        //                                headLight[i].enabled = false;
-        //                            }
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //            if (spawnTimer >= spawnRate) SpawnTraffic();
-        //            else spawnTimer += deltaTime;
-        //        }
+            // Fallback 2: Get from current route list
+            if (carIndex < carRouteList.Count && carRouteList[carIndex] != null)
+            {
+                var route = carRouteList[carIndex];
 
-        //        //if (STSPrefs.debugProcessTime) Debug.Log((("AI Update " + (Time.realtimeSinceStartup - startTime) * 1000f)) + "ms");
-        //        // Add to AITrafficController.FixedUpdate() method
-        //        // After all other car processing
-        //        // This code is missing from your current implementation - it should be in FixedUpdate()
-        //        // Run every second (at 60fps)
-        //        // Debug to check traffic light awareness
-        //        //if (Time.frameCount % 300 == 0)
-        //        //{ // Log every 5 seconds at 60fps
-        //        //    Debug.Log("===== TRAFFIC LIGHT AWARENESS CHECK =====");
-        //        //    for (int i = 0; i < carCount; i++)
-        //        //    {
-        //        //        if (carList[i] != null && isDrivingNL[i])
-        //        //        {
-        //        //            bool shouldStop = false;
+                // Try route info component
+                if (route.routeInfo != null)
+                {
+                    // Re-enable component if it was disabled (safety fix)
+                    if (!route.routeInfo.enabled)
+                    {
+                        route.routeInfo.enabled = true;
+                        Debug.LogWarning($"Re-enabled route info for car {carIndex} on route {route.name}");
+                    }
 
-        //        //            // Check route info directly
-        //        //            if (carAIWaypointRouteInfo[i] != null)
-        //        //            {
-        //        //                shouldStop = carAIWaypointRouteInfo[i].stopForTrafficLight;
-        //        //            }
+                    // Update our cached reference
+                    carAIWaypointRouteInfo[carIndex] = route.routeInfo;
+                    return route.routeInfo.stopForTrafficLight;
+                }
 
-        //        //            // Compare with the controller's native list value
-        //        //            Debug.Log($"Car {carList[i].name} (ID: {i}): stopForTrafficLight={stopForTrafficLightNL[i]}, routeInfo.stopForTrafficLight={shouldStop}");
+                // Try direct route property
+                return route.stopForTrafficLight;
+            }
 
-        //        //            // Force update if there's a mismatch
-        //        //            if (shouldStop != stopForTrafficLightNL[i])
-        //        //            {
-        //        //                Debug.LogWarning($"Mismatch detected! Fixing stopForTrafficLight for car {i}");
-        //        //                stopForTrafficLightNL[i] = shouldStop;
-        //        //            }
-        //        //        }
-        //        //    }
-        //        //    Debug.Log("========================================");
-        //        //}
+            // Default: Don't stop for traffic lights if we can't determine the state
+            return false;
+        }
 
-        //    }
-        //}
 
         public void ForceAllCarsToMoveDirectly()
         {
