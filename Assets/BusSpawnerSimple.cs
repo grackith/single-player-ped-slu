@@ -604,14 +604,22 @@ public class BusSpawnerSimple : MonoBehaviour
     {
         if (spawnedBus != null)
         {
-            // Return bus to pool or destroy
-            if (AITrafficController.Instance != null)
+            // CRITICAL: Check if traffic controller and car list are valid
+            if (AITrafficController.Instance != null &&
+                AITrafficController.Instance.GetCarList().Count > 0 &&
+                spawnedBus.assignedIndex >= 0 &&
+                spawnedBus.assignedIndex < AITrafficController.Instance.GetCarList().Count)
             {
                 AITrafficController.Instance.MoveCarToPool(spawnedBus.assignedIndex);
             }
             else
             {
-                Destroy(spawnedBus.gameObject);
+                // Just destroy the bus if traffic controller is empty
+                Debug.Log("Traffic controller empty, destroying bus directly");
+                if (spawnedBus.gameObject != null)
+                {
+                    Destroy(spawnedBus.gameObject);
+                }
             }
             spawnedBus = null;
         }
@@ -619,9 +627,9 @@ public class BusSpawnerSimple : MonoBehaviour
         hasSpawned = false;
         timer = -1;
         currentSpawnAttempt = 0;
-        spawnTriggeredByButton = false; // NEW: Reset button trigger state
+        spawnTriggeredByButton = false;
 
-        // NEW: Re-enable any bus stop buttons in the scene
+        // Re-enable bus stop buttons
         SimpleTeleportButton[] busStopButtons = FindObjectsOfType<SimpleTeleportButton>();
         foreach (var button in busStopButtons)
         {

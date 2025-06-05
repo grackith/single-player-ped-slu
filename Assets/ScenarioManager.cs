@@ -232,6 +232,7 @@ public class ScenarioManager : MonoBehaviour
             }
         }
     }
+
     // Add this helper method to ScenarioManager
     private RedirectionManager FindRedirectionManager()
     {
@@ -263,16 +264,18 @@ public class ScenarioManager : MonoBehaviour
         return rdwRoot;
     }
 
+    // Replace the Start() method in your ScenarioManager with this version
     private void Start()
     {
+        // CRITICAL: Configure physics for VR streaming FIRST
+        ConfigureVRPhysicsTiming();
+
+        // Your existing initialization code
         StartCoroutine(DelayedInitCheck());
-
-        // ADD THIS - Force initial route registration
-        //StartCoroutine(ForceInitialRouteRegistration());
-
         OptimizeForVR();
         StoreMasterLighting();
-        // Find or assign GlobalConfiguration
+
+        // Configure RDW settings...
         if (rdwGlobalConfiguration == null)
         {
             rdwGlobalConfiguration = FindObjectOfType<GlobalConfiguration>();
@@ -284,31 +287,27 @@ public class ScenarioManager : MonoBehaviour
         }
         else
         {
-            // UPDATED: Set up for HMD mode with OpenRDW standards
             rdwGlobalConfiguration.movementController = GlobalConfiguration.MovementController.HMD;
             rdwGlobalConfiguration.freeExplorationMode = true;
-            rdwGlobalConfiguration.avatarNum = 1; // Single user
-            rdwGlobalConfiguration.RESET_TRIGGER_BUFFER = 0.4f; // OpenRDW recommended value
-
+            rdwGlobalConfiguration.avatarNum = 1;
+            rdwGlobalConfiguration.RESET_TRIGGER_BUFFER = 0.4f;
             Debug.Log("Configured OpenRDW for single-user HMD mode");
         }
 
-        // Additional debug info
         Debug.Log($"ScenarioManager started. Current scene: {SceneManager.GetActiveScene().name}");
 
-        StartCoroutine(EnsureTrafficControllerReady());
+        // START TRAFFIC SYSTEM FIXES FOR BUILD
+        StartCoroutine(InitializeTrafficSystemForBuild());
 
-        // Make sure the Manager scene is loaded and maintained
+        // Rest of your existing code...
         EnsureManagerSceneIsLoaded();
 
-        // Make sure UI is visible at start
         if (researcherUI != null && !researcherUI.activeSelf)
         {
             researcherUI.SetActive(true);
             Debug.Log("Activated researcher UI in Start");
         }
 
-        // UPDATED: Find PersistentRDW and set up dimensions
         persistentRDW = FindObjectOfType<PersistentRDW>();
         if (persistentRDW == null)
         {
@@ -316,23 +315,14 @@ public class ScenarioManager : MonoBehaviour
         }
         else
         {
-            // Set your exact physical dimensions
             persistentRDW.physicalWidth = 8.4f;
             persistentRDW.physicalLength = 14.0f;
             Debug.Log("Set PersistentRDW dimensions to 8.4m × 14.0m");
         }
 
-        // Check for duplicate event systems and XR interaction managers
         CheckForDuplicateManagers();
 
-        if (AITrafficController.Instance != null)
-        {
-            // Set the flag to disable initial spawning
-            AITrafficController.Instance.disableInitialSpawn = true;
-            Debug.Log("Disabled initial traffic spawning");
-        }
-
-        // Find or create the bus spawner
+        // Bus spawner setup...
         BusSpawnerSimple = FindObjectOfType<BusSpawnerSimple>();
         if (BusSpawnerSimple == null)
         {
@@ -341,13 +331,94 @@ public class ScenarioManager : MonoBehaviour
             BusSpawnerSimple = spawnerObj.AddComponent<BusSpawnerSimple>();
             DontDestroyOnLoad(spawnerObj);
 
-            // Assign default values if available
             BusSpawnerSimple.busPrefab = busPrefab;
             BusSpawnerSimple.initialRoute = initialRoute;
             BusSpawnerSimple.intersectionRoute = intersectionRoute;
             BusSpawnerSimple.busStopRoute = busStopRoute;
-
         }
+    }
+
+    // NEW METHOD: Special traffic system initialization for builds
+    private IEnumerator InitializeTrafficSystemForBuild()
+    {
+        if (!Application.isEditor)
+        {
+            Debug.Log("BUILD: Initializing traffic system with VR fixes");
+
+            // Wait for basic scene setup
+            yield return new WaitForSeconds(1f);
+
+            // Find and configure traffic controller
+            AITrafficController controller = AITrafficController.Instance;
+            if (controller != null)
+            {
+                // Apply build-specific configuration
+                controller.ConfigureBuildPhysics();
+
+                // Disable initial spawn to prevent timing issues
+                controller.disableInitialSpawn = true;
+
+                // Wait for wheel fixes to complete
+                yield return new WaitForSeconds(3f);
+
+                // Now safely enable traffic spawning
+                controller.disableInitialSpawn = false;
+
+                Debug.Log("BUILD: Traffic system initialization complete");
+            }
+            else
+            {
+                Debug.LogError("BUILD: No AITrafficController found!");
+            }
+        }
+    }
+
+    // Add this to ScenarioManager.Start() - CRITICAL for VR streaming
+    private void ConfigureVRPhysicsTiming()
+    {
+        if (!Application.isEditor)
+        {
+            Debug.Log("Configuring physics for VR streaming to Quest 3");
+
+            // CRITICAL: Set Fixed Timestep to match Quest 3's 72Hz
+            // Quest 3 can run 72Hz, 90Hz, or 120Hz depending on settings
+            Time.fixedDeltaTime = 1f / 72f; // = 0.0139 seconds (72Hz)
+
+            // Alternative for 90Hz if your Quest 3 is set to 90Hz:
+            // Time.fixedDeltaTime = 1f / 90f; // = 0.0111 seconds (90Hz)
+
+            // Set Maximum Allowed Timestep to prevent physics spiral of death
+            Time.maximumDeltaTime = Time.fixedDeltaTime * 2f; // Allow max 2 physics steps per frame
+
+            // Configure physics solver for VR streaming stability
+            Physics.defaultSolverIterations = 6;        // Reduced from 8 for performance
+            Physics.defaultSolverVelocityIterations = 3; // Reduced from 4 for performance
+
+            // VR streaming-specific settings
+            Physics.sleepThreshold = 0.005f;    // Keep rigidbodies awake longer
+            Physics.bounceThreshold = 0.05f;    // Reduce micro-bouncing
+            Physics.defaultContactOffset = 0.01f; // Tighter contact detection
+
+            Debug.Log($"VR Physics configured: FixedDelta={Time.fixedDeltaTime:F4}s, MaxDelta={Time.maximumDeltaTime:F4}s");
+        }
+    }
+
+    // Also add this method to detect Quest refresh rate dynamically
+    private float DetectVRRefreshRate()
+    {
+        if (UnityEngine.XR.XRSettings.enabled)
+        {
+            float refreshRate = UnityEngine.XR.XRDevice.refreshRate;
+            Debug.Log($"Detected VR refresh rate: {refreshRate}Hz");
+
+            if (refreshRate > 0)
+            {
+                return refreshRate;
+            }
+        }
+
+        // Fallback to Quest 3 default
+        return 72f;
     }
 
 

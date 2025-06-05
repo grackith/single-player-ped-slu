@@ -13,6 +13,7 @@
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficcontroller")]
     public class AITrafficController : MonoBehaviour
     {
+        
         private NativeList<bool> isTrafficLightWaypointNL;
         public static AITrafficController Instance;
 
@@ -107,11 +108,34 @@
         public float actizeZone = 225;
         [Tooltip("Cars can spawn anywhere in this zone, even if spawn point is visible by the camera. Cars outside of this zone will be despawned.")]
         public float spawnZone = 350;
+        [System.Serializable]
+        public class PhysicsSnapshot
+        {
+            public float timestamp;
+            public bool isEditor;
+            public float fixedDeltaTime;
+            public float timeScale;
+            public int physicsIterations;
+            public Vector3 gravity;
+            public float motorTorque;
+            public float brakeTorque;
+            public float steerAngle;
+            public bool wheelGrounded;
+            public Vector3 wheelPosition;
+            public Vector3 carVelocity;
+            public Vector3 carPosition;
+            public bool isDriving;
+            public float targetSpeed;
+        }
+
+        private List<PhysicsSnapshot> physicsLog = new List<PhysicsSnapshot>();
 
 
         #endregion
 
         #region Set Array Data
+        // REPLACE your Set_IsDrivingArray method with this FIXED version:
+
         public void Set_IsDrivingArray(int _index, bool _value)
         {
             if (isDrivingNL[_index] != _value)
@@ -130,7 +154,10 @@
                             currentWheelCollider = frontRightWheelColliderList[_index];
                             currentWheelCollider.steerAngle = steerAngleNL[_index];
                             currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-                            FRwheelPositionNL[_index] = wheelPosition_Cached;
+
+                            // CRITICAL FIX: Convert world to local position
+                            Vector3 localPos = carList[_index].transform.InverseTransformPoint(wheelPosition_Cached);
+                            FRwheelPositionNL[_index] = localPos; // ← Now using LOCAL position!
                             FRwheelRotationNL[_index] = wheelQuaternion_Cached;
                         }
                         else if (j == 1)
@@ -138,21 +165,30 @@
                             currentWheelCollider = frontLefttWheelColliderList[_index];
                             currentWheelCollider.steerAngle = steerAngleNL[_index];
                             currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-                            FLwheelPositionNL[_index] = wheelPosition_Cached;
+
+                            // CRITICAL FIX: Convert world to local position
+                            Vector3 localPos = carList[_index].transform.InverseTransformPoint(wheelPosition_Cached);
+                            FLwheelPositionNL[_index] = localPos; // ← Now using LOCAL position!
                             FLwheelRotationNL[_index] = wheelQuaternion_Cached;
                         }
                         else if (j == 2)
                         {
                             currentWheelCollider = backRighttWheelColliderList[_index];
                             currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-                            BRwheelPositionNL[_index] = wheelPosition_Cached;
+
+                            // CRITICAL FIX: Convert world to local position
+                            Vector3 localPos = carList[_index].transform.InverseTransformPoint(wheelPosition_Cached);
+                            BRwheelPositionNL[_index] = localPos; // ← Now using LOCAL position!
                             BRwheelRotationNL[_index] = wheelQuaternion_Cached;
                         }
                         else if (j == 3)
                         {
                             currentWheelCollider = backLeftWheelColliderList[_index];
                             currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-                            BLwheelPositionNL[_index] = wheelPosition_Cached;
+
+                            // CRITICAL FIX: Convert world to local position
+                            Vector3 localPos = carList[_index].transform.InverseTransformPoint(wheelPosition_Cached);
+                            BLwheelPositionNL[_index] = localPos; // ← Now using LOCAL position!
                             BLwheelRotationNL[_index] = wheelQuaternion_Cached;
                         }
                         currentWheelCollider.motorTorque = motorTorqueNL[_index];
@@ -160,6 +196,48 @@
                     }
                 }
             }
+        }
+
+        // Add this method to your AITrafficController class
+
+        public void Set_WheelPosition(int carIndex, int wheelIndex, Vector3 position, Quaternion rotation)
+        {
+            if (carIndex < 0 || carIndex >= carCount) return;
+
+            // Update the appropriate wheel position and rotation arrays
+            switch (wheelIndex)
+            {
+                case 0: // Front Right
+                    if (carIndex < FRwheelPositionNL.Length)
+                    {
+                        FRwheelPositionNL[carIndex] = position;
+                        FRwheelRotationNL[carIndex] = rotation;
+                    }
+                    break;
+                case 1: // Front Left
+                    if (carIndex < FLwheelPositionNL.Length)
+                    {
+                        FLwheelPositionNL[carIndex] = position;
+                        FLwheelRotationNL[carIndex] = rotation;
+                    }
+                    break;
+                case 2: // Back Right
+                    if (carIndex < BRwheelPositionNL.Length)
+                    {
+                        BRwheelPositionNL[carIndex] = position;
+                        BRwheelRotationNL[carIndex] = rotation;
+                    }
+                    break;
+                case 3: // Back Left
+                    if (carIndex < BLwheelPositionNL.Length)
+                    {
+                        BLwheelPositionNL[carIndex] = position;
+                        BLwheelRotationNL[carIndex] = rotation;
+                    }
+                    break;
+            }
+
+            Debug.Log($"Updated wheel {wheelIndex} position for car {carIndex} to {position}");
         }
         //public void Set_IsDrivingArray(int _index, bool _value)
         //{
@@ -354,6 +432,45 @@
             forceChangeLanesNL[_index] = false;
             changeLaneTriggerTimer[_index] = 0f;
         }
+
+        private void CapturePhysicsSnapshot(int carIndex)
+        {
+            if (carIndex >= carList.Count || carList[carIndex] == null) return;
+
+            var snapshot = new PhysicsSnapshot
+            {
+                timestamp = Time.fixedTime,
+                isEditor = Application.isEditor,
+                fixedDeltaTime = Time.fixedDeltaTime,
+                timeScale = Time.timeScale,
+                physicsIterations = Physics.defaultSolverIterations,
+                gravity = Physics.gravity,
+                motorTorque = motorTorqueNL[carIndex],
+                brakeTorque = brakeTorqueNL[carIndex],
+                steerAngle = steerAngleNL[carIndex],
+                wheelGrounded = frontRightWheelColliderList[carIndex]?.isGrounded ?? false,
+                wheelPosition = frontRightWheelColliderList[carIndex]?.transform.position ?? Vector3.zero,
+                carVelocity = rigidbodyList[carIndex]?.velocity ?? Vector3.zero,
+                carPosition = carList[carIndex].transform.position,
+                isDriving = isDrivingNL[carIndex],
+                targetSpeed = targetSpeedNL[carIndex]
+            };
+
+            physicsLog.Add(snapshot);
+
+            // Keep only recent data
+            if (physicsLog.Count > 300) // ~5 seconds at 60fps
+                physicsLog.RemoveAt(0);
+
+            // Log key differences
+            Debug.Log($"PHYSICS SNAPSHOT [{(Application.isEditor ? "EDITOR" : "BUILD")}]: " +
+                     $"Car {carIndex} - Motor: {snapshot.motorTorque:F1}, " +
+                     $"Velocity: {snapshot.carVelocity.magnitude:F2}, " +
+                     $"Grounded: {snapshot.wheelGrounded}, " +
+                     $"FixedDT: {snapshot.fixedDeltaTime:F4}");
+        }
+
+        
         #endregion
 
         #region Get Array Data
@@ -805,6 +922,7 @@
             leftBoxcastResults = new NativeArray<RaycastHit>(carCount, Allocator.Persistent);
             rightBoxcastResults = new NativeArray<RaycastHit>(carCount, Allocator.Persistent);
             #endregion
+            vrWheelFixActiveNL.Add(false);
             waypointDataListCountNL[carCount - 1] = carRouteList[carCount - 1].waypointDataList.Count;
             carAIWaypointRouteInfo[carCount - 1] = carRouteList[carCount - 1].routeInfo;
             for (int i = 0; i < carCount; i++)
@@ -997,6 +1115,7 @@
         private AITrafficCar loadCar;
         private AITrafficWaypoint nextWaypoint;
         private AITrafficPoolEntry newTrafficPoolEntry = new AITrafficPoolEntry();
+        private NativeList<bool> vrWheelFixActiveNL;
 
         NativeArray<RaycastHit> frontBoxcastResults;
         NativeArray<RaycastHit> leftBoxcastResults;
@@ -1136,6 +1255,8 @@
             DisposeAllNativeCollections();
 
             // Reinitialize all NativeLists with Allocator.Persistent
+            vrWheelFixActiveNL = new NativeList<bool>(Allocator.Persistent);
+
             isTrafficLightWaypointNL = new NativeList<bool>(Allocator.Persistent);
             currentRoutePointIndexNL = new NativeList<int>(Allocator.Persistent);
             waypointDataListCountNL = new NativeList<int>(Allocator.Persistent);
@@ -1335,10 +1456,40 @@
 
         private void Start()
         {
+            ConfigureForVRStreaming();
+            DetectVirtualDesktop();
+
             if (!Application.isEditor)
             {
-                Debug.Log("BUILD FIX: Disabling pooling system in build");
-                usePooling = false;
+                // Remove the defaultMaterial check (doesn't exist in Unity)
+                Debug.Log($"BUILD CHECK: Solver iterations: {Physics.defaultSolverIterations}");
+                Debug.Log($"BUILD CHECK: Solver velocity iterations: {Physics.defaultSolverVelocityIterations}");
+
+                // Count how many colliders still have no material
+                Collider[] allColliders = FindObjectsOfType<Collider>();
+                int noMaterialCount = allColliders.Count(c => c.material == null);
+                Debug.Log($"BUILD CHECK: {noMaterialCount} colliders still have no material");
+
+                // Check a few specific colliders to see what materials they have
+                int checkedCount = 0;
+                foreach (var collider in allColliders)
+                {
+                    if (checkedCount < 5) // Just check first 5
+                    {
+                        string materialName = collider.material != null ? collider.material.name : "NULL";
+                        Debug.Log($"BUILD CHECK: Collider '{collider.name}' material: {materialName}");
+                        checkedCount++;
+                    }
+                }
+                StartCoroutine(DelayedDiagnostic());
+            }
+
+            // Detect VR even in PC builds
+            if (UnityEngine.XR.XRSettings.enabled || !Application.isEditor)
+            {
+                Debug.Log("VR detected or in build - applying VR-compatible physics settings");
+                Time.fixedDeltaTime = 0.01667f; // Consistent 60 FPS physics
+                usePooling = false; // Simplify for VR
             }
 
             // Add this line at the very beginning of Start
@@ -1378,6 +1529,60 @@
             brakeOffColor = new Color(brakeColor.r * brakeIntensityFactor, brakeColor.g * brakeIntensityFactor, brakeColor.b * brakeIntensityFactor);
             emissionColorName = RenderPipeline.IsDefaultRP || RenderPipeline.IsURP ? "_EmissionColor" : "_EmissiveColor";
             unassignedBrakeMaterial = new Material(unassignedBrakeMaterial);
+        }
+
+        private void ConfigureForVRStreaming()
+        {
+            Debug.Log("Configuring physics for VR streaming");
+
+            // CRITICAL: Use 60Hz for STS compatibility, NOT 90Hz
+            Time.fixedDeltaTime = 1f / 60f; // STS is designed for 60Hz
+
+            // MODERATE solver iterations that work with STS job system
+            Physics.defaultSolverIterations = 8;        // Not 12!
+            Physics.defaultSolverVelocityIterations = 4; // Not 6!
+
+            // VR streaming stability settings
+            Physics.sleepThreshold = 0.01f;              // Keep rigidbodies awake
+            Physics.bounceThreshold = 0.1f;              // Reduce micro-bouncing
+            Physics.defaultContactOffset = 0.01f;        // Tighter contact detection
+
+            Debug.Log($"VR Streaming Physics: FixedDelta={Time.fixedDeltaTime:F4}s, Iterations={Physics.defaultSolverIterations}");
+        }
+
+        public void ForceVRWheelReset()
+        {
+            if (Application.isEditor) return;
+
+            Debug.Log("FORCE VR WHEEL RESET: Fixing all car wheels in build");
+
+            for (int i = 0; i < carList.Count; i++)
+            {
+                if (carList[i] != null && carList[i].gameObject.activeInHierarchy)
+                {
+                    // Call the new comprehensive wheel fix
+                    StartCoroutine(ForceCarWheelReset(carList[i]));
+                }
+            }
+        }
+
+        private IEnumerator ForceCarWheelReset(AITrafficCar car)
+        {
+            // Wait a random delay to spread out the fixes
+            yield return new WaitForSeconds(UnityEngine.Random.Range(0.1f, 0.5f));
+
+            // Use the new comprehensive fix method
+            car.ConfigureForVRStreaming();
+
+            // Also diagnose the result
+            yield return new WaitForSeconds(1f);
+            car.DiagnoseWheelContact();
+        }
+
+        private IEnumerator DelayedDiagnostic()
+        {
+            yield return new WaitForSeconds(3f);
+            DiagnoseGroundContact();
         }
 
         IEnumerator Initialize()
@@ -2067,47 +2272,211 @@
         // Complete FixedUpdate method for AITrafficController.cs
         private void FixedUpdate()
         {
-            // BUILD DEBUG - Add this at the very beginning
+            // VR BUILD DIAGNOSTIC
+            if (!Application.isEditor && Time.fixedTime % 2.0f < Time.fixedDeltaTime)
+            {
+                Debug.Log($"BUILD DIAGNOSTIC: Physics rate: {1.0f / Time.fixedDeltaTime:F0}Hz, " +
+                         $"Frame rate: {1.0f / Time.deltaTime:F0}fps, " +
+                         $"Cars driving: {isDrivingNL.AsArray().Count(x => x)}");
+            }
+
+            // BUILD DEBUG - Check initialization
             if (!isInitialized)
             {
-                Debug.Log("BUILD DEBUG: Not initialized, skipping FixedUpdate");
+                //Debug.Log("BUILD DEBUG: Not initialized, skipping FixedUpdate");
                 return;
             }
 
-            Debug.Log("BUILD DEBUG: FixedUpdate running, checking job prerequisites...");
-
-            // Check each prerequisite
+            // Check prerequisites
             bool hasValidArrays = driveTargetTAA.isCreated && driveTargetTAA.length > 0;
             bool hasValidCars = carCount > 0;
             bool hasValidLists = isDrivingNL.IsCreated && isDrivingNL.Length > 0;
 
-            Debug.Log($"BUILD DEBUG: hasValidArrays={hasValidArrays}, hasValidCars={hasValidCars}, hasValidLists={hasValidLists}");
-
-            if (!hasValidArrays)
+            if (!hasValidArrays || !hasValidCars || !hasValidLists)
             {
-                Debug.LogError("BUILD DEBUG: driveTargetTAA not created or empty!");
+                //Debug.LogError("BUILD DEBUG: Prerequisites not met, skipping FixedUpdate");
                 return;
             }
 
-            if (!hasValidCars)
+            //  PUT THE FIX RIGHT HERE - BEFORE EVERYTHING ELSE:
+            // CRITICAL: Rebuild wheel collider references if they're null
+            if (!Application.isEditor && carCount > 0)
             {
-                Debug.LogError("BUILD DEBUG: No cars to process!");
-                return;
+                for (int i = 0; i < carCount; i++)
+                {
+                    if (i < carList.Count && carList[i] != null)
+                    {
+                        // Check if wheel collider references are null and rebuild them
+                        if (i >= frontRightWheelColliderList.Count || frontRightWheelColliderList[i] == null)
+                        {
+                            Debug.Log($"BUILD FIX: Rebuilding null wheel colliders for car {i}");
+
+                            // Ensure lists are big enough
+                            while (frontRightWheelColliderList.Count <= i)
+                                frontRightWheelColliderList.Add(null);
+                            while (frontLefttWheelColliderList.Count <= i)
+                                frontLefttWheelColliderList.Add(null);
+                            while (backRighttWheelColliderList.Count <= i)
+                                backRighttWheelColliderList.Add(null);
+                            while (backLeftWheelColliderList.Count <= i)
+                                backLeftWheelColliderList.Add(null);
+
+                            // Rebuild wheel collider references from the car's _wheels array
+                            if (carList[i]._wheels != null && carList[i]._wheels.Length >= 4)
+                            {
+                                frontRightWheelColliderList[i] = carList[i]._wheels[0].collider;
+                                frontLefttWheelColliderList[i] = carList[i]._wheels[1].collider;
+                                backRighttWheelColliderList[i] = carList[i]._wheels[2].collider;
+                                backLeftWheelColliderList[i] = carList[i]._wheels[3].collider;
+
+                                Debug.Log($"BUILD FIX: Restored wheel colliders for car {i}");
+                            }
+                            //  ADD THIS RIGHT AFTER THE WHEEL COLLIDER REBUILD:
+                            // Also rebuild rigidbody references if needed
+                            if (i >= rigidbodyList.Count || rigidbodyList[i] == null)
+                            {
+                                Debug.Log($"BUILD FIX: Rebuilding null rigidbody for car {i}");
+
+                                // Ensure rigidbody list is big enough
+                                while (rigidbodyList.Count <= i)
+                                    rigidbodyList.Add(null);
+
+                                // Rebuild rigidbody reference from the car
+                                Rigidbody carRigidbody = carList[i].GetComponent<Rigidbody>();
+                                if (carRigidbody != null)
+                                {
+                                    rigidbodyList[i] = carRigidbody;
+                                    Debug.Log($"BUILD FIX: Restored rigidbody for car {i}");
+                                }
+                                else
+                                {
+                                    Debug.LogError($"BUILD ERROR: Car {i} has no Rigidbody component!");
+                                }
+                            }
+                        }
+
+                        // Also rebuild transform cache if needed
+                        if (i >= frontTransformCached.Count || frontTransformCached[i] == null)
+                        {
+                            Debug.Log($"BUILD FIX: Rebuilding null transform cache for car {i}");
+
+                            // Ensure lists are big enough
+                            while (frontTransformCached.Count <= i)
+                                frontTransformCached.Add(null);
+                            while (leftTransformCached.Count <= i)
+                                leftTransformCached.Add(null);
+                            while (rightTransformCached.Count <= i)
+                                rightTransformCached.Add(null);
+
+                            // Rebuild transform references from the car
+                            frontTransformCached[i] = carList[i].frontSensorTransform;
+                            leftTransformCached[i] = carList[i].leftSensorTransform;
+                            rightTransformCached[i] = carList[i].rightSensorTransform;
+                        }
+                    }
+                }
             }
 
-            if (!hasValidLists)
+            // Diagnostics (run ONCE)
+            if (!Application.isEditor && carCount > 0 && Time.fixedTime % 10.0f < Time.fixedDeltaTime)
             {
-                Debug.LogError("BUILD DEBUG: Native lists not created!");
-                return;
+                DiagnoseGroundContactImmediate();
             }
 
-            Debug.Log("BUILD DEBUG: All prerequisites met, continuing with normal FixedUpdate...");
+            // VR BUILD: Combined car fixes (run ONCE every 5 seconds)
+            if (!Application.isEditor && carCount > 0 && Time.fixedTime % 5.0f < Time.fixedDeltaTime)
+            {
+                for (int i = 0; i < Math.Min(3, carCount); i++)
+                {
+                    if (i < carList.Count && carList[i] != null &&
+                        carList[i].gameObject.activeInHierarchy)
+                    {
+                        // Skip buses
+                        if (carList[i].name.ToLower().Contains("bus"))
+                        {
+                            continue;
+                        }
 
-            // YOUR ORIGINAL FIXEDUPDATE CODE STARTS HERE
-            if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
+                        bool needsRestart = false;
+                        bool needsWheelFix = false;
+
+                        // Check if car needs to be restarted (not driving when it should be)
+                        if (i < isDrivingNL.Length && !isDrivingNL[i])
+                        {
+                            needsRestart = true;
+                        }
+
+                        // Check if car has wheel/ground contact issues
+                        bool hasGroundContact = false;
+                        for (int w = 0; w < 4; w++)
+                        {
+                            WheelCollider wheel = null;
+
+                            switch (w)
+                            {
+                                case 0: if (i < frontRightWheelColliderList.Count) wheel = frontRightWheelColliderList[i]; break;
+                                case 1: if (i < frontLefttWheelColliderList.Count) wheel = frontLefttWheelColliderList[i]; break;
+                                case 2: if (i < backRighttWheelColliderList.Count) wheel = backRighttWheelColliderList[i]; break;
+                                case 3: if (i < backLeftWheelColliderList.Count) wheel = backLeftWheelColliderList[i]; break;
+                            }
+
+                            if (wheel != null)
+                            {
+                                WheelHit hit;
+                                if (wheel.GetGroundHit(out hit))
+                                {
+                                    hasGroundContact = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!hasGroundContact)
+                        {
+                            needsWheelFix = true;
+                        }
+
+                        // Apply fixes if needed
+                        if (needsWheelFix)
+                        {
+                            Debug.Log($"VR BUILD FIX: Car {i} ({carList[i].name}) has no ground contact, fixing wheels");
+                            carList[i].CompleteWheelFixForVR();
+                            
+                        }
+
+                        if (needsRestart)
+                        {
+                            Debug.Log($"VR BUILD FIX: Forcing car {i} ({carList[i].name}) to start driving");
+                            carList[i].StartDriving();
+                            Set_IsDrivingArray(i, true);
+
+                            // Reset torque values
+                            if (i < motorTorqueNL.Length) motorTorqueNL[i] = 0;
+                            if (i < brakeTorqueNL.Length) brakeTorqueNL[i] = 0;
+                        }
+                    }
+                }
+            }
+
+            // Reset wheel positions (run ONCE)
+            if (!Application.isEditor && carCount > 0 && Time.fixedTime % 1.0f < Time.fixedDeltaTime)
+            {
+                for (int i = 0; i < Math.Min(3, carCount); i++)
+                {
+                    if (i < carList.Count && carList[i] != null)
+                    {
+                        Transform carTransform = carList[i].transform;
+                        if (i < frontRightWheelColliderList.Count && frontRightWheelColliderList[i] != null)
+                        {
+                            frontRightWheelColliderList[i].transform.SetParent(carTransform, false);
+                            frontRightWheelColliderList[i].transform.localPosition = new Vector3(0.6f, -0.5f, 1.2f);
+                        }
+                    }
+                }
+            }
+
+            // Main logic (run ONCE)
             deltaTime = Time.deltaTime;
-
-            // NEW: Check for upcoming traffic lights BEFORE processing movement
             CheckForUpcomingTrafficLights();
 
             // Process traffic light and yield trigger logic
@@ -2144,11 +2513,8 @@
                 for (int i = 0; i < carCount; i++)
                 {
                     yieldForCrossTrafficNL[i] = false;
-
-                    // IMPROVED: Robust traffic light state detection
                     stopForTrafficLightNL[i] = GetTrafficLightStateForCar(i);
 
-                    // Update traffic light waypoint flag even when not using yield triggers
                     isTrafficLightWaypointNL[i] = false;
                     if (currentWaypointList[i] != null)
                     {
@@ -2204,7 +2570,7 @@
                 isTrafficLightWaypointNA = isTrafficLightWaypointNL.AsArray()
             };
 
-            Debug.Log("BUILD DEBUG: Job created, attempting to schedule...");
+            
 
             jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
 
@@ -2212,116 +2578,25 @@
 
             jobHandle.Complete(); // Wait for completion before using results
 
-            Debug.Log("BUILD DEBUG: Job completed successfully!");
 
-            // Your existing FixedUpdate logic here...
-            if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
-            deltaTime = Time.deltaTime;
 
-            // NEW: Check for upcoming traffic lights BEFORE processing movement
-            CheckForUpcomingTrafficLights();
-
-                // Process traffic light and yield trigger logic
-                if (useYieldTriggers)
+            // Process sensor data and setup boxcast commands
+            for (int i = 0; i < carCount; i++) // operate on results
+            {
+                // CRITICAL: Add null checks for transforms before accessing them
+                if (i >= frontTransformCached.Count || frontTransformCached[i] == null)
                 {
-                    for (int i = 0; i < carCount; i++)
-                    {
-                        yieldForCrossTrafficNL[i] = false;
-                        isTrafficLightWaypointNL[i] = false;
-
-                        if (currentWaypointList[i] != null)
-                        {
-                            isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
-
-                            if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute != null)
-                            {
-                                for (int j = 0; j < currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers.Count; j++)
-                                {
-                                    if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers[j].yieldForTrafficLight == true)
-                                    {
-                                        yieldForCrossTrafficNL[i] = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        // IMPROVED: Robust traffic light state detection
-                        stopForTrafficLightNL[i] = GetTrafficLightStateForCar(i);
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < carCount; i++)
-                    {
-                        yieldForCrossTrafficNL[i] = false;
-
-                        // IMPROVED: Robust traffic light state detection
-                        stopForTrafficLightNL[i] = GetTrafficLightStateForCar(i);
-
-                        // Update traffic light waypoint flag even when not using yield triggers
-                        isTrafficLightWaypointNL[i] = false;
-                        if (currentWaypointList[i] != null)
-                        {
-                            isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
-                        }
-                    }
+                    Debug.LogWarning($"BUILD: Skipping car {i} - frontTransformCached is null");
+                    continue; // Skip this car if transform is null
                 }
 
-                // Setup and schedule the main car AI job
-                carAITrafficJob = new AITrafficCarJob
+                // Front Sensor setup
+                if (frontSensorFacesTarget)
                 {
-                    frontSensorLengthNA = frontSensorLengthNL.AsArray(),
-                    currentRoutePointIndexNA = currentRoutePointIndexNL.AsArray(),
-                    waypointDataListCountNA = waypointDataListCountNL.AsArray(),
-                    carTransformPreviousPositionNA = carTransformPreviousPositionNL.AsArray(),
-                    carTransformPositionNA = carTransformPositionNL.AsArray(),
-                    finalRoutePointPositionNA = finalRoutePointPositionNL.AsArray(),
-                    routePointPositionNA = routePointPositionNL.AsArray(),
-                    isDrivingNA = isDrivingNL.AsArray(),
-                    isActiveNA = isActiveNL.AsArray(),
-                    canProcessNA = canProcessNL.AsArray(),
-                    speedNA = speedNL.AsArray(),
-                    deltaTime = deltaTime,
-                    routeProgressNA = routeProgressNL.AsArray(),
-                    topSpeedNA = topSpeedNL.AsArray(),
-                    targetSpeedNA = targetSpeedNL.AsArray(),
-                    speedLimitNA = speedLimitNL.AsArray(),
-                    accelNA = accelNL.AsArray(),
-                    localTargetNA = localTargetNL.AsArray(),
-                    targetAngleNA = targetAngleNL.AsArray(),
-                    steerAngleNA = steerAngleNL.AsArray(),
-                    motorTorqueNA = motorTorqueNL.AsArray(),
-                    accelerationInputNA = accelerationInputNL.AsArray(),
-                    brakeTorqueNA = brakeTorqueNL.AsArray(),
-                    moveHandBrakeNA = moveHandBrakeNL.AsArray(),
-                    maxSteerAngle = maxSteerAngle,
-                    overrideInputNA = overrideInputNL.AsArray(),
-                    distanceToEndPointNA = distanceToEndPointNL.AsArray(),
-                    overrideAccelerationPowerNA = overrideAccelerationPowerNL.AsArray(),
-                    overrideBrakePowerNA = overrideBrakePowerNL.AsArray(),
-                    isBrakingNA = isBrakingNL.AsArray(),
-                    speedMultiplier = speedMultiplier,
-                    steerSensitivity = steerSensitivity,
-                    stopThreshold = stopThreshold,
-                    frontHitDistanceNA = frontHitDistanceNL.AsArray(),
-                    frontHitNA = frontHitNL.AsArray(),
-                    stopForTrafficLightNA = stopForTrafficLightNL.AsArray(),
-                    yieldForCrossTrafficNA = yieldForCrossTrafficNL.AsArray(),
-                    accelerationPowerNA = accelerationPowerNL.AsArray(),
-                    frontSensorTransformPositionNA = frontSensorTransformPositionNL.AsArray(),
-                    isTrafficLightWaypointNA = isTrafficLightWaypointNL.AsArray()
-                };
-                jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
-                jobHandle.Complete(); // Wait for completion before using results
-
-                // Process sensor data and setup boxcast commands
-                for (int i = 0; i < carCount; i++) // operate on results
-                {
-                    // Front Sensor setup
-                    if (frontSensorFacesTarget)
+                    if (currentWaypointList[i] != null &&
+                        currentWaypointList[i].onReachWaypointSettings.nextPointInRoute != null)
                     {
-                        if (currentWaypointList[i])
+                        try
                         {
                             frontTransformCached[i].LookAt(currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.transform);
                             frontSensorEulerAngles = frontTransformCached[i].rotation.eulerAngles;
@@ -2329,223 +2604,247 @@
                             frontSensorEulerAngles.z = 0;
                             frontTransformCached[i].rotation = Quaternion.Euler(frontSensorEulerAngles);
                         }
-                    }
-                    frontSensorTransformPositionNL[i] = frontTransformCached[i].position;
-                    frontDirectionList[i] = frontTransformCached[i].forward;
-                    frontRotationList[i] = frontTransformCached[i].rotation;
-
-                    // Setup front sensor boxcast command
-                    frontBoxcastCommands[i] = new BoxcastCommand(
-                        frontSensorTransformPositionNL[i],
-                        frontSensorSizeNL[i],
-                        frontRotationList[i],
-                        frontDirectionList[i],
-                        new QueryParameters(layerMask, false),
-                        frontSensorLengthNL[i]
-                    );
-
-                    // Setup side sensor boxcast commands for lane changing
-                    if (useLaneChanging)
-                    {
-                        if (speedNL[i] > minSpeedToChangeLanes)
+                        catch (System.Exception ex)
                         {
-                            if ((forceChangeLanesNL[i] == true || frontHitNL[i] == true) && canChangeLanesNL[i] && isChangingLanesNL[i] == false)
-                            {
-                                leftOriginList[i] = leftTransformCached[i].position;
-                                leftDirectionList[i] = leftTransformCached[i].forward;
-                                leftRotationList[i] = leftTransformCached[i].rotation;
-
-                                leftBoxcastCommands[i] = new BoxcastCommand(
-                                    leftOriginList[i],
-                                    sideSensorSizeNL[i],
-                                    leftRotationList[i],
-                                    leftDirectionList[i],
-                                    new QueryParameters(layerMask, false),
-                                    sideSensorLengthNL[i]
-                                );
-
-                                rightOriginList[i] = rightTransformCached[i].position;
-                                rightDirectionList[i] = rightTransformCached[i].forward;
-                                rightRotationList[i] = rightTransformCached[i].rotation;
-
-                                rightBoxcastCommands[i] = new BoxcastCommand(
-                                    rightOriginList[i],
-                                    sideSensorSizeNL[i],
-                                    rightRotationList[i],
-                                    rightDirectionList[i],
-                                    new QueryParameters(layerMask, false),
-                                    sideSensorLengthNL[i]
-                                );
-                            }
+                            Debug.LogWarning($"BUILD: Error setting sensor rotation for car {i}: {ex.Message}");
                         }
                     }
                 }
 
-                // Execute sensor jobs
-                var handle = BoxcastCommand.ScheduleBatch(frontBoxcastCommands, frontBoxcastResults, 1, default);
-                handle.Complete();
-                handle = BoxcastCommand.ScheduleBatch(leftBoxcastCommands, leftBoxcastResults, 1, default);
-                handle.Complete();
-                handle = BoxcastCommand.ScheduleBatch(rightBoxcastCommands, rightBoxcastResults, 1, default);
-                handle.Complete();
-
-                // Process sensor results
-                for (int i = 0; i < carCount; i++) // operate on results
+                // Safely get transform data with null checks
+                try
                 {
-                    // Process front sensor results with improved traffic light detection
-                    bool hitDetected = frontBoxcastResults[i].collider != null;
+                    frontSensorTransformPositionNL[i] = frontTransformCached[i].position;
+                    frontDirectionList[i] = frontTransformCached[i].forward;
+                    frontRotationList[i] = frontTransformCached[i].rotation;
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"BUILD: Error accessing transform data for car {i}: {ex.Message}");
+                    continue; // Skip this car if we can't get transform data
+                }
 
-                    if (hitDetected)
+                // Setup front sensor boxcast command (only if we have valid data)
+                frontBoxcastCommands[i] = new BoxcastCommand(
+                    frontSensorTransformPositionNL[i],
+                    frontSensorSizeNL[i],
+                    frontRotationList[i],
+                    frontDirectionList[i],
+                    new QueryParameters(layerMask, false),
+                    frontSensorLengthNL[i]
+                );
+
+                // Setup side sensor boxcast commands for lane changing
+                if (useLaneChanging)
+                {
+                    if (speedNL[i] > minSpeedToChangeLanes)
                     {
-                        frontHitTransform[i] = frontBoxcastResults[i].transform;
-
-                        // Check if we should ignore this collision BEFORE setting frontHitNL
-                        bool shouldIgnoreHit = false;
-
-                        // Check for traffic light waypoints in front sensor
-                        AITrafficWaypoint hitWaypoint = frontHitTransform[i].GetComponent<AITrafficWaypoint>();
-                        if (hitWaypoint != null && hitWaypoint.isTrafficLightWaypoint)
+                        if ((forceChangeLanesNL[i] == true || frontHitNL[i] == true) && canChangeLanesNL[i] && isChangingLanesNL[i] == false)
                         {
-                            bool shouldStopForLight = false;
-                            if (hitWaypoint.onReachWaypointSettings.parentRoute.routeInfo != null)
+                            // Add null checks for side sensors too
+                            if (i < leftTransformCached.Count && leftTransformCached[i] != null &&
+                                i < rightTransformCached.Count && rightTransformCached[i] != null)
                             {
-                                shouldStopForLight = hitWaypoint.onReachWaypointSettings.parentRoute.routeInfo.stopForTrafficLight;
-                            }
-                            else
-                            {
-                                shouldStopForLight = hitWaypoint.onReachWaypointSettings.parentRoute.stopForTrafficLight;
-                            }
-
-                            if (shouldStopForLight && frontBoxcastResults[i].distance < 10f)
-                            {
-                                Debug.Log($"[SENSOR TRAFFIC] Car {carList[i].name} front sensor detected RED traffic light {frontBoxcastResults[i].distance:F1}m ahead");
-
-                                // Enhanced braking for red traffic lights
-                                overrideInputNL[i] = true;
-                                motorTorqueNL[i] = 0;
-                                brakeTorqueNL[i] = speedNL[i] * 3f; // Extra braking force for traffic lights
-
-                                // If very close to red light, stop completely
-                                if (frontBoxcastResults[i].distance < 4f)
+                                try
                                 {
-                                    Set_IsDrivingArray(i, false);
-                                    Debug.Log($"[SENSOR TRAFFIC] Car {carList[i].name} stopped for red light");
+                                    leftOriginList[i] = leftTransformCached[i].position;
+                                    leftDirectionList[i] = leftTransformCached[i].forward;
+                                    leftRotationList[i] = leftTransformCached[i].rotation;
+
+                                    leftBoxcastCommands[i] = new BoxcastCommand(
+                                        leftOriginList[i],
+                                        sideSensorSizeNL[i],
+                                        leftRotationList[i],
+                                        leftDirectionList[i],
+                                        new QueryParameters(layerMask, false),
+                                        sideSensorLengthNL[i]
+                                    );
+
+                                    rightOriginList[i] = rightTransformCached[i].position;
+                                    rightDirectionList[i] = rightTransformCached[i].forward;
+                                    rightRotationList[i] = rightTransformCached[i].rotation;
+
+                                    rightBoxcastCommands[i] = new BoxcastCommand(
+                                        rightOriginList[i],
+                                        sideSensorSizeNL[i],
+                                        rightRotationList[i],
+                                        rightDirectionList[i],
+                                        new QueryParameters(layerMask, false),
+                                        sideSensorLengthNL[i]
+                                    );
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    Debug.LogWarning($"BUILD: Error setting up side sensors for car {i}: {ex.Message}");
                                 }
                             }
                         }
+                    }
+                }
+            }
+            var handle = BoxcastCommand.ScheduleBatch(frontBoxcastCommands, frontBoxcastResults, 1, default);
+            handle.Complete();  // ← Complete the front boxcast
+            handle = BoxcastCommand.ScheduleBatch(leftBoxcastCommands, leftBoxcastResults, 1, default);
+            handle.Complete();
+            handle = BoxcastCommand.ScheduleBatch(rightBoxcastCommands, rightBoxcastResults, 1, default);
+            handle.Complete();
 
-                        // Turning collision filtering (your existing logic)
-                        if (i < carList.Count && carList[i] != null && carList[i].isTurning && frontHitTransform[i] != null)
-                        {
-                            if (frontHitTransform[i].CompareTag("vehicle"))
-                            {
-                                shouldIgnoreHit = true;
-                                Debug.Log($"Car {carList[i].name} is turning - IGNORING vehicle collision with {frontHitTransform[i].name} at distance {frontBoxcastResults[i].distance:F1}");
-                            }
-                            else if (frontHitTransform[i].CompareTag("Player"))
-                            {
-                                shouldIgnoreHit = false;
-                                Debug.Log($"Car {carList[i].name} is turning - BUT STILL detecting player {frontHitTransform[i].name}");
-                            }
-                        }
+            // Process sensor results
+            for (int i = 0; i < carCount; i++) // operate on results
+            {
+                // Process front sensor results with improved traffic light detection
+                bool hitDetected = frontBoxcastResults[i].collider != null;
 
-                        if (shouldIgnoreHit)
+                if (hitDetected)
+                {
+                    frontHitTransform[i] = frontBoxcastResults[i].transform;
+
+                    // Check if we should ignore this collision BEFORE setting frontHitNL
+                    bool shouldIgnoreHit = false;
+
+                    // Check for traffic light waypoints in front sensor
+                    AITrafficWaypoint hitWaypoint = frontHitTransform[i].GetComponent<AITrafficWaypoint>();
+                    if (hitWaypoint != null && hitWaypoint.isTrafficLightWaypoint)
+                    {
+                        bool shouldStopForLight = false;
+                        if (hitWaypoint.onReachWaypointSettings.parentRoute.routeInfo != null)
                         {
-                            frontHitNL[i] = false;
-                            frontHitDistanceNL[i] = frontSensorLengthNL[i];
+                            shouldStopForLight = hitWaypoint.onReachWaypointSettings.parentRoute.routeInfo.stopForTrafficLight;
                         }
                         else
                         {
-                            frontHitNL[i] = true;
-                            if (frontHitTransform[i] != frontPreviousHitTransform[i])
+                            shouldStopForLight = hitWaypoint.onReachWaypointSettings.parentRoute.stopForTrafficLight;
+                        }
+
+                        if (shouldStopForLight && frontBoxcastResults[i].distance < 10f)
+                        {
+                            Debug.Log($"[SENSOR TRAFFIC] Car {carList[i].name} front sensor detected RED traffic light {frontBoxcastResults[i].distance:F1}m ahead");
+
+                            // Enhanced braking for red traffic lights
+                            overrideInputNL[i] = true;
+                            motorTorqueNL[i] = 0;
+                            brakeTorqueNL[i] = speedNL[i] * 3f; // Extra braking force for traffic lights
+
+                            // If very close to red light, stop completely
+                            if (frontBoxcastResults[i].distance < 4f)
                             {
-                                frontPreviousHitTransform[i] = frontHitTransform[i];
+                                Set_IsDrivingArray(i, false);
+                                Debug.Log($"[SENSOR TRAFFIC] Car {carList[i].name} stopped for red light");
                             }
-                            frontHitDistanceNL[i] = frontBoxcastResults[i].distance;
                         }
                     }
-                    else // No collision detected
+
+                    // Turning collision filtering (your existing logic)
+                    if (i < carList.Count && carList[i] != null && carList[i].isTurning && frontHitTransform[i] != null)
+                    {
+                        if (frontHitTransform[i].CompareTag("vehicle"))
+                        {
+                            shouldIgnoreHit = true;
+                            Debug.Log($"Car {carList[i].name} is turning - IGNORING vehicle collision with {frontHitTransform[i].name} at distance {frontBoxcastResults[i].distance:F1}");
+                        }
+                        else if (frontHitTransform[i].CompareTag("Player"))
+                        {
+                            shouldIgnoreHit = false;
+                            Debug.Log($"Car {carList[i].name} is turning - BUT STILL detecting player {frontHitTransform[i].name}");
+                        }
+                    }
+
+                    if (shouldIgnoreHit)
                     {
                         frontHitNL[i] = false;
                         frontHitDistanceNL[i] = frontSensorLengthNL[i];
                     }
-
-                    // Process left sensor results
-                    leftHitNL[i] = leftBoxcastResults[i].collider == null ? false : true;
-                    if (leftHitNL[i])
-                    {
-                        leftHitTransform[i] = leftBoxcastResults[i].transform;
-                        leftHitDistanceNL[i] = leftBoxcastResults[i].distance;
-                    }
                     else
                     {
-                        leftHitDistanceNL[i] = sideSensorLengthNL[i];
-                    }
-
-                    // Process right sensor results
-                    rightHitNL[i] = rightBoxcastResults[i].collider == null ? false : true;
-                    if (rightHitNL[i])
-                    {
-                        rightHitTransform[i] = rightBoxcastResults[i].transform;
-                        rightHitDistanceNL[i] = rightBoxcastResults[i].distance;
-                    }
-                    else
-                    {
-                        rightHitDistanceNL[i] = sideSensorLengthNL[i];
+                        frontHitNL[i] = true;
+                        if (frontHitTransform[i] != frontPreviousHitTransform[i])
+                        {
+                            frontPreviousHitTransform[i] = frontHitTransform[i];
+                        }
+                        frontHitDistanceNL[i] = frontBoxcastResults[i].distance;
                     }
                 }
-
-                // Process car control logic (lane changing, physics, etc.)
-                for (int i = 0; i < carCount; i++) // operate on results
+                else // No collision detected
                 {
-                    if (isActiveNL[i] && canProcessNL[i])
+                    frontHitNL[i] = false;
+                    frontHitDistanceNL[i] = frontSensorLengthNL[i];
+                }
+
+                // Process left sensor results
+                leftHitNL[i] = leftBoxcastResults[i].collider == null ? false : true;
+                if (leftHitNL[i])
+                {
+                    leftHitTransform[i] = leftBoxcastResults[i].transform;
+                    leftHitDistanceNL[i] = leftBoxcastResults[i].distance;
+                }
+                else
+                {
+                    leftHitDistanceNL[i] = sideSensorLengthNL[i];
+                }
+
+                // Process right sensor results
+                rightHitNL[i] = rightBoxcastResults[i].collider == null ? false : true;
+                if (rightHitNL[i])
+                {
+                    rightHitTransform[i] = rightBoxcastResults[i].transform;
+                    rightHitDistanceNL[i] = rightBoxcastResults[i].distance;
+                }
+                else
+                {
+                    rightHitDistanceNL[i] = sideSensorLengthNL[i];
+                }
+            }
+
+            // Process car control logic (lane changing, physics, etc.)
+            for (int i = 0; i < carCount; i++) // operate on results
+            {
+                if (isActiveNL[i] && canProcessNL[i])
+                {
+                    #region Lane Change Logic
+                    if (useLaneChanging && isDrivingNL[i])
                     {
-                        #region Lane Change Logic
-                        if (useLaneChanging && isDrivingNL[i])
+                        if (speedNL[i] > minSpeedToChangeLanes)
                         {
-                            if (speedNL[i] > minSpeedToChangeLanes)
+                            if (!canChangeLanesNL[i])
                             {
-                                if (!canChangeLanesNL[i])
+                                changeLaneCooldownTimer[i] += deltaTime;
+                                if (changeLaneCooldownTimer[i] > changeLaneCooldown)
                                 {
-                                    changeLaneCooldownTimer[i] += deltaTime;
-                                    if (changeLaneCooldownTimer[i] > changeLaneCooldown)
-                                    {
-                                        canChangeLanesNL[i] = true;
-                                        changeLaneCooldownTimer[i] = 0f;
-                                    }
+                                    canChangeLanesNL[i] = true;
+                                    changeLaneCooldownTimer[i] = 0f;
                                 }
+                            }
 
-                                if ((forceChangeLanesNL[i] == true || frontHitNL[i] == true) && canChangeLanesNL[i] && isChangingLanesNL[i] == false)
+                            if ((forceChangeLanesNL[i] == true || frontHitNL[i] == true) && canChangeLanesNL[i] && isChangingLanesNL[i] == false)
+                            {
+                                changeLaneTriggerTimer[i] += Time.deltaTime;
+                                canTurnLeft = leftHitNL[i] == true ? false : true;
+                                canTurnRight = rightHitNL[i] == true ? false : true;
+                                if (changeLaneTriggerTimer[i] >= changeLaneTrigger || forceChangeLanesNL[i] == true)
                                 {
-                                    changeLaneTriggerTimer[i] += Time.deltaTime;
-                                    canTurnLeft = leftHitNL[i] == true ? false : true;
-                                    canTurnRight = rightHitNL[i] == true ? false : true;
-                                    if (changeLaneTriggerTimer[i] >= changeLaneTrigger || forceChangeLanesNL[i] == true)
-                                    {
-                                        canChangeLanesNL[i] = false;
-                                        nextWaypoint = currentWaypointList[i];
+                                    canChangeLanesNL[i] = false;
+                                    nextWaypoint = currentWaypointList[i];
 
-                                        if (nextWaypoint != null)
+                                    if (nextWaypoint != null)
+                                    {
+                                        if (nextWaypoint.onReachWaypointSettings.laneChangePoints.Count > 0)
                                         {
-                                            if (nextWaypoint.onReachWaypointSettings.laneChangePoints.Count > 0)
+                                            for (int j = 0; j < nextWaypoint.onReachWaypointSettings.laneChangePoints.Count; j++)
                                             {
-                                                for (int j = 0; j < nextWaypoint.onReachWaypointSettings.laneChangePoints.Count; j++)
+                                                if (
+                                                    PossibleTargetDirection(carTAA[i], nextWaypoint.onReachWaypointSettings.laneChangePoints[j].transform) == -1 && canTurnLeft ||
+                                                    PossibleTargetDirection(carTAA[i], nextWaypoint.onReachWaypointSettings.laneChangePoints[j].transform) == 1 && canTurnRight
+                                                    )
                                                 {
-                                                    if (
-                                                        PossibleTargetDirection(carTAA[i], nextWaypoint.onReachWaypointSettings.laneChangePoints[j].transform) == -1 && canTurnLeft ||
-                                                        PossibleTargetDirection(carTAA[i], nextWaypoint.onReachWaypointSettings.laneChangePoints[j].transform) == 1 && canTurnRight
-                                                        )
+                                                    for (int k = 0; k < nextWaypoint.onReachWaypointSettings.laneChangePoints[j].onReachWaypointSettings.parentRoute.vehicleTypes.Length; k++)
                                                     {
-                                                        for (int k = 0; k < nextWaypoint.onReachWaypointSettings.laneChangePoints[j].onReachWaypointSettings.parentRoute.vehicleTypes.Length; k++)
+                                                        if (carList[i].vehicleType == nextWaypoint.onReachWaypointSettings.laneChangePoints[j].onReachWaypointSettings.parentRoute.vehicleTypes[k])
                                                         {
-                                                            if (carList[i].vehicleType == nextWaypoint.onReachWaypointSettings.laneChangePoints[j].onReachWaypointSettings.parentRoute.vehicleTypes[k])
-                                                            {
-                                                                carList[i].ChangeToRouteWaypoint(nextWaypoint.onReachWaypointSettings.laneChangePoints[j].onReachWaypointSettings);
-                                                                isChangingLanesNL[i] = true;
-                                                                canChangeLanesNL[i] = false;
-                                                                forceChangeLanesNL[i] = false;
-                                                                changeLaneTriggerTimer[i] = 0f;
-                                                            }
+                                                            carList[i].ChangeToRouteWaypoint(nextWaypoint.onReachWaypointSettings.laneChangePoints[j].onReachWaypointSettings);
+                                                            isChangingLanesNL[i] = true;
+                                                            canChangeLanesNL[i] = false;
+                                                            forceChangeLanesNL[i] = false;
+                                                            changeLaneTriggerTimer[i] = 0f;
                                                         }
                                                     }
                                                 }
@@ -2553,125 +2852,254 @@
                                         }
                                     }
                                 }
-                                else
-                                {
-                                    changeLaneTriggerTimer[i] = 0f;
-                                    leftHitNL[i] = false;
-                                    rightHitNL[i] = false;
-                                    leftHitDistanceNL[i] = sideSensorLengthNL[i];
-                                    rightHitDistanceNL[i] = sideSensorLengthNL[i];
-                                }
-                            }
-                        }
-                        #endregion
-
-                        // Physics and drag logic
-                        if ((speedNL[i] == 0 || !overrideInputNL[i]))
-                        {
-                            rigidbodyList[i].drag = minDragNL[i];
-                            rigidbodyList[i].angularDrag = minAngularDragNL[i];
-                        }
-                        else if (overrideInputNL[i])
-                        {
-                            isBrakingNL[i] = true;
-                            if (frontHitNL[i])
-                            {
-                                motorTorqueNL[i] = 0;
-                                brakeTorqueNL[i] = Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i]) * (speedNL[i]);
-                                dragToAdd = Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i]) * ((speedNL[i]));
-                                if (frontHitDistanceNL[i] < 1) dragToAdd = targetSpeedNL[i] * (speedNL[i] * 50);
-
-                                rigidbodyList[i].drag = minDragNL[i] + (Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i]) * dragToAdd);
-                                rigidbodyList[i].angularDrag = minAngularDragNL[i] + Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i] * dragToAdd);
                             }
                             else
                             {
-                                motorTorqueNL[i] = 0;
-                                dragToAdd = Mathf.InverseLerp(5, 0, distanceToEndPointNL[i]);
-                                rigidbodyList[i].drag = dragToAdd;
-                                rigidbodyList[i].angularDrag = dragToAdd;
+                                changeLaneTriggerTimer[i] = 0f;
+                                leftHitNL[i] = false;
+                                rightHitNL[i] = false;
+                                leftHitDistanceNL[i] = sideSensorLengthNL[i];
+                                rightHitDistanceNL[i] = sideSensorLengthNL[i];
                             }
-                            changeLaneTriggerTimer[i] = 0;
                         }
+                    }
+                    #endregion
 
-                        // Wheel physics processing
-                        for (int j = 0; j < 4; j++) // move
+                    // Physics and drag logic
+                    if ((speedNL[i] == 0 || !overrideInputNL[i]))
+                    {
+                        rigidbodyList[i].drag = minDragNL[i];
+                        rigidbodyList[i].angularDrag = minAngularDragNL[i];
+                    }
+                    else if (overrideInputNL[i])
+                    {
+                        isBrakingNL[i] = true;
+                        if (frontHitNL[i])
                         {
-                            if (j == 0)
-                            {
-                                currentWheelCollider = frontRightWheelColliderList[i];
-                                currentWheelCollider.steerAngle = steerAngleNL[i];
-                                currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-                                FRwheelPositionNL[i] = wheelPosition_Cached;
-                                FRwheelRotationNL[i] = wheelQuaternion_Cached;
-                            }
-                            else if (j == 1)
-                            {
-                                currentWheelCollider = frontLefttWheelColliderList[i];
-                                currentWheelCollider.steerAngle = steerAngleNL[i];
-                                currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-                                FLwheelPositionNL[i] = wheelPosition_Cached;
-                                FLwheelRotationNL[i] = wheelQuaternion_Cached;
-                            }
-                            else if (j == 2)
-                            {
-                                currentWheelCollider = backRighttWheelColliderList[i];
-                                currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-                                BRwheelPositionNL[i] = wheelPosition_Cached;
-                                BRwheelRotationNL[i] = wheelQuaternion_Cached;
-                            }
-                            else if (j == 3)
-                            {
-                                currentWheelCollider = backLeftWheelColliderList[i];
-                                currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-                                BLwheelPositionNL[i] = wheelPosition_Cached;
-                                BLwheelRotationNL[i] = wheelQuaternion_Cached;
-                            }
-                            currentWheelCollider.motorTorque = motorTorqueNL[i];
-                            currentWheelCollider.brakeTorque = brakeTorqueNL[i];
-                            currentWheelCollider.sidewaysFriction = speedNL[i] < 1 ? lowSidewaysWheelFrictionCurve : highSidewaysWheelFrictionCurve;
-                        }
+                            motorTorqueNL[i] = 0;
+                            brakeTorqueNL[i] = Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i]) * (speedNL[i]);
+                            dragToAdd = Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i]) * ((speedNL[i]));
+                            if (frontHitDistanceNL[i] < 1) dragToAdd = targetSpeedNL[i] * (speedNL[i] * 50);
 
-                        // Brake light logic
-                        if ((frontHitNL[i] && speedNL[i] < (previousFrameSpeedNL[i] + 5)) || overrideDragNL[i])
-                            isBrakingNL[i] = true;
-
-                        if (speedNL[i] + .5f > previousFrameSpeedNL[i] && speedNL[i] > 15 && frontHitNL[i])
-                            isBrakingNL[i] = false;
-
-                        if (isBrakingNL[i])
-                        {
-                            brakeTimeNL[i] += deltaTime;
-                            if (brakeTimeNL[i] > 0.15f)
-                            {
-                                brakeMaterial[i].SetColor(emissionColorName, brakeOnColor);
-                            }
+                            rigidbodyList[i].drag = minDragNL[i] + (Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i]) * dragToAdd);
+                            rigidbodyList[i].angularDrag = minAngularDragNL[i] + Mathf.InverseLerp(0, frontSensorLengthNL[i], frontHitDistanceNL[i] * dragToAdd);
                         }
                         else
                         {
-                            brakeTimeNL[i] = 0f;
-                            brakeMaterial[i].SetColor(emissionColorName, brakeOffColor);
+                            motorTorqueNL[i] = 0;
+                            dragToAdd = Mathf.InverseLerp(5, 0, distanceToEndPointNL[i]);
+                            rigidbodyList[i].drag = dragToAdd;
+                            rigidbodyList[i].angularDrag = dragToAdd;
                         }
-                        previousFrameSpeedNL[i] = speedNL[i];
+                        changeLaneTriggerTimer[i] = 0;
+                        if (i == 0)
+                        {
+                            CapturePhysicsSnapshot(i);
+                        }
+                    }
+
+
+
+                    // Wheel physics processing with VR safety checks
+                    // In AITrafficController.FixedUpdate(), replace the wheel physics section (around line 1400)
+                    // with this VR streaming-safe version:
+
+                    // REPLACE the wheel physics section in FixedUpdate with this FIXED version:
+
+                    // VR STREAMING-SAFE: Wheel physics processing
+                    for (int j = 0; j < 4; j++)
+                    {
+                        WheelCollider wheelCollider = null;
+                        // Get wheel collider with null safety
+                        if (j == 0 && i < frontRightWheelColliderList.Count)
+                            wheelCollider = frontRightWheelColliderList[i];
+                        else if (j == 1 && i < frontLefttWheelColliderList.Count)
+                            wheelCollider = frontLefttWheelColliderList[i];
+                        else if (j == 2 && i < backRighttWheelColliderList.Count)
+                            wheelCollider = backRighttWheelColliderList[i];
+                        else if (j == 3 && i < backLeftWheelColliderList.Count)
+                            wheelCollider = backLeftWheelColliderList[i];
+
+                        if (wheelCollider != null && wheelCollider.enabled)
+                        {
+                            // VR STREAMING FIX: Check ground contact with retry
+                            WheelHit groundHit;
+                            bool hasGroundContact = wheelCollider.GetGroundHit(out groundHit);
+
+                            // If no ground contact in VR build, try force-waking the physics
+                            if (!hasGroundContact && !Application.isEditor)
+                            {
+                                if (rigidbodyList[i] != null)
+                                {
+                                    rigidbodyList[i].WakeUp();
+                                }
+                                hasGroundContact = wheelCollider.GetGroundHit(out groundHit);
+                            }
+
+                            // VR STREAMING-SAFE: Validate physics values
+                            float motorTorque = Mathf.Clamp(motorTorqueNL[i], -15000f, 15000f);
+                            float brakeTorque = Mathf.Clamp(brakeTorqueNL[i], -1f, 15000f);
+
+                            try
+                            {
+                                // Apply physics with extra validation for streaming
+                                wheelCollider.motorTorque = motorTorque;
+                                wheelCollider.brakeTorque = brakeTorque;
+
+                                // CRITICAL FIX: Convert world positions to local positions!
+                                wheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
+
+                                // Convert WORLD position to LOCAL position relative to car
+                                Vector3 localWheelPosition = carList[i].transform.InverseTransformPoint(wheelPosition_Cached);
+
+                                // Store LOCAL positions instead of world positions
+                                switch (j)
+                                {
+                                    case 0:
+                                        wheelCollider.steerAngle = steerAngleNL[i];
+                                        FRwheelPositionNL[i] = localWheelPosition; // ← Now using LOCAL position!
+                                        FRwheelRotationNL[i] = wheelQuaternion_Cached;
+                                        break;
+                                    case 1:
+                                        wheelCollider.steerAngle = steerAngleNL[i];
+                                        FLwheelPositionNL[i] = localWheelPosition; // ← Now using LOCAL position!
+                                        FLwheelRotationNL[i] = wheelQuaternion_Cached;
+                                        break;
+                                    case 2:
+                                        BRwheelPositionNL[i] = localWheelPosition; // ← Now using LOCAL position!
+                                        BRwheelRotationNL[i] = wheelQuaternion_Cached;
+                                        break;
+                                    case 3:
+                                        BLwheelPositionNL[i] = localWheelPosition; // ← Now using LOCAL position!
+                                        BLwheelRotationNL[i] = wheelQuaternion_Cached;
+                                        break;
+                                }
+
+                                // VR STREAMING DEBUG: Log contact issues
+                                if (!hasGroundContact && !Application.isEditor && Time.fixedTime % 2.0f < Time.fixedDeltaTime)
+                                {
+                                    Debug.LogWarning($"VR STREAMING: Car {i} wheel {j} has no ground contact");
+                                    Vector3 wheelPos = wheelCollider.transform.position;
+                                    if (Physics.Raycast(wheelPos, Vector3.down, out RaycastHit hit, 2f))
+                                    {
+                                        Debug.Log($"VR STREAMING: Found ground {hit.distance}m below wheel via raycast: {hit.collider.name}");
+                                    }
+                                }
+                            }
+                            catch (System.Exception ex)
+                            {
+                                Debug.LogError($"VR STREAMING ERROR: Wheel physics failed for car {i} wheel {j}: {ex.Message}");
+                            }
+                        }
+                    }
+
+                    // Brake light logic
+                    if ((frontHitNL[i] && speedNL[i] < (previousFrameSpeedNL[i] + 5)) || overrideDragNL[i])
+                        isBrakingNL[i] = true;
+
+                    if (speedNL[i] + .5f > previousFrameSpeedNL[i] && speedNL[i] > 15 && frontHitNL[i])
+                        isBrakingNL[i] = false;
+
+                    if (isBrakingNL[i])
+                    {
+                        brakeTimeNL[i] += deltaTime;
+                        if (brakeTimeNL[i] > 0.15f)
+                        {
+                            brakeMaterial[i].SetColor(emissionColorName, brakeOnColor);
+                        }
+                    }
+                    else
+                    {
+                        brakeTimeNL[i] = 0f;
+                        brakeMaterial[i].SetColor(emissionColorName, brakeOffColor);
+                    }
+                    previousFrameSpeedNL[i] = speedNL[i];
+                }
+            }
+
+            // Execute wheel and position jobs
+            // Execute wheel and position jobs - WITH VR SAFETY CHECKS
+            carTransformpositionJob = new AITrafficCarPositionJob
+            {
+                canProcessNA = canProcessNL.AsArray(),
+                carTransformPreviousPositionNA = carTransformPreviousPositionNL.AsArray(),
+                carTransformPositionNA = carTransformPositionNL.AsArray(),
+            };
+            jobHandle = carTransformpositionJob.Schedule(carTAA);
+            jobHandle.Complete();
+
+            // VR WHEEL JOB SAFETY: Only run wheel jobs if NOT in VR build or if wheels are properly grounded
+            bool runWheelJobs = Application.isEditor; // Always run in editor
+
+            if (!Application.isEditor)
+            {
+                // In VR builds, use multiple methods to check for grounded wheels
+                int groundedWheels = 0;
+                int totalWheelsChecked = 0;
+
+                for (int i = 0; i < Math.Min(5, carCount); i++) // Check first 5 cars
+                {
+                    if (i < carList.Count && carList[i] != null)
+                    {
+                        // Method 1: Check wheel colliders
+                        if (i < frontRightWheelColliderList.Count && frontRightWheelColliderList[i] != null)
+                        {
+                            WheelHit hit;
+                            if (frontRightWheelColliderList[i].GetGroundHit(out hit))
+                            {
+                                groundedWheels++;
+                            }
+                            totalWheelsChecked++;
+                        }
+
+                        // Method 2: Check backup ground detector if available
+                        BackupGroundDetector detector = carList[i].GetComponent<BackupGroundDetector>();
+                        if (detector != null && detector.HasAnyGroundContact())
+                        {
+                            groundedWheels++;
+                        }
+
+                        // Method 3: Manual raycast check as last resort
+                        if (groundedWheels == 0)
+                        {
+                            Vector3 carPos = carList[i].transform.position;
+                            if (Physics.Raycast(carPos, Vector3.down, 3f))
+                            {
+                                groundedWheels++;
+                                Debug.Log($"BUILD: Manual raycast found ground for {carList[i].name}");
+                            }
+                        }
                     }
                 }
 
-                // Execute wheel and position jobs
-                carTransformpositionJob = new AITrafficCarPositionJob
-                {
-                    canProcessNA = canProcessNL.AsArray(),
-                    carTransformPreviousPositionNA = carTransformPreviousPositionNL.AsArray(),
-                    carTransformPositionNA = carTransformPositionNL.AsArray(),
-                };
-                jobHandle = carTransformpositionJob.Schedule(carTAA);
-                jobHandle.Complete();
+                runWheelJobs = groundedWheels > 0; // Only run if we have some grounded wheels
 
+                if (!runWheelJobs)
+                {
+                    Debug.Log($"VR BUILD: Skipping wheel jobs - {groundedWheels}/{totalWheelsChecked} wheels grounded");
+
+                    // EMERGENCY: Try to force ground contact every 60 frames (1 second at 60fps)
+                    if (Time.fixedTime % 1f < Time.fixedDeltaTime)
+                    {
+                        ForceWheelGroundContact();
+                    }
+                }
+                else
+                {
+                    Debug.Log($"VR BUILD: Running wheel jobs - {groundedWheels} wheels have ground contact");
+                }
+            }
+
+            if (runWheelJobs)
+            {
+                // Run wheel jobs with VR safety flags
                 frAITrafficCarWheelJob = new AITrafficCarWheelJob
                 {
                     canProcessNA = canProcessNL.AsArray(),
                     wheelPositionNA = FRwheelPositionNL.AsArray(),
                     wheelQuaternionNA = FRwheelRotationNL.AsArray(),
                     speedNA = speedNL.AsArray(),
+                    vrWheelFixActiveNA = vrWheelFixActiveNL.AsArray(),
                 };
                 jobHandle = frAITrafficCarWheelJob.Schedule(frontRightWheelTAA);
                 jobHandle.Complete();
@@ -2682,6 +3110,7 @@
                     wheelPositionNA = FLwheelPositionNL.AsArray(),
                     wheelQuaternionNA = FLwheelRotationNL.AsArray(),
                     speedNA = speedNL.AsArray(),
+                    vrWheelFixActiveNA = vrWheelFixActiveNL.AsArray(),
                 };
                 jobHandle = flAITrafficCarWheelJob.Schedule(frontLeftWheelTAA);
                 jobHandle.Complete();
@@ -2692,6 +3121,7 @@
                     wheelPositionNA = BRwheelPositionNL.AsArray(),
                     wheelQuaternionNA = BRwheelRotationNL.AsArray(),
                     speedNA = speedNL.AsArray(),
+                    vrWheelFixActiveNA = vrWheelFixActiveNL.AsArray(),
                 };
                 jobHandle = brAITrafficCarWheelJob.Schedule(backRightWheelTAA);
                 jobHandle.Complete();
@@ -2702,80 +3132,141 @@
                     wheelPositionNA = BLwheelPositionNL.AsArray(),
                     wheelQuaternionNA = BLwheelRotationNL.AsArray(),
                     speedNA = speedNL.AsArray(),
+                    vrWheelFixActiveNA = vrWheelFixActiveNL.AsArray(),
                 };
                 jobHandle = blAITrafficCarWheelJob.Schedule(backLeftWheelTAA);
                 jobHandle.Complete();
-
-                // Pooling system processing
-                if (usePooling)
+            }
+            else
+            {
+                // VR BUILD: Manually position wheel meshes when jobs are skipped
+                for (int i = 0; i < carCount; i++)
                 {
-                    centerPosition = centerPoint.position;
-
-                    // ADD THIS DEBUG BLOCK
-                    //static int debugFrame = 0;
-                    debugFrame++;
-                    if (debugFrame % 300 == 0) // Log every 5 seconds at 60fps
+                    if (i < carList.Count && carList[i] != null && carList[i]._wheels != null)
                     {
-                        Debug.Log($"[POOLING] Center position: {centerPosition}");
-                        Debug.Log($"[POOLING] Current density: {currentDensity}, Target density: {density}");
-                        Debug.Log($"[POOLING] Traffic pool count: {trafficPool.Count}");
-                        Debug.Log($"[POOLING] Active cars: {carList.Count - trafficPool.Count}");
-
-                        // Check visibility states
-                        int visibleCars = 0;
-                        int invisibleCars = 0;
-                        for (int i = 0; i < carCount; i++)
+                        // Keep wheel meshes at correct local positions
+                        Vector3[] correctPositions = new Vector3[]
                         {
-                            if (isVisibleNL[i]) visibleCars++;
-                            else invisibleCars++;
+                new Vector3(0.6f, -0.4f, 1.2f),   // FR
+                new Vector3(-0.6f, -0.4f, 1.2f),  // FL
+                new Vector3(0.6f, -0.4f, -1.2f),  // BR
+                new Vector3(-0.6f, -0.4f, -1.2f)  // BL
+                        };
+
+                        for (int w = 0; w < 4 && w < carList[i]._wheels.Length; w++)
+                        {
+                            if (carList[i]._wheels[w].meshTransform != null)
+                            {
+                                carList[i]._wheels[w].meshTransform.localPosition = correctPositions[w];
+                            }
                         }
-                        Debug.Log($"[POOLING] Visible cars: {visibleCars}, Invisible cars: {invisibleCars}");
                     }
-                    _AITrafficDistanceJob = new AITrafficDistanceJob
-                    {
-                        canProcessNA = canProcessNL.AsArray(),
-                        playerPosition = centerPosition,
-                        distanceToPlayerNA = distanceToPlayerNL.AsArray(),
-                        isVisibleNA = isVisibleNL.AsArray(),
-                        withinLimitNA = withinLimitNL.AsArray(),
-                        cullDistance = cullHeadLight,
-                        lightIsActiveNA = lightIsActiveNL.AsArray(),
-                        outOfBoundsNA = outOfBoundsNL.AsArray(),
-                        actizeZone = actizeZone,
-                        spawnZone = spawnZone,
-                        isDisabledNA = isDisabledNL.AsArray(),
-                    };
-                    jobHandle = _AITrafficDistanceJob.Schedule(carTAA);
-                    jobHandle.Complete();
+                }
+            }
 
-                    // Update route densities
-                    for (int i = 0; i < allWaypointRoutesList.Count; i++)
-                    {
-                        allWaypointRoutesList[i].previousDensity = allWaypointRoutesList[i].currentDensity;
-                        allWaypointRoutesList[i].currentDensity = 0;
-                    }
+            // Pooling system processing
+            if (usePooling)
+            {
+                centerPosition = centerPoint.position;
 
+                // ADD THIS DEBUG BLOCK
+                //static int debugFrame = 0;
+                debugFrame++;
+                if (debugFrame % 300 == 0) // Log every 5 seconds at 60fps
+                {
+                    Debug.Log($"[POOLING] Center position: {centerPosition}");
+                    Debug.Log($"[POOLING] Current density: {currentDensity}, Target density: {density}");
+                    Debug.Log($"[POOLING] Traffic pool count: {trafficPool.Count}");
+                    Debug.Log($"[POOLING] Active cars: {carList.Count - trafficPool.Count}");
+
+                    // Check visibility states
+                    int visibleCars = 0;
+                    int invisibleCars = 0;
                     for (int i = 0; i < carCount; i++)
                     {
-                        if (canProcessNL[i])
+                        if (isVisibleNL[i]) visibleCars++;
+                        else invisibleCars++;
+                    }
+                    Debug.Log($"[POOLING] Visible cars: {visibleCars}, Invisible cars: {invisibleCars}");
+                }
+                _AITrafficDistanceJob = new AITrafficDistanceJob
+                {
+                    canProcessNA = canProcessNL.AsArray(),
+                    playerPosition = centerPosition,
+                    distanceToPlayerNA = distanceToPlayerNL.AsArray(),
+                    isVisibleNA = isVisibleNL.AsArray(),
+                    withinLimitNA = withinLimitNL.AsArray(),
+                    cullDistance = cullHeadLight,
+                    lightIsActiveNA = lightIsActiveNL.AsArray(),
+                    outOfBoundsNA = outOfBoundsNL.AsArray(),
+                    actizeZone = actizeZone,
+                    spawnZone = spawnZone,
+                    isDisabledNA = isDisabledNL.AsArray(),
+                };
+                jobHandle = _AITrafficDistanceJob.Schedule(carTAA);
+                jobHandle.Complete();
+
+                // Update route densities
+                for (int i = 0; i < allWaypointRoutesList.Count; i++)
+                {
+                    allWaypointRoutesList[i].previousDensity = allWaypointRoutesList[i].currentDensity;
+                    allWaypointRoutesList[i].currentDensity = 0;
+                }
+
+                for (int i = 0; i < carCount; i++)
+                {
+                    // CRITICAL: Add bounds checking for all array accesses
+                    if (i >= carList.Count || carList[i] == null ||
+                        i >= canProcessNL.Length || i >= isDisabledNL.Length ||
+                        i >= outOfBoundsNL.Length || i >= carRouteList.Count)
+                    {
+                        continue; // Skip this iteration if any bounds would be exceeded
+                    }
+
+                    if (canProcessNL[i])
+                    {
+                        if (isDisabledNL[i] == false)
                         {
-                            if (isDisabledNL[i] == false)
+                            if (carRouteList[i] != null)  // Add null check for route
                             {
                                 carRouteList[i].currentDensity += 1;
-                                if (outOfBoundsNL[i])
-                                {
-                                    Debug.Log($"[POOLING] Moving car {carList[i].name} to pool (out of bounds)");
-                                    MoveCarToPool(carList[i].assignedIndex);
-                                }
                             }
-                            else if (outOfBoundsNL[i] == false)
+
+                            if (outOfBoundsNL[i])
+                            {
+                                Debug.Log($"[POOLING] Moving car {carList[i].name} to pool (out of bounds)");
+
+                                // IMPROVED: Use the loop index instead of assignedIndex
+                                MoveCarToPool(i);  // ← Use 'i' directly since we're already bounds-checked
+
+                                // Alternative safer approach using assignedIndex:
+                                /*
+                                int assignedIndex = carList[i].assignedIndex;
+                                if (assignedIndex >= 0 && assignedIndex < carList.Count && 
+                                    assignedIndex < canProcessNL.Length)
+                                {
+                                    MoveCarToPool(assignedIndex);
+                                }
+                                else
+                                {
+                                    Debug.LogWarning($"Invalid assignedIndex {assignedIndex} for car {carList[i].name}, using loop index {i}");
+                                    MoveCarToPool(i);
+                                }
+                                */
+                            }
+                        }
+                        else if (outOfBoundsNL[i] == false)
+                        {
+                            // Add bounds checking for these arrays too
+                            if (i < lightIsActiveNL.Length && i < isEnabledNL.Length && i < headLight.Count)
                             {
                                 if (lightIsActiveNL[i])
                                 {
                                     if (isEnabledNL[i] == false)
                                     {
                                         isEnabledNL[i] = true;
-                                        headLight[i].enabled = true;
+                                        if (headLight[i] != null)  // Add null check
+                                            headLight[i].enabled = true;
                                     }
                                 }
                                 else
@@ -2783,18 +3274,132 @@
                                     if (isEnabledNL[i])
                                     {
                                         isEnabledNL[i] = false;
-                                        headLight[i].enabled = false;
+                                        if (headLight[i] != null)  // Add null check
+                                            headLight[i].enabled = false;
                                     }
                                 }
                             }
                         }
                     }
+                }
 
-                    if (spawnTimer >= spawnRate) SpawnTraffic();
-                    else spawnTimer += deltaTime;
+                if (spawnTimer >= spawnRate) SpawnTraffic();
+                else spawnTimer += deltaTime;
+            }
+        }
+
+        // Add to AITrafficController.Start()
+        private void DetectVirtualDesktop()
+        {
+            // Check if we're running through Virtual Desktop
+            bool isVirtualDesktop = SystemInfo.deviceName.Contains("Virtual") ||
+                                   Application.platform == RuntimePlatform.WindowsPlayer;
+
+            if (isVirtualDesktop)
+            {
+                Debug.Log("DETECTED: Running on PC build (likely Virtual Desktop streaming)");
+                Debug.Log($"Target FPS: {Application.targetFrameRate}");
+                Debug.Log($"Fixed Delta: {Time.fixedDeltaTime}");
+                Debug.Log($"VSync Count: {QualitySettings.vSyncCount}");
+
+                // Force optimal settings for VR streaming
+                Application.targetFrameRate = 90;
+                QualitySettings.vSyncCount = 0; // Disable VSync for streaming
+
+                Debug.Log("Applied VR streaming optimizations");
+            }
+        }
+
+
+        // Execute sensor jobs
+
+        public void DiagnoseGroundContactImmediate()
+        {
+            Debug.Log($"=== IMMEDIATE CAR DIAGNOSTIC (carCount: {carCount}) ===");
+
+            if (carCount > 0 && carList.Count > 0 && carList[0] != null)
+            {
+                int carIndex = 0;
+                Debug.Log($"Car {carIndex} ({carList[carIndex].name}):");
+                Debug.Log($"  Position: {carList[carIndex].transform.position}");
+                Debug.Log($"  Active: {carList[carIndex].gameObject.activeInHierarchy}");
+                Debug.Log($"  IsDriving: {isDrivingNL[carIndex]}");
+                Debug.Log($"  Speed: {speedNL[carIndex]:F2}");
+                Debug.Log($"  Motor Torque: {motorTorqueNL[carIndex]:F1}");
+                Debug.Log($"  Brake Torque: {brakeTorqueNL[carIndex]:F1}");
+
+                // Check wheel colliders
+                if (frontRightWheelColliderList.Count > carIndex && frontRightWheelColliderList[carIndex] != null)
+                {
+                    WheelCollider wheel = frontRightWheelColliderList[carIndex];
+                    WheelHit hit;
+                    bool grounded = wheel.GetGroundHit(out hit);
+
+                    Debug.Log($"  FR Wheel - Grounded: {grounded}, Position: {wheel.transform.position}");
+                    Debug.Log($"  FR Wheel - Motor: {wheel.motorTorque:F1}, Brake: {wheel.brakeTorque:F1}");
+
+                    if (!grounded)
+                    {
+                        // Check what's below this wheel
+                        Vector3 wheelPos = wheel.transform.position;
+                        if (Physics.Raycast(wheelPos, Vector3.down, out RaycastHit rayHit, 5f))
+                        {
+                            Debug.Log($"  Ground {rayHit.distance:F2}m below wheel: {rayHit.collider.name}");
+                        }
+                        else
+                        {
+                            Debug.LogError($"  NO GROUND within 5m below wheel!");
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"  NO FRONT RIGHT WHEEL COLLIDER!");
                 }
             }
-        
+
+            Debug.Log("=== END IMMEDIATE DIAGNOSTIC ===");
+        }
+        private void DiagnoseGroundContact()
+        {
+            if (!Application.isEditor)
+            {
+                Debug.Log("=== GROUND CONTACT DIAGNOSTIC ===");
+
+                var controller = AITrafficController.Instance;
+                if (controller != null)
+                {
+                    var cars = controller.GetCarList();
+
+                    for (int i = 0; i < Math.Min(3, cars.Count); i++)
+                    {
+                        if (cars[i] != null)
+                        {
+                            Debug.Log($"Car {cars[i].name}:");
+                            Debug.Log($"  Position: {cars[i].transform.position}");
+                            Debug.Log($"  Velocity: {cars[i].rb?.velocity ?? Vector3.zero}");
+
+                            // Check each wheel
+                            for (int w = 0; w < cars[i]._wheels.Length; w++)
+                            {
+                                if (cars[i]._wheels[w].collider != null)
+                                {
+                                    WheelHit hit;
+                                    bool grounded = cars[i]._wheels[w].collider.GetGroundHit(out hit);
+                                    Debug.Log($"  Wheel {w}: Grounded={grounded}, Position={cars[i]._wheels[w].collider.transform.position}");
+
+                                    if (grounded)
+                                    {
+                                        Debug.Log($"    Ground: {hit.collider.name} at {hit.point}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
 
         // Add this supporting method for checking upcoming traffic lights
         // Add this supporting method for checking upcoming traffic lights
@@ -3091,10 +3696,20 @@
             Debug.LogWarning("No compatible random cars in pool for route");
             return null;
         }
+        public void SetVRWheelFixActive(int carIndex, bool active)
+        {
+            if (carIndex >= 0 && carIndex < vrWheelFixActiveNL.Length)
+            {
+                vrWheelFixActiveNL[carIndex] = active;
+                Debug.Log($"Set VR wheel fix active for car {carIndex}: {active}");
+            }
+        }
 
         public void DisposeAllNativeCollections()
         {
             // Native Lists Disposal
+            if (vrWheelFixActiveNL.IsCreated) vrWheelFixActiveNL.Dispose();
+
             if (currentRoutePointIndexNL.IsCreated) currentRoutePointIndexNL.Dispose();
             if (waypointDataListCountNL.IsCreated) waypointDataListCountNL.Dispose();
             if (carTransformPreviousPositionNL.IsCreated) carTransformPreviousPositionNL.Dispose();
@@ -3956,6 +4571,29 @@
 
         public void MoveCarToPool(int _index)
         {
+            // CRITICAL: Add bounds checking HERE, not in the coroutine!
+            if (_index < 0 || _index >= carList.Count)
+            {
+                Debug.LogError($"MoveCarToPool: Invalid index {_index}. carList.Count = {carList.Count}");
+                return;
+            }
+
+            if (carList[_index] == null)
+            {
+                Debug.LogError($"MoveCarToPool: Car at index {_index} is null!");
+                return;
+            }
+
+            // Add native list bounds checking too
+            if (_index >= canChangeLanesNL.Length || _index >= isChangingLanesNL.Length ||
+                _index >= forceChangeLanesNL.Length || _index >= isDisabledNL.Length ||
+                _index >= isActiveNL.Length)
+            {
+                Debug.LogError($"MoveCarToPool: Index {_index} out of range for native lists!");
+                return;
+            }
+
+            // NOW it's safe to access the arrays:
             canChangeLanesNL[_index] = false;
             isChangingLanesNL[_index] = false;
             forceChangeLanesNL[_index] = false;
@@ -3994,9 +4632,14 @@
 
         public void MoveAllCarsToPool()
         {
-            for (int i = 0; i < isActiveNL.Length; i++)
+            // Use the smaller of the two counts to prevent out of range
+            int maxIndex = Mathf.Min(isActiveNL.Length, carList.Count);
+
+            for (int i = 0; i < maxIndex; i++)
             {
-                if (isActiveNL[i])
+                // Additional safety check
+                if (i < carList.Count && carList[i] != null &&
+                    i < isActiveNL.Length && isActiveNL[i])
                 {
                     canChangeLanesNL[i] = false;
                     isChangingLanesNL[i] = false;
@@ -4007,6 +4650,8 @@
                     StartCoroutine(MoveCarToPoolCoroutine(i));
                 }
             }
+
+            Debug.Log($"MoveAllCarsToPool: Processed {maxIndex} cars safely");
         }
 
         // Add this to AITrafficController
@@ -4319,10 +4964,13 @@
         public void DisableAllCars()
         {
             usePooling = false;
-            for (int i = 0; i < carList.Count; i++)
+            for (int i = 0; i < carList.Count; i++)  // ← Use carList.Count, not native list length
             {
-                MoveCarToPool(i);
-                Set_CanProcess(i, false);
+                if (carList[i] != null)  // ← Add null check
+                {
+                    MoveCarToPool(i);
+                    Set_CanProcess(i, false);
+                }
             }
         }
 
@@ -4505,6 +5153,212 @@
             }
 
             return nearestIndex;
+        }
+
+        // Add this method to AITrafficController class - CRITICAL for builds
+        public void ConfigureBuildPhysics()
+        {
+            if (!Application.isEditor)
+            {
+                Debug.Log("BUILD: Configuring traffic system for VR streaming");
+
+                // Force wheel collider stability for builds
+                StartCoroutine(BuildWheelColliderFix());
+
+                // Disable pooling initially to let physics settle
+                bool originalPooling = usePooling;
+                usePooling = false;
+
+                // Wait for physics to stabilize, then re-enable pooling
+                StartCoroutine(RestorePoolingAfterDelay(originalPooling));
+            }
+        }
+
+        private IEnumerator BuildWheelColliderFix()
+        {
+            // Wait for initial physics setup
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            Debug.Log("BUILD: Applying wheel collider fixes");
+
+            // Apply fixes to all registered cars
+            for (int i = 0; i < carList.Count; i++)
+            {
+                if (carList[i] != null)
+                {
+                    FixCarWheelsForBuild(carList[i]);
+                }
+
+                // Spread fixes across frames to prevent frame drops
+                if (i % 3 == 0) yield return null;
+            }
+
+            Debug.Log("BUILD: Wheel collider fixes complete");
+        }
+
+        private void FixCarWheelsForBuild(AITrafficCar car)
+        {
+            if (car._wheels == null || car._wheels.Length < 4) return;
+
+            // Ensure rigidbody is properly configured
+            if (car.rb != null)
+            {
+                car.rb.interpolation = RigidbodyInterpolation.Interpolate;
+                car.rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                car.rb.sleepThreshold = 0.005f; // Keep awake for VR
+            }
+
+            // Fix each wheel collider
+            for (int w = 0; w < 4; w++)
+            {
+                if (car._wheels[w].collider != null)
+                {
+                    WheelCollider wc = car._wheels[w].collider;
+
+                    // Ensure proper parent relationship - CRITICAL for builds
+                    if (wc.transform.parent != car.transform)
+                    {
+                        wc.transform.SetParent(car.transform, false);
+                        Debug.Log($"BUILD: Fixed parent relationship for wheel {w} on {car.name}");
+                    }
+
+                    // Force wheel collider settings for build stability
+                    wc.radius = 0.35f;
+                    wc.suspensionDistance = 0.3f;
+                    wc.mass = 20f;
+
+                    // Configure suspension for VR streaming
+                    JointSpring spring = wc.suspensionSpring;
+                    spring.spring = 35000f;
+                    spring.damper = 4500f;
+                    spring.targetPosition = 0.5f;
+                    wc.suspensionSpring = spring;
+
+                    // Force enable/disable cycle to reset physics state
+                    wc.enabled = false;
+                    wc.enabled = true;
+                }
+
+                // Fix visual wheel mesh positioning
+                if (car._wheels[w].meshTransform != null)
+                {
+                    // Ensure mesh is child of car - CRITICAL for builds
+                    if (car._wheels[w].meshTransform.parent != car.transform)
+                    {
+                        car._wheels[w].meshTransform.SetParent(car.transform, false);
+                        Debug.Log($"BUILD: Fixed mesh parent for wheel {w} on {car.name}");
+                    }
+
+                    // Set correct local position for this wheel
+                    Vector3[] correctLocalPositions = new Vector3[]
+                    {
+                new Vector3(0.6f, -0.4f, 1.2f),   // Front Right
+                new Vector3(-0.6f, -0.4f, 1.2f),  // Front Left  
+                new Vector3(0.6f, -0.4f, -1.2f),  // Back Right
+                new Vector3(-0.6f, -0.4f, -1.2f)  // Back Left
+                    };
+
+                    car._wheels[w].meshTransform.localPosition = correctLocalPositions[w];
+                    car._wheels[w].meshTransform.localRotation = Quaternion.identity;
+                }
+            }
+        }
+
+        // Add this method to your AITrafficController class - CRITICAL GROUND FIX
+        public void ForceWheelGroundContact()
+        {
+            if (!Application.isEditor)
+            {
+                Debug.Log("BUILD: Force establishing wheel ground contact");
+                StartCoroutine(ForceGroundContactCoroutine());
+            }
+        }
+
+        private IEnumerator ForceGroundContactCoroutine()
+        {
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            for (int i = 0; i < carList.Count; i++)
+            {
+                if (carList[i] != null && carList[i]._wheels != null)
+                {
+                    ForceCarGroundContact(carList[i]);
+                }
+
+                // Spread across frames
+                if (i % 2 == 0) yield return null;
+            }
+
+            Debug.Log("BUILD: Ground contact establishment complete");
+        }
+
+        private void ForceCarGroundContact(AITrafficCar car)
+        {
+            // 1. Position car slightly above ground to ensure proper detection
+            Vector3 carPos = car.transform.position;
+            carPos.y = -32f; // Your ground is at -34, so place car at -32
+            car.transform.position = carPos;
+
+            // 2. Set specific wheel collider positions for your car hierarchy
+            Vector3[] wheelColliderPositions = new Vector3[]
+            {
+        new Vector3(0.6f, -0.5f, 1.2f),   // Front Right
+        new Vector3(-0.6f, -0.5f, 1.2f),  // Front Left  
+        new Vector3(0.6f, -0.5f, -1.2f),  // Back Right
+        new Vector3(-0.6f, -0.5f, -1.2f)  // Back Left
+            };
+
+            for (int w = 0; w < 4 && w < car._wheels.Length; w++)
+            {
+                if (car._wheels[w].collider != null)
+                {
+                    WheelCollider wc = car._wheels[w].collider;
+
+                    // CRITICAL: Set wheel collider local position
+                    wc.transform.localPosition = wheelColliderPositions[w];
+
+                    // Force wheel settings for ground detection
+                    wc.radius = 0.35f;
+                    wc.suspensionDistance = 0.5f; // Increased for better ground detection
+                    wc.mass = 20f;
+
+                    // Configure suspension spring for stability
+                    JointSpring spring = wc.suspensionSpring;
+                    spring.spring = 25000f; // Reduced for softer suspension
+                    spring.damper = 2500f;  // Reduced for better ground contact
+                    spring.targetPosition = 0.3f; // Lower for more ground contact
+                    wc.suspensionSpring = spring;
+
+                    // CRITICAL: Reset collider to force new raycast
+                    wc.enabled = false;
+                    wc.enabled = true;
+
+                    Debug.Log($"BUILD: Reset wheel collider {w} on {car.name} at local position {wheelColliderPositions[w]}");
+                }
+            }
+
+            // 3. Force rigidbody to proper physics state
+            if (car.rb != null)
+            {
+                car.rb.isKinematic = false;
+                car.rb.WakeUp();
+                car.rb.velocity = Vector3.zero;
+                car.rb.angularVelocity = Vector3.zero;
+
+                // Add slight downward force to ensure ground contact
+                car.rb.AddForce(Vector3.down * 100f, ForceMode.Force);
+            }
+
+            Debug.Log($"BUILD: Force established ground contact for {car.name} at position {car.transform.position}");
+        }
+
+        private IEnumerator RestorePoolingAfterDelay(bool originalPooling)
+        {
+            yield return new WaitForSeconds(2f);
+            usePooling = originalPooling;
+            Debug.Log($"BUILD: Restored pooling to {originalPooling}");
         }
         #endregion
     }
