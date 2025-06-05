@@ -860,6 +860,7 @@ public class VisualizationManager : MonoBehaviour
         }
     }
 
+#if UNITY_EDITOR
     void OnValidate()
     {
         // Only update during play mode or if explicitly requested
@@ -882,6 +883,7 @@ public class VisualizationManager : MonoBehaviour
             }
         }
     }
+#endif
     // Add this method to VisualizationManager to help debug the issue
     public void Initialize(int avatarId)
     {

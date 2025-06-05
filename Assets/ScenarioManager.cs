@@ -56,6 +56,9 @@ public class ScenarioManager : MonoBehaviour
     public AITrafficWaypointRoute busStopRoute; // Bus stop route
     private Coroutine busSpawnCoroutine;
     private BusSpawnerSimple BusSpawnerSimple;
+
+    [Header("Bus Stop Button Integration")]
+    public bool enableBusStopButtons = true;
     //public AITrafficWaypointRoute busRoute;
 
     [Header("UI Configuration")]
@@ -262,6 +265,11 @@ public class ScenarioManager : MonoBehaviour
 
     private void Start()
     {
+        StartCoroutine(DelayedInitCheck());
+
+        // ADD THIS - Force initial route registration
+        //StartCoroutine(ForceInitialRouteRegistration());
+
         OptimizeForVR();
         StoreMasterLighting();
         // Find or assign GlobalConfiguration
@@ -287,6 +295,8 @@ public class ScenarioManager : MonoBehaviour
 
         // Additional debug info
         Debug.Log($"ScenarioManager started. Current scene: {SceneManager.GetActiveScene().name}");
+
+        StartCoroutine(EnsureTrafficControllerReady());
 
         // Make sure the Manager scene is loaded and maintained
         EnsureManagerSceneIsLoaded();
@@ -337,6 +347,51 @@ public class ScenarioManager : MonoBehaviour
             BusSpawnerSimple.intersectionRoute = intersectionRoute;
             BusSpawnerSimple.busStopRoute = busStopRoute;
 
+        }
+    }
+
+
+    private IEnumerator ForceInitialRouteRegistration()
+    {
+        // Wait for everything to initialize
+        yield return new WaitForSeconds(1f);
+
+        Debug.Log("FORCE: Attempting initial route registration");
+
+        if (AITrafficController.Instance != null)
+        {
+            // CRITICAL: Disable initial spawning while we fix routes
+            bool originalSpawnState = AITrafficController.Instance.disableInitialSpawn;
+            AITrafficController.Instance.disableInitialSpawn = true;
+
+            var routes = FindObjectsOfType<AITrafficWaypointRoute>();
+
+            // Use each route's own RegisterRoute() method
+            foreach (var route in routes)
+            {
+                if (route != null && !route.isRegistered)
+                {
+                    route.RegisterRoute(); // This will set isRegistered = true
+                    Debug.Log($"FORCE: Registered route {route.name}");
+                }
+            }
+
+            yield return new WaitForSeconds(0.5f);
+
+            // CRITICAL: Now that routes are registered, allow spawning
+            AITrafficController.Instance.disableInitialSpawn = originalSpawnState;
+
+            // Force spawn traffic now that routes are ready
+            AITrafficController.Instance.DirectlySpawnVehicles(20);
+
+            // Verify results
+            int registeredCount = 0;
+            foreach (var route in routes)
+            {
+                if (route.isRegistered) registeredCount++;
+            }
+
+            Debug.Log($"FORCE: Final registration result: {registeredCount}/{routes.Length} routes registered");
         }
     }
 
@@ -706,6 +761,8 @@ public class ScenarioManager : MonoBehaviour
 
         if (AITrafficController.Instance != null)
         {
+
+            //AITrafficController.Instance.EnsureSystemReady();
             AITrafficController.Instance.DisposeAllNativeCollections();
             AITrafficController.Instance.InitializeNativeLists();
             AITrafficController.Instance.RegisterAllRoutesInScene();
@@ -1647,6 +1704,7 @@ public class ScenarioManager : MonoBehaviour
         Application.Quit();
 #endif
     }
+
     public void ForceRegisterAllRoutes()
     {
         // Find the traffic controller
@@ -1841,6 +1899,7 @@ public class ScenarioManager : MonoBehaviour
         else
         {
             yield return StartCoroutine(SafeVisualizationRefresh());
+            SetupBusButtonsForScenario(scenario);
         }
 
         // 5. Wait for scene to load
@@ -1884,12 +1943,17 @@ public class ScenarioManager : MonoBehaviour
             yield return new WaitForEndOfFrame();
         }
 
-        // 7-10. Traffic system setup (existing logic)
+        //// 7-10. Traffic system setup (existing logic)
         if (controller != null && !controller.enabled)
         {
             controller.enabled = true;
             Debug.Log("Re-enabled traffic controller after scene load");
         }
+
+        //StartCoroutine(FixBuildTimingIssues(scenario.trafficDensity));
+
+        // Use gentle approach instead
+        //GentleTrafficSceneTransition(scenario.trafficDensity);
 
         // Ensure all traffic light managers are enabled
         var lightManagers = FindObjectsOfType<AITrafficLightManager>();
@@ -4078,6 +4142,62 @@ public class ScenarioManager : MonoBehaviour
 
         Debug.Log("Stored master lighting components");
     }
+
+    // Add this method to your ScenarioManager.cs class
+
+    private void SetupBusButtonsForScenario(Scenario scenario)
+    {
+        // Wait a frame for scene to fully load
+        StartCoroutine(SetupBusButtonsDelayed(scenario));
+    }
+
+    private IEnumerator SetupBusButtonsDelayed(Scenario scenario)
+    {
+        yield return new WaitForEndOfFrame();
+
+        // Find all SimpleTeleportButton components in the newly loaded scene
+        SimpleTeleportButton[] allButtons = FindObjectsOfType<SimpleTeleportButton>();
+
+        foreach (var button in allButtons)
+        {
+            if (button == null) continue;
+
+            // Check if this should be a bus button based on name or current scene
+            bool shouldBeBusButton = false;
+
+            // Method 1: Check button name
+            string buttonName = button.gameObject.name.ToLower();
+            if (buttonName.Contains("bus") || buttonName.Contains("stop") || buttonName.Contains("call"))
+            {
+                shouldBeBusButton = true;
+            }
+
+            // Method 2: Check if button is in a scenario scene (not the base researcher scene)
+            Scene buttonScene = button.gameObject.scene;
+            if (buttonScene.name != "s.researcher" && scenario.spawnBus)
+            {
+                // If it's in a scenario scene and this scenario uses buses, assume it's a bus button
+                shouldBeBusButton = true;
+            }
+
+            if (shouldBeBusButton)
+            {
+                // Configure as bus button
+                button.SetupAsBusButton();
+
+                // Enable/disable based on scenario settings
+                button.SetButtonEnabled(scenario.spawnBus && enableBusStopButtons);
+
+                Debug.Log($"Configured bus button: {button.gameObject.name} in scene {buttonScene.name}");
+            }
+        }
+
+        Debug.Log($"Bus button setup complete for scenario: {scenario.scenarioName}");
+    }
+
+    // Call this method in your TransitionToScenario coroutine, after the scene loads:
+    // Add this line after: "yield return StartCoroutine(SafeVisualizationRefresh());"
+    // 
     private void PreserveMasterLighting(Scene newScene)
     {
         Debug.Log("Preserving master lighting settings");
@@ -4108,6 +4228,167 @@ public class ScenarioManager : MonoBehaviour
             }
         }
     }
+
+    // Add this to ScenarioManager.Start() to check initialization order
+    private void CheckInitializationOrder()
+    {
+        Debug.Log("=== INITIALIZATION ORDER CHECK ===");
+
+        // Check if traffic controller exists and is initialized
+        var controller = AITrafficController.Instance;
+        Debug.Log($"AITrafficController exists: {controller != null}");
+        if (controller != null)
+        {
+            Debug.Log($"Controller enabled: {controller.enabled}");
+            Debug.Log($"Controller car count: {controller.carCount}");
+        }
+
+        // Check routes
+        var routes = FindObjectsOfType<AITrafficWaypointRoute>();
+        Debug.Log($"Routes found: {routes.Length}");
+        int registeredRoutes = 0;
+        foreach (var route in routes)
+        {
+            if (route.isRegistered) registeredRoutes++;
+        }
+        Debug.Log($"Routes registered: {registeredRoutes}/{routes.Length}");
+
+        // Check spawn points
+        var spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
+        Debug.Log($"Spawn points found: {spawnPoints.Length}");
+
+        Debug.Log("=== END INITIALIZATION CHECK ===");
+    }
+
+    private IEnumerator DelayedInitCheck()
+    {
+        // Check immediately
+        Debug.Log("=== IMMEDIATE CHECK ===");
+        CheckInitializationOrder();
+
+        // Check after 1 frame (let everything initialize)
+        yield return null;
+        Debug.Log("=== AFTER 1 FRAME ===");
+        CheckInitializationOrder();
+
+        // Check after 2 seconds
+        yield return new WaitForSeconds(2f);
+        Debug.Log("=== AFTER 2 SECONDS ===");
+        CheckInitializationOrder();
+
+        // NEW: Additional detailed checks
+        yield return new WaitForSeconds(1f);
+        Debug.Log("=== DETAILED TRAFFIC SYSTEM CHECK ===");
+        PerformDetailedTrafficCheck();
+    }
+
+    private void PerformDetailedTrafficCheck()
+    {
+        var controller = AITrafficController.Instance;
+        if (controller != null)
+        {
+            Debug.Log($"Controller enabled: {controller.enabled}");
+            Debug.Log($"Controller density: {controller.density}");
+            Debug.Log($"Controller current density: {controller.currentDensity}");
+            Debug.Log($"Controller car count: {controller.carCount}");
+            Debug.Log($"Controller using pooling: {controller.usePooling}");
+
+            // Check internal arrays
+            try
+            {
+                var cars = controller.GetTrafficCars();
+                var routes = controller.GetRoutes();
+                Debug.Log($"Cars array length: {cars?.Length ?? 0}");
+                Debug.Log($"Routes array length: {routes?.Length ?? 0}");
+
+                int activeCars = 0;
+                int drivingCars = 0;
+                foreach (var car in cars)
+                {
+                    if (car != null)
+                    {
+                        activeCars++;
+                        if (car.isDriving) drivingCars++;
+                    }
+                }
+                Debug.Log($"Active cars: {activeCars}, Driving cars: {drivingCars}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error checking traffic arrays: {ex.Message}");
+            }
+        }
+
+        // Check routes
+        var sceneRoutes = FindObjectsOfType<AITrafficWaypointRoute>();
+        Debug.Log($"Routes in scene: {sceneRoutes.Length}");
+        int registeredRoutes = 0;
+        foreach (var route in sceneRoutes)
+        {
+            if (route != null && route.isRegistered)
+            {
+                registeredRoutes++;
+                Debug.Log($"Route '{route.name}': {route.waypointDataList.Count} waypoints");
+            }
+        }
+        Debug.Log($"Registered routes: {registeredRoutes}/{sceneRoutes.Length}");
+
+        // Check spawn points
+        var spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
+        Debug.Log($"Spawn points in scene: {spawnPoints.Length}");
+        int validSpawnPoints = 0;
+        foreach (var sp in spawnPoints)
+        {
+            if (sp != null && sp.waypoint != null &&
+                sp.waypoint.onReachWaypointSettings.parentRoute != null)
+            {
+                validSpawnPoints++;
+            }
+        }
+        Debug.Log($"Valid spawn points: {validSpawnPoints}/{spawnPoints.Length}");
+    }
+
+    private IEnumerator EnsureTrafficControllerReady()
+    {
+        // Wait a few frames to ensure everything is initialized
+        yield return new WaitForSeconds(0.1f);
+
+        if (AITrafficController.Instance == null)
+        {
+            Debug.LogError("AITrafficController.Instance is null in build! Check initialization order.");
+        }
+        else
+        {
+            Debug.Log("AITrafficController ready in build");
+
+            // Force refresh all registered cars
+            var carList = AITrafficController.Instance.GetCarList();
+            for (int i = 0; i < carList.Count; i++)
+            {
+                if (carList[i] != null)
+                {
+                    // Ensure car physics and movement are properly initialized
+                    var car = carList[i];
+                    if (car.rb != null)
+                    {
+                        car.rb.isKinematic = false;
+                        car.rb.WakeUp();
+                    }
+
+                    // Restart driving if it was supposed to be driving
+                    if (car.isDriving && car.CurrentSpeed() <= 0.1f)
+                    {
+                        Debug.Log($"Restarting car {car.name} in build");
+                        car.StartDriving();
+                    }
+                }
+            }
+        }
+    }
+
+    // Replace your traffic system initialization in TransitionToScenario with this timing fix
+    // This preserves your existing logic but fixes build timing issues
+
 
 
 

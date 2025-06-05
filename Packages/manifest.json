@@ -34,6 +34,7 @@
     "com.unity.xr.oculus": "3.2.2",
     "com.unity.xr.openxr": "1.12.1",
     "com.valvesoftware.unity.openvr": "file:../Assets/SteamVR/OpenVRUnityXRPackage/Editor/com.valvesoftware.unity.openvr-1.2.1.tgz",
+    "unity-missing-scripts-finder": "https://github.com/RimuruDev/Unity-MissingScriptsFinder.git",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
     "com.unity.modules.animation": "1.0.0",

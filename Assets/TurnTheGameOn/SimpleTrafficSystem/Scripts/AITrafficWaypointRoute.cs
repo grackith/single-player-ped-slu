@@ -203,6 +203,20 @@
                 waypointDataList.Add(newPoint);
             }
         }
+        public void SetupRandomSpawnPoints()
+        {
+            if (waypointDataList.Count > 4)
+            {
+                RemoveAllSpawnPoints();
+                int randomIndex = UnityEngine.Random.Range(1, 3);
+                for (int i = randomIndex; i < waypointDataList.Count && i < waypointDataList.Count - 3; i += UnityEngine.Random.Range(1, 3))
+                {
+                    GameObject loadedSpawnPoint = Instantiate(STSRefs.AssetReferences._AITrafficSpawnPoint, waypointDataList[i]._transform) as GameObject;
+                    AITrafficSpawnPoint trafficSpawnPoint = loadedSpawnPoint.GetComponent<AITrafficSpawnPoint>();
+                    trafficSpawnPoint.waypoint = trafficSpawnPoint.transform.parent.GetComponent<AITrafficWaypoint>();
+                }
+            }
+        }
 #endif
         #endregion
 
@@ -423,22 +437,6 @@
             }
         }
 
-#if UNITY_EDITOR
-        public void SetupRandomSpawnPoints()
-        {
-            if (waypointDataList.Count > 4)
-            {
-                RemoveAllSpawnPoints();
-                int randomIndex = UnityEngine.Random.Range(1, 3);
-                for (int i = randomIndex; i < waypointDataList.Count && i < waypointDataList.Count - 3; i += UnityEngine.Random.Range(1, 3))
-                {
-                    GameObject loadedSpawnPoint = Instantiate(STSRefs.AssetReferences._AITrafficSpawnPoint, waypointDataList[i]._transform) as GameObject;
-                    AITrafficSpawnPoint trafficSpawnPoint = loadedSpawnPoint.GetComponent<AITrafficSpawnPoint>();
-                    trafficSpawnPoint.waypoint = trafficSpawnPoint.transform.parent.GetComponent<AITrafficWaypoint>();
-                }
-            }
-        }
-#endif
         #endregion
     }
 }

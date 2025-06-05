@@ -68,29 +68,65 @@
             Debug.Log($"Spawn point {name} registered successfully");
         }
 
+        private bool IsSceneCameraCheck()
+        {
+            try
+            {
+                // In builds, Camera.current might be null or behave differently
+                if (Camera.current == null)
+                    return false;
+
+                // Check if it's the scene camera (editor only)
+                string cameraName = Camera.current.name;
+                return cameraName == "SceneCamera" || cameraName.Contains("Scene");
+            }
+            catch
+            {
+                // If any exception occurs, assume it's not the scene camera
+                return false;
+            }
+        }
+
         void OnBecameInvisible()
         {
-#if UNITY_EDITOR
-            if (Camera.current != null)
-            {
-                if (Camera.current.name == "SceneCamera")
-                    return;
-            }
-#endif
+            if (IsSceneCameraCheck())
+                return;
+
             isVisible = false;
         }
 
         void OnBecameVisible()
         {
-#if UNITY_EDITOR
-            if (Camera.current != null)
-            {
-                if (Camera.current.name == "SceneCamera")
-                    return;
-            }
-#endif
+            if (IsSceneCameraCheck())
+                return;
+
+            // Your visibility logic here  
             isVisible = true;
         }
+
+//        void OnBecameInvisible()
+//        {
+//#if UNITY_EDITOR
+//            if (Camera.current != null)
+//            {
+//                if (Camera.current.name == "SceneCamera")
+//                    return;
+//            }
+//#endif
+//            isVisible = false;
+//        }
+
+//        void OnBecameVisible()
+//        {
+//#if UNITY_EDITOR
+//            if (Camera.current != null)
+//            {
+//                if (Camera.current.name == "SceneCamera")
+//                    return;
+//            }
+//#endif
+//            isVisible = true;
+//        }
 
         private void OnTriggerEnter(Collider other)
         {

@@ -6,7 +6,7 @@ MonoImporter:
   defaultReferences:
   - waypoint: {instanceID: 0}
   - runtimeMaterial: {instanceID: 0}
-  executionOrder: 0
+  executionOrder: -50
   icon: {instanceID: 0}
   userData: 
   assetBundleName: 

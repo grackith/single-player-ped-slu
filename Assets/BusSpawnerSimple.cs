@@ -25,6 +25,10 @@ public class BusSpawnerSimple : MonoBehaviour
     private int currentSpawnAttempt = 0;
     private Coroutine spawnRetryCoroutine;
 
+    [Header("Button Integration")]
+    public bool allowButtonSpawning = true;
+    private bool spawnTriggeredByButton = false;
+
     private float timer;
     private AITrafficCar spawnedBus;
 
@@ -44,14 +48,51 @@ public class BusSpawnerSimple : MonoBehaviour
 
     void Update()
     {
-        if (!hasSpawned && timer > 0)
+        // Only process timer if spawn wasn't triggered by button
+        if (!hasSpawned && !spawnTriggeredByButton && timer > 0)
         {
             timer -= Time.deltaTime;
             if (timer <= 0)
             {
+                Debug.Log("Timer expired - spawning bus via timer fallback");
                 SpawnBus();
             }
         }
+    }
+
+    public void SpawnBusImmediately()
+    {
+        if (hasSpawned)
+        {
+            Debug.Log("Bus already spawned - ignoring immediate spawn request");
+            return;
+        }
+
+        if (!allowButtonSpawning)
+        {
+            Debug.Log("Button spawning is disabled for this scenario");
+            return;
+        }
+
+        Debug.Log("Spawning bus immediately due to button press");
+
+        // Mark that the spawn was triggered by button
+        spawnTriggeredByButton = true;
+
+        // Cancel the timer-based spawning
+        timer = -1f;
+
+        // Spawn the bus right now
+        SpawnBus();
+    }
+
+    // NEW METHOD: Check if bus can be spawned (useful for button validation)
+    public bool CanSpawnBus()
+    {
+        return !hasSpawned &&
+               busPrefab != null &&
+               initialRoute != null &&
+               AITrafficController.Instance != null;
     }
 
     // Method called from ScenarioManager
@@ -63,9 +104,17 @@ public class BusSpawnerSimple : MonoBehaviour
             return;
         }
 
+        // NEW: Don't start timer if button already triggered spawn
+        if (spawnTriggeredByButton)
+        {
+            Debug.Log("Bus spawn already triggered by button - ignoring timer trigger");
+            return;
+        }
+
         timer = customDelay > 0 ? customDelay : spawnDelay;
-        Debug.Log($"BusSpawnerSimple: Bus spawn triggered, will spawn in {timer} seconds");
+        Debug.Log($"BusSpawnerSimple: Bus spawn triggered, will spawn in {timer} seconds (unless button is pressed first)");
     }
+
 
     // Core spawn method
     public void SpawnBus()
@@ -569,7 +618,16 @@ public class BusSpawnerSimple : MonoBehaviour
 
         hasSpawned = false;
         timer = -1;
-        currentSpawnAttempt = 0; // Reset attempt counter
+        currentSpawnAttempt = 0;
+        spawnTriggeredByButton = false; // NEW: Reset button trigger state
+
+        // NEW: Re-enable any bus stop buttons in the scene
+        SimpleTeleportButton[] busStopButtons = FindObjectsOfType<SimpleTeleportButton>();
+        foreach (var button in busStopButtons)
+        {
+            button.ResetForNewScenario();
+        }
+
         Debug.Log("BusSpawnerSimple: Reset and ready for next spawn");
     }
 }

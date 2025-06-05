@@ -65,7 +65,7 @@
         private Color brakeOffColor;
         private float brakeIntensityFactor;
         private string emissionColorName;
-
+        private int debugFrame = 0;
 
 
         // Add this field to the AITrafficController class
@@ -458,6 +458,31 @@
                 return allWaypointRoutesList[index];
             }
             return null;
+        }
+
+        // Add this method to AITrafficController
+        public void ForceAllCarsVisibleInBuild()
+        {
+            if (!Application.isEditor)
+            {
+                Debug.Log("BUILD FIX: Forcing all cars to be visible");
+
+                for (int i = 0; i < carCount; i++)
+                {
+                    if (i < carList.Count && carList[i] != null && carList[i].gameObject.activeInHierarchy)
+                    {
+                        // Force visibility
+                        isVisibleNL[i] = true;
+                        isDisabledNL[i] = false;
+                        isActiveNL[i] = true;
+                        canProcessNL[i] = true;
+
+                        Debug.Log($"BUILD FIX: Set car {i} ({carList[i].name}) to visible");
+                    }
+                }
+
+                Debug.Log($"BUILD FIX: Forced {carCount} cars to be visible");
+            }
         }
         #endregion
 
@@ -1089,7 +1114,7 @@
                 Debug.LogWarning("Multiple AITrafficController Instances found in scene, this is not allowed. Destroying this duplicate AITrafficController.");
                 Destroy(this);
             }
-           
+
         }
 
         private int _density = 200;
@@ -1310,16 +1335,15 @@
 
         private void Start()
         {
+            if (!Application.isEditor)
+            {
+                Debug.Log("BUILD FIX: Disabling pooling system in build");
+                usePooling = false;
+            }
+
             // Add this line at the very beginning of Start
             InitializeSpawnPoints();
-
             bool shouldSpawnAutomatically = false; // Force to false to prevent auto-spawning
-
-            //if (usePooling && shouldSpawnAutomatically)
-            //{
-            //    StartCoroutine(SpawnStartupTrafficCoroutine());
-            //    // Rest of the start method...
-            //}
 
             if (usePooling && shouldSpawnAutomatically)
             {
@@ -1335,7 +1359,7 @@
             }
             else
             {
-                StartCoroutine(Initialize());
+                StartCoroutine(Initialize()); // ← Only call Initialize() here!
             }
             // sideways friction
             lowSidewaysWheelFrictionCurve.extremumSlip = 0.2f;
@@ -2034,29 +2058,168 @@
                 Debug.LogWarning("This may be due to insufficient routes, waypoints, or compatible vehicle types.");
             }
         }
-       
-        
 
-       
+
+
+
 
 
         // Complete FixedUpdate method for AITrafficController.cs
         private void FixedUpdate()
         {
-            if (isInitialized)
+            // BUILD DEBUG - Add this at the very beginning
+            if (!isInitialized)
             {
-                // Validation checks
-                if (!driveTargetTAA.isCreated || driveTargetTAA.length == 0)
+                Debug.Log("BUILD DEBUG: Not initialized, skipping FixedUpdate");
+                return;
+            }
+
+            Debug.Log("BUILD DEBUG: FixedUpdate running, checking job prerequisites...");
+
+            // Check each prerequisite
+            bool hasValidArrays = driveTargetTAA.isCreated && driveTargetTAA.length > 0;
+            bool hasValidCars = carCount > 0;
+            bool hasValidLists = isDrivingNL.IsCreated && isDrivingNL.Length > 0;
+
+            Debug.Log($"BUILD DEBUG: hasValidArrays={hasValidArrays}, hasValidCars={hasValidCars}, hasValidLists={hasValidLists}");
+
+            if (!hasValidArrays)
+            {
+                Debug.LogError("BUILD DEBUG: driveTargetTAA not created or empty!");
+                return;
+            }
+
+            if (!hasValidCars)
+            {
+                Debug.LogError("BUILD DEBUG: No cars to process!");
+                return;
+            }
+
+            if (!hasValidLists)
+            {
+                Debug.LogError("BUILD DEBUG: Native lists not created!");
+                return;
+            }
+
+            Debug.Log("BUILD DEBUG: All prerequisites met, continuing with normal FixedUpdate...");
+
+            // YOUR ORIGINAL FIXEDUPDATE CODE STARTS HERE
+            if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
+            deltaTime = Time.deltaTime;
+
+            // NEW: Check for upcoming traffic lights BEFORE processing movement
+            CheckForUpcomingTrafficLights();
+
+            // Process traffic light and yield trigger logic
+            if (useYieldTriggers)
+            {
+                for (int i = 0; i < carCount; i++)
                 {
-                    // Skip job scheduling this frame - arrays aren't ready
-                    return;
+                    yieldForCrossTrafficNL[i] = false;
+                    isTrafficLightWaypointNL[i] = false;
+
+                    if (currentWaypointList[i] != null)
+                    {
+                        isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
+
+                        if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute != null)
+                        {
+                            for (int j = 0; j < currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers.Count; j++)
+                            {
+                                if (currentWaypointList[i].onReachWaypointSettings.nextPointInRoute.onReachWaypointSettings.yieldTriggers[j].yieldForTrafficLight == true)
+                                {
+                                    yieldForCrossTrafficNL[i] = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // IMPROVED: Robust traffic light state detection
+                    stopForTrafficLightNL[i] = GetTrafficLightStateForCar(i);
                 }
+            }
+            else
+            {
+                for (int i = 0; i < carCount; i++)
+                {
+                    yieldForCrossTrafficNL[i] = false;
 
-                if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
-                deltaTime = Time.deltaTime;
+                    // IMPROVED: Robust traffic light state detection
+                    stopForTrafficLightNL[i] = GetTrafficLightStateForCar(i);
 
-                // NEW: Check for upcoming traffic lights BEFORE processing movement
-                CheckForUpcomingTrafficLights();
+                    // Update traffic light waypoint flag even when not using yield triggers
+                    isTrafficLightWaypointNL[i] = false;
+                    if (currentWaypointList[i] != null)
+                    {
+                        isTrafficLightWaypointNL[i] = currentWaypointList[i].isTrafficLightWaypoint;
+                    }
+                }
+            }
+
+            Debug.Log("BUILD DEBUG: About to create and schedule job...");
+
+            // Setup and schedule the main car AI job
+            carAITrafficJob = new AITrafficCarJob
+            {
+                frontSensorLengthNA = frontSensorLengthNL.AsArray(),
+                currentRoutePointIndexNA = currentRoutePointIndexNL.AsArray(),
+                waypointDataListCountNA = waypointDataListCountNL.AsArray(),
+                carTransformPreviousPositionNA = carTransformPreviousPositionNL.AsArray(),
+                carTransformPositionNA = carTransformPositionNL.AsArray(),
+                finalRoutePointPositionNA = finalRoutePointPositionNL.AsArray(),
+                routePointPositionNA = routePointPositionNL.AsArray(),
+                isDrivingNA = isDrivingNL.AsArray(),
+                isActiveNA = isActiveNL.AsArray(),
+                canProcessNA = canProcessNL.AsArray(),
+                speedNA = speedNL.AsArray(),
+                deltaTime = deltaTime,
+                routeProgressNA = routeProgressNL.AsArray(),
+                topSpeedNA = topSpeedNL.AsArray(),
+                targetSpeedNA = targetSpeedNL.AsArray(),
+                speedLimitNA = speedLimitNL.AsArray(),
+                accelNA = accelNL.AsArray(),
+                localTargetNA = localTargetNL.AsArray(),
+                targetAngleNA = targetAngleNL.AsArray(),
+                steerAngleNA = steerAngleNL.AsArray(),
+                motorTorqueNA = motorTorqueNL.AsArray(),
+                accelerationInputNA = accelerationInputNL.AsArray(),
+                brakeTorqueNA = brakeTorqueNL.AsArray(),
+                moveHandBrakeNA = moveHandBrakeNL.AsArray(),
+                maxSteerAngle = maxSteerAngle,
+                overrideInputNA = overrideInputNL.AsArray(),
+                distanceToEndPointNA = distanceToEndPointNL.AsArray(),
+                overrideAccelerationPowerNA = overrideAccelerationPowerNL.AsArray(),
+                overrideBrakePowerNA = overrideBrakePowerNL.AsArray(),
+                isBrakingNA = isBrakingNL.AsArray(),
+                speedMultiplier = speedMultiplier,
+                steerSensitivity = steerSensitivity,
+                stopThreshold = stopThreshold,
+                frontHitDistanceNA = frontHitDistanceNL.AsArray(),
+                frontHitNA = frontHitNL.AsArray(),
+                stopForTrafficLightNA = stopForTrafficLightNL.AsArray(),
+                yieldForCrossTrafficNA = yieldForCrossTrafficNL.AsArray(),
+                accelerationPowerNA = accelerationPowerNL.AsArray(),
+                frontSensorTransformPositionNA = frontSensorTransformPositionNL.AsArray(),
+                isTrafficLightWaypointNA = isTrafficLightWaypointNL.AsArray()
+            };
+
+            Debug.Log("BUILD DEBUG: Job created, attempting to schedule...");
+
+            jobHandle = carAITrafficJob.Schedule(driveTargetTAA);
+
+            Debug.Log("BUILD DEBUG: Job scheduled successfully!");
+
+            jobHandle.Complete(); // Wait for completion before using results
+
+            Debug.Log("BUILD DEBUG: Job completed successfully!");
+
+            // Your existing FixedUpdate logic here...
+            if (STSPrefs.debugProcessTime) startTime = Time.realtimeSinceStartup;
+            deltaTime = Time.deltaTime;
+
+            // NEW: Check for upcoming traffic lights BEFORE processing movement
+            CheckForUpcomingTrafficLights();
 
                 // Process traffic light and yield trigger logic
                 if (useYieldTriggers)
@@ -2547,6 +2710,27 @@
                 if (usePooling)
                 {
                     centerPosition = centerPoint.position;
+
+                    // ADD THIS DEBUG BLOCK
+                    //static int debugFrame = 0;
+                    debugFrame++;
+                    if (debugFrame % 300 == 0) // Log every 5 seconds at 60fps
+                    {
+                        Debug.Log($"[POOLING] Center position: {centerPosition}");
+                        Debug.Log($"[POOLING] Current density: {currentDensity}, Target density: {density}");
+                        Debug.Log($"[POOLING] Traffic pool count: {trafficPool.Count}");
+                        Debug.Log($"[POOLING] Active cars: {carList.Count - trafficPool.Count}");
+
+                        // Check visibility states
+                        int visibleCars = 0;
+                        int invisibleCars = 0;
+                        for (int i = 0; i < carCount; i++)
+                        {
+                            if (isVisibleNL[i]) visibleCars++;
+                            else invisibleCars++;
+                        }
+                        Debug.Log($"[POOLING] Visible cars: {visibleCars}, Invisible cars: {invisibleCars}");
+                    }
                     _AITrafficDistanceJob = new AITrafficDistanceJob
                     {
                         canProcessNA = canProcessNL.AsArray(),
@@ -2580,6 +2764,7 @@
                                 carRouteList[i].currentDensity += 1;
                                 if (outOfBoundsNL[i])
                                 {
+                                    Debug.Log($"[POOLING] Moving car {carList[i].name} to pool (out of bounds)");
                                     MoveCarToPool(carList[i].assignedIndex);
                                 }
                             }
@@ -2609,7 +2794,7 @@
                     else spawnTimer += deltaTime;
                 }
             }
-        }
+        
 
         // Add this supporting method for checking upcoming traffic lights
         // Add this supporting method for checking upcoming traffic lights
@@ -3433,7 +3618,8 @@
                 // Handle spawn point visibility
                 try
                 {
-                    if (STSPrefs.hideSpawnPointsInEditMode && spawnPointsAreHidden == false)
+                    if (spawnPointsAreHidden == false) 
+                        //STSPrefs.hideSpawnPointsInEditMode &&
                     {
                         spawnPointsAreHidden = true;
                         AITrafficSpawnPoint[] spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
@@ -3449,7 +3635,8 @@
                             }
                         }
                     }
-                    else if (STSPrefs.hideSpawnPointsInEditMode == false && spawnPointsAreHidden)
+                    else if (spawnPointsAreHidden)
+                        //STSPrefs.hideSpawnPointsInEditMode == false &&
                     {
                         spawnPointsAreHidden = false;
                         AITrafficSpawnPoint[] spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
@@ -4290,6 +4477,11 @@
                 InitializeNativeLists();
             }
         }
+
+        // Add this method to AITrafficController class (or create an extension)
+        // If you can't modify AITrafficController, add this to ScenarioManager instead
+
+
 
         private int FindNearestWaypointIndex(Vector3 position, AITrafficWaypointRoute route)
         {

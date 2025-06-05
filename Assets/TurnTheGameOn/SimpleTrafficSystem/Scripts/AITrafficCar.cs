@@ -1514,33 +1514,86 @@
             }
         }
 
+        private bool IsSceneCameraCheck()
+        {
+            try
+            {
+                if (Camera.current == null)
+                {
+                    Debug.Log($"[VISIBILITY] {name}: Camera.current is null");
+                    return false;
+                }
 
-        #endregion
+                string cameraName = Camera.current.name;
+                bool isSceneCamera = cameraName == "SceneCamera" || cameraName.Contains("Scene");
 
-        #region Callbacks
+                if (Application.isEditor || Debug.isDebugBuild)
+                {
+                    Debug.Log($"[VISIBILITY] {name}: Camera.current = {cameraName}, isSceneCamera = {isSceneCamera}");
+                }
+
+                return isSceneCamera;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[VISIBILITY] {name}: Exception in IsSceneCameraCheck: {ex.Message}");
+                return false;
+            }
+        }
+
         void OnBecameInvisible()
         {
-#if UNITY_EDITOR
-            if (Camera.current != null)
+            if (IsSceneCameraCheck())
+                return;
+
+            Debug.Log($"[VISIBILITY] {name}: OnBecameInvisible - setting visible to FALSE");
+
+            if (AITrafficController.Instance != null && assignedIndex >= 0)
             {
-                if (Camera.current.name == "SceneCamera")
-                    return;
+                AITrafficController.Instance.SetVisibleState(assignedIndex, false);
             }
-#endif
-            AITrafficController.Instance.SetVisibleState(assignedIndex, false);
         }
 
         void OnBecameVisible()
         {
-#if UNITY_EDITOR
-            if (Camera.current != null)
+            if (IsSceneCameraCheck())
+                return;
+
+            Debug.Log($"[VISIBILITY] {name}: OnBecameVisible - setting visible to TRUE");
+
+            if (AITrafficController.Instance != null && assignedIndex >= 0)
             {
-                if (Camera.current.name == "SceneCamera")
-                    return;
+                AITrafficController.Instance.SetVisibleState(assignedIndex, true);
             }
-#endif
-            AITrafficController.Instance.SetVisibleState(assignedIndex, true);
         }
+
+
+        #endregion
+
+        #region Callbacks
+        //        void OnBecameInvisible()
+        //        {
+        //#if UNITY_EDITOR
+        //            if (Camera.current != null)
+        //            {
+        //                if (Camera.current.name == "SceneCamera")
+        //                    return;
+        //            }
+        //#endif
+        //            AITrafficController.Instance.SetVisibleState(assignedIndex, false);
+        //        }
+
+        //        void OnBecameVisible()
+        //        {
+        //#if UNITY_EDITOR
+        //            if (Camera.current != null)
+        //            {
+        //                if (Camera.current.name == "SceneCamera")
+        //                    return;
+        //            }
+        //#endif
+        //            AITrafficController.Instance.SetVisibleState(assignedIndex, true);
+        //        }
         #endregion
 
         IEnumerator ResumeDrivingTimer(float _stopTime)

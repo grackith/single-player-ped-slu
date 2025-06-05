@@ -175,7 +175,7 @@
                     {
                         for (int j = 0; j < rend.sharedMaterials.Length; j++)
                         {
-                            if (rend.sharedMaterials[j].name == STSPrefs.brakeMaterialName)
+                            if (rend.sharedMaterials[j].name == STSPrefs_Editor.brakeMaterialName)
                             {
                                 _car.brakeMaterialMesh = rend;
                                 _car.brakeMaterialIndex = j;
@@ -194,19 +194,19 @@
 
             for (int i = 0; i < allChildTransforms.Length; i++)
             {
-                if (allChildTransforms[i].name == STSPrefs.fr_wheelName)
+                if (allChildTransforms[i].name == STSPrefs_Editor.fr_wheelName)
                 {
                     _car._wheels[0].meshTransform = allChildTransforms[i];
                 }
-                else if (allChildTransforms[i].name == STSPrefs.fl_wheelName)
+                else if (allChildTransforms[i].name == STSPrefs_Editor.fl_wheelName)
                 {
                     _car._wheels[1].meshTransform = allChildTransforms[i];
                 }
-                else if (allChildTransforms[i].name == STSPrefs.br_wheelName)
+                else if (allChildTransforms[i].name == STSPrefs_Editor.br_wheelName)
                 {
                     _car._wheels[2].meshTransform = allChildTransforms[i];
                 }
-                else if (allChildTransforms[i].name == STSPrefs.bl_wheelName)
+                else if (allChildTransforms[i].name == STSPrefs_Editor.bl_wheelName)
                 {
                     _car._wheels[3].meshTransform = allChildTransforms[i];
                 }

@@ -2,7 +2,6 @@
 {
     using UnityEngine;
     using UnityEditor;
-    using System;
 
     [CustomEditor(typeof(AITrafficController))]
     public class Editor_AITrafficController : Editor
@@ -29,7 +28,7 @@
         }
         private void OnDisable()
         {
-            SceneView.duringSceneGui -= CustomOnSceneGUI; // Fixed: used -= instead of += to properly remove the delegate
+            SceneView.duringSceneGui += CustomOnSceneGUI;
             isInitialized = false;
         }
 
@@ -40,48 +39,22 @@
         {
             if (Application.isPlaying)
             {
-                if (STSPrefs.sensorGizmos)
+                if (STSPrefs_Editor.sensorGizmos)
                 {
-                    try
+                    for (int i = 0; i < AITrafficController.Instance.carCount; i++)
                     {
-                        // Check if controller instance exists
-                        if (AITrafficController.Instance == null)
-                            return;
-
-                        // Use a safer approach when accessing NativeLists
-                        int carCount = AITrafficController.Instance.carCount;
-                        for (int i = 0; i < carCount; i++)
+                        if (AITrafficController.Instance.GetIsDisabled(i) == false)
                         {
-                            try
-                            {
-                                bool isDisabled = AITrafficController.Instance.GetIsDisabled(i);
-                                if (!isDisabled)
-                                {
-                                    carPosition = AITrafficController.Instance.GetFrontSensorPosition(i);
-                                    carTargetPosition = AITrafficController.Instance.GetCarTargetPosition(i);
-                                    Handles.DrawBezier(
-                                        carPosition,
-                                        carTargetPosition,
-                                        carPosition,
-                                        carTargetPosition,
-                                        Color.green,
-                                        null,
-                                        3);
-                                }
-                            }
-                            catch (Exception)
-                            {
-                                // Silent catch for individual car errors
-                                // This avoids flooding the console with errors
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Only log error occasionally to avoid console spam
-                        if (Time.frameCount % 100 == 0)
-                        {
-                            Debug.LogWarning($"Error in AITrafficController Editor: {ex.Message}");
+                            carPosition = AITrafficController.Instance.GetFrontSensorPosition(i);
+                            carTargetPosition = AITrafficController.Instance.GetCarTargetPosition(i);
+                            Handles.DrawBezier(
+                                carPosition,
+                                carTargetPosition,
+                                carPosition,
+                                carTargetPosition,
+                                Color.green,
+                                null,
+                                3);
                         }
                     }
                 }
@@ -361,6 +334,7 @@
                     EditorGUILayout.PropertyField(spawnRate, true);
                     if (EditorGUI.EndChangeCheck())
                         serializedObject.ApplyModifiedProperties();
+
                     SerializedProperty disabledPosition = serializedObject.FindProperty("disabledPosition");
                     EditorGUI.BeginChangeCheck();
                     EditorGUILayout.PropertyField(disabledPosition, true);
@@ -409,7 +383,6 @@
     {
         static Vector3 centerPosition;
 
-
         static PlayModeStateChanged()
         {
             EditorApplication.playModeStateChanged += LogPlayModeState;
@@ -426,58 +399,46 @@
         [DrawGizmo(GizmoType.InSelectionHierarchy | GizmoType.NotInSelectionHierarchy)]
         static void DrawHandles(AITrafficController _AITrafficController, GizmoType gizmoType)
         {
-            try
+            if (EditorApplication.isPlaying && _AITrafficController.usePooling && STSPrefs_Editor.poolGizmos)
             {
-                if (EditorApplication.isPlaying && _AITrafficController != null &&
-                    _AITrafficController.usePooling && STSPrefs.poolGizmos)
-                {
-                    // Check if centerPoint exists before accessing
-                    if (_AITrafficController.centerPoint == null)
-                        return;
+                centerPosition = _AITrafficController.centerPoint.position;
+                // spawn zone
+                Handles.color = STSPrefs_Editor.spawnZoneColor;
+                Handles.DrawSolidDisc
+                    (
+                    centerPosition,
+                Vector3.up,
+                _AITrafficController.spawnZone
+                );
 
-                    centerPosition = _AITrafficController.centerPoint.position;
+                // active zone
+                Handles.color = STSPrefs_Editor.activeZoneColor;
+                Handles.DrawSolidDisc
+                    (
+                    centerPosition,
+                Vector3.up,
+                _AITrafficController.actizeZone
+                );
 
-                    // spawn zone
-                    Handles.color = STSPrefs.spawnZoneColor;
-                    Handles.DrawSolidDisc(
-                        centerPosition,
-                        Vector3.up,
-                        _AITrafficController.spawnZone
-                    );
+                // cull headlight zone
+                Handles.color = STSPrefs_Editor.cullHeadLightZone;
+                Handles.DrawSolidDisc
+                    (
+                    centerPosition,
+                Vector3.up,
+                _AITrafficController.cullHeadLight
+                );
 
-                    // active zone
-                    Handles.color = STSPrefs.activeZoneColor;
-                    Handles.DrawSolidDisc(
-                        centerPosition,
-                        Vector3.up,
-                        _AITrafficController.actizeZone
-                    );
-
-                    // cull headlight zone
-                    Handles.color = STSPrefs.cullHeadLightZone;
-                    Handles.DrawSolidDisc(
-                        centerPosition,
-                        Vector3.up,
-                        _AITrafficController.cullHeadLight
-                    );
-
-                    // min spawn zone
-                    Handles.color = STSPrefs.minSpawnZoneColor;
-                    Handles.DrawSolidDisc(
-                        centerPosition,
-                        Vector3.up,
-                        _AITrafficController.minSpawnZone
-                    );
-                }
-            }
-            catch (Exception ex)
-            {
-                // Only log occasionally to prevent console spam
-                if (Time.frameCount % 100 == 0)
-                {
-                    Debug.LogWarning($"Error drawing traffic controller gizmos: {ex.Message}");
-                }
+                // min spawn zone
+                Handles.color = STSPrefs_Editor.minSpawnZoneColor;
+                Handles.DrawSolidDisc
+                    (
+                    centerPosition,
+                Vector3.up,
+                _AITrafficController.minSpawnZone
+                );
             }
         }
     }
+
 }

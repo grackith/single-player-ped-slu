@@ -1,4 +1,4 @@
-﻿namespace TurnTheGameOn.SimpleTrafficSystem
+namespace TurnTheGameOn.SimpleTrafficSystem
 {
     using System.Collections.Generic;
     using UnityEngine;
@@ -6,11 +6,12 @@
     using UnityEditor;
 #endif
 
-    public static class STSPrefs
+    public static class STSPrefs_Editor
     {
-#pragma warning disable 0414
+#if UNITY_EDITOR
         private static bool loaded = false;
-#pragma warning restore 0414
+
+        // These are the editor-specific properties that can be modified in the preferences
         public static bool routeGizmos = true;
         public static Color pathColor = new Color(1, 0.7725532f, 0, 1);
         public static Color selectedPathColor = new Color(0, 1, 0, 1);
@@ -56,12 +57,10 @@
 
         public static string CiDyIntegrationPath = "Assets/TurnTheGameOn/SimpleTrafficSystem/Integration/CiDy.unitypackage";
         public static string StylizedVehiclesIntegrationPath = "Assets/TurnTheGameOn/SimpleTrafficSystem/Integration/StylizedVehiclePack.unitypackage";
-
         public static string HDRP_DemosPath = "Assets/TurnTheGameOn/SimpleTrafficSystem/Integration/HDRP.unitypackage";
         public static string URP_DemosPath = "Assets/TurnTheGameOn/SimpleTrafficSystem/Integration/URP.unitypackage";
 
-#if UNITY_EDITOR
-        static STSPrefs()
+        static STSPrefs_Editor()
         {
             LoadPrefs();
         }
@@ -225,8 +224,7 @@
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.EndVertical();
-            
-            
+
             if (GUI.changed)
             {
                 SavePrefs();
@@ -276,8 +274,8 @@
             brakeMaterialName = EditorPrefs.GetString("STS.brakeMaterialName", "BrakeLights");
             CiDyIntegrationPath = EditorPrefs.GetString("STS.CiDy2", "Assets/TurnTheGameOn/SimpleTrafficSystem/Integration/CiDy2.unitypackage");
             StylizedVehiclesIntegrationPath = EditorPrefs.GetString("STS.StylizedVehicles", "Assets/TurnTheGameOn/SimpleTrafficSystem/Integration/StylizedVehiclePack.unitypackage");
-            HDRP_DemosPath = EditorPrefs.GetString("STS.HDRP_Demos", "Assets /TurnTheGameOn/SimpleTrafficSystem/Integration/HDRP_Demos.unitypackage");
-            URP_DemosPath = EditorPrefs.GetString("STS.URP_Demos", "Assets /TurnTheGameOn/SimpleTrafficSystem/Integration/URP_Demos.unitypackage");
+            HDRP_DemosPath = EditorPrefs.GetString("STS.HDRP_Demos", "Assets/TurnTheGameOn/SimpleTrafficSystem/Integration/HDRP_Demos.unitypackage");
+            URP_DemosPath = EditorPrefs.GetString("STS.URP_Demos", "Assets/TurnTheGameOn/SimpleTrafficSystem/Integration/URP_Demos.unitypackage");
             loaded = true;
         }
 

@@ -116,7 +116,7 @@
                 {
                     if (GUILayout.Button("HDRP"))
                     {
-                        AssetDatabase.ImportPackage(STSPrefs.HDRP_DemosPath, true);
+                        AssetDatabase.ImportPackage(STSPrefs_Editor.HDRP_DemosPath, true);
                     }
                     if (GUILayout.Button("Update Project Materials for HDRP"))
                     {
@@ -127,7 +127,7 @@
                 {
                     if (GUILayout.Button("URP"))
                     {
-                        AssetDatabase.ImportPackage(STSPrefs.URP_DemosPath, true);
+                        AssetDatabase.ImportPackage(STSPrefs_Editor.URP_DemosPath, true);
                     }
                     if (GUILayout.Button("Update Project Materials for URP"))
                     {
@@ -150,11 +150,11 @@
                 EditorGUILayout.HelpBox("The 3rd party packages are required for each integration.", MessageType.Info);
                 if (GUILayout.Button("CiDy 2 Integration"))
                 {
-                    AssetDatabase.ImportPackage(STSPrefs.CiDyIntegrationPath, true);
+                    AssetDatabase.ImportPackage(STSPrefs_Editor.CiDyIntegrationPath, true);
                 }
                 if (GUILayout.Button("Stylized Vehicles Pack"))
                 {
-                    AssetDatabase.ImportPackage(STSPrefs.StylizedVehiclesIntegrationPath, true);
+                    AssetDatabase.ImportPackage(STSPrefs_Editor.StylizedVehiclesIntegrationPath, true);
                 }
                 EditorGUILayout.Space();
                 EditorGUILayout.Space();
@@ -777,7 +777,7 @@
                         {
                             UndoRecordTargetObject(this, "Load Routes");
                             _routes = FindObjectsOfType<AITrafficWaypointRoute>();
-                            STSPrefs.hideSpawnPointsInEditMode = false;
+                            STSPrefs_Editor.hideSpawnPointsInEditMode = false;
                             SceneView.RepaintAll();
                         }
 
@@ -796,7 +796,7 @@
                         {
                             UndoRecordTargetObject(this, "Load Routes");
                             _routes = FindObjectsOfType<AITrafficWaypointRoute>();
-                            STSPrefs.hideSpawnPointsInEditMode = false;
+                            STSPrefs_Editor.hideSpawnPointsInEditMode = false;
                             SceneView.RepaintAll();
                         }
                     }
@@ -1362,12 +1362,12 @@
                             float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                             Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                             float size = linearPointDistance * handleSize;
-                            if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                            if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                             {
                                 if ((LC_routeIndexA == i || LC_routeIndexB == i) || (LC_routeIndexA == -1 || LC_routeIndexB == -1)) // if index is selected // if 1 or more indexes are not assigned
                                 {
-                                    style.normal.textColor = (this.LC_routeIndexA == i || this.LC_routeIndexB == i) ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                    Handles.color = (this.LC_routeIndexA == i || this.LC_routeIndexB == i) ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                    style.normal.textColor = (this.LC_routeIndexA == i || this.LC_routeIndexB == i) ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                    Handles.color = (this.LC_routeIndexA == i || this.LC_routeIndexB == i) ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                     if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                     {
                                         UndoRecordTargetObject(this, "Lane Connector Handle");
@@ -1406,7 +1406,7 @@
                     }
                     if (this.LC_routeIndexA != -1 && this.LC_routeIndexB != -1) /// Draw Line
                     {
-                        Handles.color = STSPrefs.connectionColor;
+                        Handles.color = STSPrefs_Editor.connectionColor;
                         int indexA = this._routes[LC_routeIndexA].waypointDataList.Count - 1;
                         int indexB = this._routes[LC_routeIndexB].waypointDataList.Count - 1;
                         Vector3 positionA = this._routes[LC_routeIndexA].waypointDataList[indexA]._transform.position + new Vector3(0, 0.2f, 0);
@@ -1431,15 +1431,15 @@
                             float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                             Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                             float size = linearPointDistance * handleSize;
-                            if (STSPrefs.drawDistance >= pointDistance)
+                            if (STSPrefs_Editor.drawDistance >= pointDistance)
                             {
                                 #region TO Handle
                                 if (RC_toPointIndex == -1 || RC_toRouteIndex == i && RC_toPointIndex == j)
                                 {
                                     if (RC_fromRouteIndex != i && RC_fromPointIndex != j)
                                     {
-                                        style.normal.textColor = (RC_toRouteIndex == i) && (RC_toPointIndex == j) ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                        Handles.color = (RC_toRouteIndex == i) && (RC_toPointIndex == j) ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                        style.normal.textColor = (RC_toRouteIndex == i) && (RC_toPointIndex == j) ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                        Handles.color = (RC_toRouteIndex == i) && (RC_toPointIndex == j) ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                         if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                         {
                                             UndoRecordTargetObject(this, "To Handle");
@@ -1469,8 +1469,8 @@
                                     {
                                         pointTransformPosition = _routes[i].waypointDataList[j]._transform.position + new Vector3(0, (2.75f * linearPointDistance), 0);
                                         _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
-                                        style.normal.textColor = (RC_fromRouteIndex == i) && (RC_fromPointIndex == j) ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                        Handles.color = (RC_fromRouteIndex == i) && (RC_fromPointIndex == j) ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                        style.normal.textColor = (RC_fromRouteIndex == i) && (RC_fromPointIndex == j) ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                        Handles.color = (RC_fromRouteIndex == i) && (RC_fromPointIndex == j) ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                         if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                         {
                                             UndoRecordTargetObject(this, "From Handle");
@@ -1514,12 +1514,12 @@
                             float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                             Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                             float size = linearPointDistance * handleSize;
-                            if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                            if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                             {
                                 if (RE_routeIndex == i || RE_routeIndex == -1) // if index is selected // if index is not assigned
                                 {
-                                    style.normal.textColor = RE_routeIndex == i ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                    Handles.color = RE_routeIndex == i ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                    style.normal.textColor = RE_routeIndex == i ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                    Handles.color = RE_routeIndex == i ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                     if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                     {
                                         UndoRecordTargetObject(this, "Route Editor Handle");
@@ -1567,10 +1567,10 @@
                                 float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                                 Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                                 float size = linearPointDistance * handleSize;
-                                if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                                if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                                 {
-                                    style.normal.textColor = (SC_routeIndex == i) ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                    Handles.color = (SC_routeIndex == i) ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                    style.normal.textColor = (SC_routeIndex == i) ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                    Handles.color = (SC_routeIndex == i) ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                     if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                     {
                                         UndoRecordTargetObject(this, "Signal Connector Route Handle");
@@ -1608,10 +1608,10 @@
                             float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                             Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                             float size = linearPointDistance * handleSize;
-                            if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                            if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                             {
-                                style.normal.textColor = (SC_lightIndex == i) ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                Handles.color = (SC_lightIndex == i) ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                style.normal.textColor = (SC_lightIndex == i) ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                Handles.color = (SC_lightIndex == i) ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                 if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                 {
                                     UndoRecordTargetObject(this, "Signal Connector Light Handle");
@@ -1639,7 +1639,7 @@
                         if (SC_lights[i].waypointRoute != null)
                         {
                             int index = SC_lights[i].waypointRoute.waypointDataList.Count - 1;
-                            Handles.color = STSPrefs.connectionColor;
+                            Handles.color = STSPrefs_Editor.connectionColor;
                             Handles.DrawLine(SC_lights[i].transform.position, SC_lights[i].waypointRoute.waypointDataList[index]._transform.position);
                         }
                     }
@@ -1649,8 +1649,8 @@
                     break;
                 case EditMode.SpawnPoints:
                     #region SpawnPoints
-                    style.normal.textColor = STSPrefs.handleTextColor;
-                    Handles.color = STSPrefs.handleColor;
+                    style.normal.textColor = STSPrefs_Editor.handleTextColor;
+                    Handles.color = STSPrefs_Editor.handleColor;
                     for (int i = 0; i < _routes.Length; i++)
                     {
                         if (_routes[0] == null)
@@ -1667,7 +1667,7 @@
                                 float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                                 Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                                 float size = linearPointDistance * handleSize;
-                                if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                                if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                                 {
                                     if (_routes[i].waypointDataList[j]._transform.childCount == 0)
                                     {
@@ -1715,10 +1715,10 @@
                                 float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                                 Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                                 float size = linearPointDistance * handleSize;
-                                if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                                if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                                 {
-                                    style.normal.textColor = (STC_routeIndex == i) ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                    Handles.color = (STC_routeIndex == i) ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                    style.normal.textColor = (STC_routeIndex == i) ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                    Handles.color = (STC_routeIndex == i) ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                     if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                     {
                                         UndoRecordTargetObject(this, "Stop Connector Route Handle");
@@ -1756,10 +1756,10 @@
                             float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                             Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                             float size = linearPointDistance * handleSize;
-                            if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                            if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                             {
-                                style.normal.textColor = (STC_stopIndex == i) ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                Handles.color = (STC_stopIndex == i) ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                style.normal.textColor = (STC_stopIndex == i) ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                Handles.color = (STC_stopIndex == i) ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                 if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                 {
                                     UndoRecordTargetObject(this, "Stop Connector Stop Handle");
@@ -1787,7 +1787,7 @@
                         if (STC_stops[i].waypointRoute != null)
                         {
                             int index = STC_stops[i].waypointRoute.waypointDataList.Count - 1;
-                            Handles.color = STSPrefs.connectionColor;
+                            Handles.color = STSPrefs_Editor.connectionColor;
                             Handles.DrawLine(STC_stops[i].transform.position, STC_stops[i].waypointRoute.waypointDataList[index]._transform.position);
                         }
                     }
@@ -1812,12 +1812,12 @@
                             float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                             Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                             float size = linearPointDistance * handleSize;
-                            if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                            if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                             {
                                 if (YT_configureRouteIndex == i || YT_configureRouteIndex == -1) // if index is selected // if 1 or more indexes are not assigned
                                 {
-                                    style.normal.textColor = YT_configureRouteIndex == i ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                    Handles.color = YT_configureRouteIndex == i ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                    style.normal.textColor = YT_configureRouteIndex == i ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                    Handles.color = YT_configureRouteIndex == i ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                     if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                     {
                                         UndoRecordTargetObject(this, "Yield Trigger Route Handle");
@@ -1850,14 +1850,14 @@
                                         {
                                             if (YT_configureWaypointIndex == j || YT_configureWaypointIndex == -1)
                                             {
-                                                style.normal.textColor = YT_configureWaypointIndex == j ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                                Handles.color = YT_configureWaypointIndex == j ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                                style.normal.textColor = YT_configureWaypointIndex == j ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                                Handles.color = YT_configureWaypointIndex == j ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                                 pointTransformPosition = _routes[i].waypointDataList[j]._transform.position;
                                                 pointDistance = Vector3.Distance(Camera.current.transform.position, pointTransformPosition);
                                                 linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                                                 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                                                 size = linearPointDistance * handleSize;
-                                                if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                                                if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                                                 {
                                                     if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                                     {
@@ -1910,10 +1910,10 @@
                                     float linearPointDistance = Mathf.InverseLerp(0, handleMaxSizeDistance, pointDistance);
                                     Vector3 _textPosition = pointTransformPosition + (handleTextoffset * linearPointDistance);
                                     float size = linearPointDistance * handleSize;
-                                    if (STSPrefs.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
+                                    if (STSPrefs_Editor.drawDistance >= Vector3.Distance(Camera.current.transform.position, pointTransformPosition))
                                     {
-                                        style.normal.textColor = (YT_routeInfoIndex == i) ? STSPrefs.handleTextSelectedColor : STSPrefs.handleTextColor;
-                                        Handles.color = (YT_routeInfoIndex == i) ? STSPrefs.handleSelectedColor : STSPrefs.handleColor;
+                                        style.normal.textColor = (YT_routeInfoIndex == i) ? STSPrefs_Editor.handleTextSelectedColor : STSPrefs_Editor.handleTextColor;
+                                        Handles.color = (YT_routeInfoIndex == i) ? STSPrefs_Editor.handleSelectedColor : STSPrefs_Editor.handleColor;
                                         if (Handles.Button(pointTransformPosition, Quaternion.LookRotation(sceneViewCameraTransform.forward, sceneViewCameraTransform.up), size, size, Handles.DotHandleCap))
                                         {
                                             UndoRecordTargetObject(this, "Yield Trigger Route Info Handle");
@@ -1938,7 +1938,7 @@
                     #region Line Handle
                     if (YT_route != null)
                     {
-                        Handles.color = STSPrefs.connectionColor;
+                        Handles.color = STSPrefs_Editor.connectionColor;
                         for (int i = 0; i < YT_route.waypointDataList.Count; i++)
                         {
                             for (int j = 0; j < YT_route.waypointDataList[i]._waypoint.onReachWaypointSettings.yieldTriggers.Count; j++)
