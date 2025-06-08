@@ -112,7 +112,7 @@ public class ScenarioManager : MonoBehaviour
         get { return _instance; }
     }
 
-    
+
     #endregion
 
     #region Unity Lifecycle Methods
@@ -232,7 +232,6 @@ public class ScenarioManager : MonoBehaviour
             }
         }
     }
-
     // Add this helper method to ScenarioManager
     private RedirectionManager FindRedirectionManager()
     {
@@ -264,18 +263,11 @@ public class ScenarioManager : MonoBehaviour
         return rdwRoot;
     }
 
-    // Replace the Start() method in your ScenarioManager with this version
     private void Start()
     {
-        // CRITICAL: Configure physics for VR streaming FIRST
-        ConfigureVRPhysicsTiming();
-
-        // Your existing initialization code
-        StartCoroutine(DelayedInitCheck());
         OptimizeForVR();
         StoreMasterLighting();
-
-        // Configure RDW settings...
+        // Find or assign GlobalConfiguration
         if (rdwGlobalConfiguration == null)
         {
             rdwGlobalConfiguration = FindObjectOfType<GlobalConfiguration>();
@@ -287,27 +279,29 @@ public class ScenarioManager : MonoBehaviour
         }
         else
         {
+            // UPDATED: Set up for HMD mode with OpenRDW standards
             rdwGlobalConfiguration.movementController = GlobalConfiguration.MovementController.HMD;
             rdwGlobalConfiguration.freeExplorationMode = true;
-            rdwGlobalConfiguration.avatarNum = 1;
-            rdwGlobalConfiguration.RESET_TRIGGER_BUFFER = 0.4f;
+            rdwGlobalConfiguration.avatarNum = 1; // Single user
+            rdwGlobalConfiguration.RESET_TRIGGER_BUFFER = 0.4f; // OpenRDW recommended value
+
             Debug.Log("Configured OpenRDW for single-user HMD mode");
         }
 
+        // Additional debug info
         Debug.Log($"ScenarioManager started. Current scene: {SceneManager.GetActiveScene().name}");
 
-        // START TRAFFIC SYSTEM FIXES FOR BUILD
-        StartCoroutine(InitializeTrafficSystemForBuild());
-
-        // Rest of your existing code...
+        // Make sure the Manager scene is loaded and maintained
         EnsureManagerSceneIsLoaded();
 
+        // Make sure UI is visible at start
         if (researcherUI != null && !researcherUI.activeSelf)
         {
             researcherUI.SetActive(true);
             Debug.Log("Activated researcher UI in Start");
         }
 
+        // UPDATED: Find PersistentRDW and set up dimensions
         persistentRDW = FindObjectOfType<PersistentRDW>();
         if (persistentRDW == null)
         {
@@ -315,14 +309,23 @@ public class ScenarioManager : MonoBehaviour
         }
         else
         {
+            // Set your exact physical dimensions
             persistentRDW.physicalWidth = 8.4f;
             persistentRDW.physicalLength = 14.0f;
             Debug.Log("Set PersistentRDW dimensions to 8.4m × 14.0m");
         }
 
+        // Check for duplicate event systems and XR interaction managers
         CheckForDuplicateManagers();
 
-        // Bus spawner setup...
+        if (AITrafficController.Instance != null)
+        {
+            // Set the flag to disable initial spawning
+            AITrafficController.Instance.disableInitialSpawn = true;
+            Debug.Log("Disabled initial traffic spawning");
+        }
+
+        // Find or create the bus spawner
         BusSpawnerSimple = FindObjectOfType<BusSpawnerSimple>();
         if (BusSpawnerSimple == null)
         {
@@ -331,138 +334,12 @@ public class ScenarioManager : MonoBehaviour
             BusSpawnerSimple = spawnerObj.AddComponent<BusSpawnerSimple>();
             DontDestroyOnLoad(spawnerObj);
 
+            // Assign default values if available
             BusSpawnerSimple.busPrefab = busPrefab;
             BusSpawnerSimple.initialRoute = initialRoute;
             BusSpawnerSimple.intersectionRoute = intersectionRoute;
             BusSpawnerSimple.busStopRoute = busStopRoute;
-        }
-    }
 
-    // NEW METHOD: Special traffic system initialization for builds
-    private IEnumerator InitializeTrafficSystemForBuild()
-    {
-        if (!Application.isEditor)
-        {
-            Debug.Log("BUILD: Initializing traffic system with VR fixes");
-
-            // Wait for basic scene setup
-            yield return new WaitForSeconds(1f);
-
-            // Find and configure traffic controller
-            AITrafficController controller = AITrafficController.Instance;
-            if (controller != null)
-            {
-                // Apply build-specific configuration
-                controller.ConfigureBuildPhysics();
-
-                // Disable initial spawn to prevent timing issues
-                controller.disableInitialSpawn = true;
-
-                // Wait for wheel fixes to complete
-                yield return new WaitForSeconds(3f);
-
-                // Now safely enable traffic spawning
-                controller.disableInitialSpawn = false;
-
-                Debug.Log("BUILD: Traffic system initialization complete");
-            }
-            else
-            {
-                Debug.LogError("BUILD: No AITrafficController found!");
-            }
-        }
-    }
-
-    // Add this to ScenarioManager.Start() - CRITICAL for VR streaming
-    private void ConfigureVRPhysicsTiming()
-    {
-        if (!Application.isEditor)
-        {
-            Debug.Log("Configuring physics for VR streaming to Quest 3");
-
-            // CRITICAL: Set Fixed Timestep to match Quest 3's 72Hz
-            // Quest 3 can run 72Hz, 90Hz, or 120Hz depending on settings
-            Time.fixedDeltaTime = 1f / 72f; // = 0.0139 seconds (72Hz)
-
-            // Alternative for 90Hz if your Quest 3 is set to 90Hz:
-            // Time.fixedDeltaTime = 1f / 90f; // = 0.0111 seconds (90Hz)
-
-            // Set Maximum Allowed Timestep to prevent physics spiral of death
-            Time.maximumDeltaTime = Time.fixedDeltaTime * 2f; // Allow max 2 physics steps per frame
-
-            // Configure physics solver for VR streaming stability
-            Physics.defaultSolverIterations = 6;        // Reduced from 8 for performance
-            Physics.defaultSolverVelocityIterations = 3; // Reduced from 4 for performance
-
-            // VR streaming-specific settings
-            Physics.sleepThreshold = 0.005f;    // Keep rigidbodies awake longer
-            Physics.bounceThreshold = 0.05f;    // Reduce micro-bouncing
-            Physics.defaultContactOffset = 0.01f; // Tighter contact detection
-
-            Debug.Log($"VR Physics configured: FixedDelta={Time.fixedDeltaTime:F4}s, MaxDelta={Time.maximumDeltaTime:F4}s");
-        }
-    }
-
-    // Also add this method to detect Quest refresh rate dynamically
-    private float DetectVRRefreshRate()
-    {
-        if (UnityEngine.XR.XRSettings.enabled)
-        {
-            float refreshRate = UnityEngine.XR.XRDevice.refreshRate;
-            Debug.Log($"Detected VR refresh rate: {refreshRate}Hz");
-
-            if (refreshRate > 0)
-            {
-                return refreshRate;
-            }
-        }
-
-        // Fallback to Quest 3 default
-        return 72f;
-    }
-
-
-    private IEnumerator ForceInitialRouteRegistration()
-    {
-        // Wait for everything to initialize
-        yield return new WaitForSeconds(1f);
-
-        Debug.Log("FORCE: Attempting initial route registration");
-
-        if (AITrafficController.Instance != null)
-        {
-            // CRITICAL: Disable initial spawning while we fix routes
-            bool originalSpawnState = AITrafficController.Instance.disableInitialSpawn;
-            AITrafficController.Instance.disableInitialSpawn = true;
-
-            var routes = FindObjectsOfType<AITrafficWaypointRoute>();
-
-            // Use each route's own RegisterRoute() method
-            foreach (var route in routes)
-            {
-                if (route != null && !route.isRegistered)
-                {
-                    route.RegisterRoute(); // This will set isRegistered = true
-                    Debug.Log($"FORCE: Registered route {route.name}");
-                }
-            }
-
-            yield return new WaitForSeconds(0.5f);
-
-            // CRITICAL: Now that routes are registered, allow spawning
-            AITrafficController.Instance.disableInitialSpawn = originalSpawnState;
-
-            // Force spawn traffic now that routes are ready
-            AITrafficController.Instance.DirectlySpawnVehicles(20);
-
-            // Verify results
-            int registeredCount = 0;
-            foreach (var route in routes)
-            {
-                if (route.isRegistered) registeredCount++;
-            }
-
-            Debug.Log($"FORCE: Final registration result: {registeredCount}/{routes.Length} routes registered");
         }
     }
 
@@ -643,7 +520,7 @@ public class ScenarioManager : MonoBehaviour
         Debug.Log($"VR Player positioned: XR Origin at {targetXROriginPos}, Head should be at {startPosition}");
     }
 
-  
+
     // Add this to your ScenarioManager.cs to run during scenario transition
     public void RefreshScenarioRouteConnections()
     {
@@ -832,8 +709,6 @@ public class ScenarioManager : MonoBehaviour
 
         if (AITrafficController.Instance != null)
         {
-
-            //AITrafficController.Instance.EnsureSystemReady();
             AITrafficController.Instance.DisposeAllNativeCollections();
             AITrafficController.Instance.InitializeNativeLists();
             AITrafficController.Instance.RegisterAllRoutesInScene();
@@ -863,8 +738,8 @@ public class ScenarioManager : MonoBehaviour
             return;
         }
 
-    // Get any bus route
-    AITrafficWaypointRoute busStopRoute = null;
+        // Get any bus route
+        AITrafficWaypointRoute busStopRoute = null;
         if (this.busStopRoute != null)
         {
             busStopRoute = this.busStopRoute;
@@ -915,7 +790,7 @@ public class ScenarioManager : MonoBehaviour
         }
     }
 
-    
+
 
     private class SpawnOnce : MonoBehaviour
     {
@@ -1042,7 +917,7 @@ public class ScenarioManager : MonoBehaviour
             }
         }
 
-        
+
 
         // D key - Diagnostic information
         if (Input.GetKeyDown(KeyCode.D))
@@ -1775,7 +1650,6 @@ public class ScenarioManager : MonoBehaviour
         Application.Quit();
 #endif
     }
-
     public void ForceRegisterAllRoutes()
     {
         // Find the traffic controller
@@ -2014,17 +1888,12 @@ public class ScenarioManager : MonoBehaviour
             yield return new WaitForEndOfFrame();
         }
 
-        //// 7-10. Traffic system setup (existing logic)
+        // 7-10. Traffic system setup (existing logic)
         if (controller != null && !controller.enabled)
         {
             controller.enabled = true;
             Debug.Log("Re-enabled traffic controller after scene load");
         }
-
-        //StartCoroutine(FixBuildTimingIssues(scenario.trafficDensity));
-
-        // Use gentle approach instead
-        //GentleTrafficSceneTransition(scenario.trafficDensity);
 
         // Ensure all traffic light managers are enabled
         var lightManagers = FindObjectsOfType<AITrafficLightManager>();
@@ -4299,167 +4168,6 @@ public class ScenarioManager : MonoBehaviour
             }
         }
     }
-
-    // Add this to ScenarioManager.Start() to check initialization order
-    private void CheckInitializationOrder()
-    {
-        Debug.Log("=== INITIALIZATION ORDER CHECK ===");
-
-        // Check if traffic controller exists and is initialized
-        var controller = AITrafficController.Instance;
-        Debug.Log($"AITrafficController exists: {controller != null}");
-        if (controller != null)
-        {
-            Debug.Log($"Controller enabled: {controller.enabled}");
-            Debug.Log($"Controller car count: {controller.carCount}");
-        }
-
-        // Check routes
-        var routes = FindObjectsOfType<AITrafficWaypointRoute>();
-        Debug.Log($"Routes found: {routes.Length}");
-        int registeredRoutes = 0;
-        foreach (var route in routes)
-        {
-            if (route.isRegistered) registeredRoutes++;
-        }
-        Debug.Log($"Routes registered: {registeredRoutes}/{routes.Length}");
-
-        // Check spawn points
-        var spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
-        Debug.Log($"Spawn points found: {spawnPoints.Length}");
-
-        Debug.Log("=== END INITIALIZATION CHECK ===");
-    }
-
-    private IEnumerator DelayedInitCheck()
-    {
-        // Check immediately
-        Debug.Log("=== IMMEDIATE CHECK ===");
-        CheckInitializationOrder();
-
-        // Check after 1 frame (let everything initialize)
-        yield return null;
-        Debug.Log("=== AFTER 1 FRAME ===");
-        CheckInitializationOrder();
-
-        // Check after 2 seconds
-        yield return new WaitForSeconds(2f);
-        Debug.Log("=== AFTER 2 SECONDS ===");
-        CheckInitializationOrder();
-
-        // NEW: Additional detailed checks
-        yield return new WaitForSeconds(1f);
-        Debug.Log("=== DETAILED TRAFFIC SYSTEM CHECK ===");
-        PerformDetailedTrafficCheck();
-    }
-
-    private void PerformDetailedTrafficCheck()
-    {
-        var controller = AITrafficController.Instance;
-        if (controller != null)
-        {
-            Debug.Log($"Controller enabled: {controller.enabled}");
-            Debug.Log($"Controller density: {controller.density}");
-            Debug.Log($"Controller current density: {controller.currentDensity}");
-            Debug.Log($"Controller car count: {controller.carCount}");
-            Debug.Log($"Controller using pooling: {controller.usePooling}");
-
-            // Check internal arrays
-            try
-            {
-                var cars = controller.GetTrafficCars();
-                var routes = controller.GetRoutes();
-                Debug.Log($"Cars array length: {cars?.Length ?? 0}");
-                Debug.Log($"Routes array length: {routes?.Length ?? 0}");
-
-                int activeCars = 0;
-                int drivingCars = 0;
-                foreach (var car in cars)
-                {
-                    if (car != null)
-                    {
-                        activeCars++;
-                        if (car.isDriving) drivingCars++;
-                    }
-                }
-                Debug.Log($"Active cars: {activeCars}, Driving cars: {drivingCars}");
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Error checking traffic arrays: {ex.Message}");
-            }
-        }
-
-        // Check routes
-        var sceneRoutes = FindObjectsOfType<AITrafficWaypointRoute>();
-        Debug.Log($"Routes in scene: {sceneRoutes.Length}");
-        int registeredRoutes = 0;
-        foreach (var route in sceneRoutes)
-        {
-            if (route != null && route.isRegistered)
-            {
-                registeredRoutes++;
-                Debug.Log($"Route '{route.name}': {route.waypointDataList.Count} waypoints");
-            }
-        }
-        Debug.Log($"Registered routes: {registeredRoutes}/{sceneRoutes.Length}");
-
-        // Check spawn points
-        var spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
-        Debug.Log($"Spawn points in scene: {spawnPoints.Length}");
-        int validSpawnPoints = 0;
-        foreach (var sp in spawnPoints)
-        {
-            if (sp != null && sp.waypoint != null &&
-                sp.waypoint.onReachWaypointSettings.parentRoute != null)
-            {
-                validSpawnPoints++;
-            }
-        }
-        Debug.Log($"Valid spawn points: {validSpawnPoints}/{spawnPoints.Length}");
-    }
-
-    private IEnumerator EnsureTrafficControllerReady()
-    {
-        // Wait a few frames to ensure everything is initialized
-        yield return new WaitForSeconds(0.1f);
-
-        if (AITrafficController.Instance == null)
-        {
-            Debug.LogError("AITrafficController.Instance is null in build! Check initialization order.");
-        }
-        else
-        {
-            Debug.Log("AITrafficController ready in build");
-
-            // Force refresh all registered cars
-            var carList = AITrafficController.Instance.GetCarList();
-            for (int i = 0; i < carList.Count; i++)
-            {
-                if (carList[i] != null)
-                {
-                    // Ensure car physics and movement are properly initialized
-                    var car = carList[i];
-                    if (car.rb != null)
-                    {
-                        car.rb.isKinematic = false;
-                        car.rb.WakeUp();
-                    }
-
-                    // Restart driving if it was supposed to be driving
-                    if (car.isDriving && car.CurrentSpeed() <= 0.1f)
-                    {
-                        Debug.Log($"Restarting car {car.name} in build");
-                        car.StartDriving();
-                    }
-                }
-            }
-        }
-    }
-
-    // Replace your traffic system initialization in TransitionToScenario with this timing fix
-    // This preserves your existing logic but fixes build timing issues
-
 
 
 

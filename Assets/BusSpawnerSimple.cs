@@ -115,6 +115,13 @@ public class BusSpawnerSimple : MonoBehaviour
         Debug.Log($"BusSpawnerSimple: Bus spawn triggered, will spawn in {timer} seconds (unless button is pressed first)");
     }
 
+    private IEnumerator DelayedRigidbodyWakeup(Rigidbody rb)
+    {
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate(); // Wait 2 physics frames
+        rb.WakeUp();
+    }
+
 
     // Core spawn method
     public void SpawnBus()
@@ -134,8 +141,11 @@ public class BusSpawnerSimple : MonoBehaviour
 
         // Get spawn position at the start of the route with proper offset
         Vector3 spawnPosition = initialRoute.waypointDataList[0]._transform.position;
-        spawnPosition.y += 0.5f; // Prevent ground clipping
-
+        RaycastHit hit;
+        if (Physics.Raycast(spawnPosition + Vector3.up * 5f, Vector3.down, out hit, 10f))
+        {
+            spawnPosition.y = hit.point.y + 0.1f; // Small offset above ground
+        }
         // Check if spawn area is clear
         if (!IsSpawnAreaClear(spawnPosition, clearanceRadius))
         {
@@ -188,6 +198,15 @@ public class BusSpawnerSimple : MonoBehaviour
             return;
         }
 
+        Rigidbody busRb = busCar.GetComponent<Rigidbody>();
+        if (busRb != null)
+        {
+            busRb.velocity = Vector3.zero;
+            busRb.angularVelocity = Vector3.zero;
+            // Remove WakeUp() or delay it
+            StartCoroutine(DelayedRigidbodyWakeup(busRb));
+        }
+
         // Important: Create the DriveTarget before registering with controller
         Transform driveTarget = new GameObject("DriveTarget").transform;
         driveTarget.SetParent(busObject.transform);
@@ -199,12 +218,13 @@ public class BusSpawnerSimple : MonoBehaviour
             Debug.Log($"Positioned drive target at {driveTarget.position}");
         }
 
-
         // Important: Set vehicle type before registration
         busCar.vehicleType = busType;
         busCar.waypointRoute = initialRoute;
+
         // Add this to the SpawnBus method before registering the car
         AITrafficController.Instance.EnsureCapacityForNewCar();
+
         try
         {
             // Register with controller - this is where the error happens

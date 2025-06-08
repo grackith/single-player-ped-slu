@@ -57,7 +57,7 @@
 
         private float turningStartTime;
         private float minimumTurningDuration = 3.0f; // Stay in turning mode for at least 3 seconds
-        private bool vrWheelFixActive = false;
+
 
 
         // Used when vehicle type filtering is active
@@ -287,11 +287,6 @@
             // Set driving state
             isDriving = true;
             isActiveInTraffic = true;
-            if (rb != null)
-            {
-                rb.WakeUp(); // Ensure rigidbody is active
-                rb.isKinematic = false; // Make sure it's not kinematic
-            }
 
             // Update controller state
             if (AITrafficController.Instance != null && assignedIndex >= 0)
@@ -317,18 +312,7 @@
 
             // CRITICAL: Ensure drive target is properly positioned
             EnsureDriveTargetPosition();
-
             Debug.Log($"Car {name} started driving on route {waypointRoute.name}");
-        }
-        public void SetVRWheelFixActive(bool active)
-        {
-            vrWheelFixActive = active;
-
-            // Also update the controller's array
-            if (AITrafficController.Instance != null && assignedIndex >= 0)
-            {
-                AITrafficController.Instance.SetVRWheelFixActive(assignedIndex, active);
-            }
         }
 
         private int FindNearestWaypointIndex()
@@ -360,16 +344,6 @@
             {
                 driveTarget = new GameObject("DriveTarget").transform;
                 driveTarget.SetParent(transform);
-                driveTarget.localPosition = Vector3.zero; // Ensure clean local position
-                driveTarget.localRotation = Quaternion.identity; // Ensure clean local rotation
-            }
-
-            // Validate route data before proceeding
-            if (waypointRoute == null || waypointRoute.waypointDataList == null || waypointRoute.waypointDataList.Count == 0)
-            {
-                Debug.LogWarning($"Car {name}: Cannot ensure drive target - invalid route data");
-                driveTarget.position = transform.position + transform.forward * 10f;
-                return;
             }
 
             // Position drive target at next waypoint
@@ -379,31 +353,11 @@
                 waypointRoute.waypointDataList[nextWaypointIndex]._transform != null)
             {
                 driveTarget.position = waypointRoute.waypointDataList[nextWaypointIndex]._transform.position;
-
-                // VR DEBUG: Log drive target positioning
-                if (!Application.isEditor)
-                {
-                    Debug.Log($"Car {name}: Drive target set to waypoint {nextWaypointIndex} at {driveTarget.position}");
-                }
             }
             else
             {
                 // Fallback - position ahead of car
                 driveTarget.position = transform.position + transform.forward * 10f;
-
-                if (!Application.isEditor)
-                {
-                    Debug.Log($"Car {name}: Drive target set to fallback position ahead of car");
-                }
-            }
-
-            // VR ADDITION: Ensure the car is facing roughly toward the drive target
-            Vector3 directionToTarget = (driveTarget.position - transform.position).normalized;
-            if (directionToTarget.magnitude > 0.1f) // Valid direction
-            {
-                // Gently orient toward target (don't snap instantly)
-                Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 0.3f);
             }
         }
 
@@ -487,13 +441,11 @@
                 Debug.LogError("Cannot register car: No AITrafficController instance found!");
                 return;
             }
-
             if (route == null)
             {
                 Debug.LogError("Cannot register car: Route is null!");
                 return;
             }
-
             try
             {
                 if (brakeMaterial == null && brakeMaterialMesh != null)
@@ -504,7 +456,6 @@
                     }
                     else
                     {
-                        //Debug.LogWarning($"Invalid brakeMaterialIndex {brakeMaterialIndex}, using default material");
                         brakeMaterial = null; // Controller will use unassignedBrakeMaterial
                     }
                 }
@@ -512,21 +463,14 @@
                 // Store route reference directly
                 waypointRoute = route;
 
-                // Your existing code in RegisterCar()
                 // Get rigidbody if needed
                 if (rb == null)
                     rb = GetComponent<Rigidbody>();
 
-                // ADD THIS - VR-compatible physics settings
+                // ONLY ADD THIS: Force rigidbody wake up for builds
                 if (rb != null)
                 {
-                    rb.interpolation = RigidbodyInterpolation.Interpolate;
-                    rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-
-                    // Ensure reasonable physics values for VR
-                    if (rb.mass < 0.1f) rb.mass = 1.0f;
-                    if (rb.drag < 0.1f) rb.drag = minDrag;
-                    if (rb.angularDrag < 0.1f) rb.angularDrag = minAngularDrag;
+                    rb.WakeUp();
                 }
 
                 // Register with controller
@@ -539,100 +483,28 @@
                 }
 
                 startRoute = route;
-
                 Debug.Log($"Car {name} registered with controller, assigned index: {assignedIndex}");
             }
-
-            
-
             catch (System.Exception ex)
             {
                 Debug.LogError($"Error registering car {name} with controller: {ex.Message}");
                 assignedIndex = -1; // Flag as registration failed
             }
-            if (!Application.isEditor)
+        }
+
+        private IEnumerator ValidateDriveTargetAfterRegistration()
+        {
+            // Wait for controller to finish creating DriveTarget
+            yield return null;
+
+            Transform driveTarget = transform.Find("DriveTarget");
+            if (driveTarget != null && waypointRoute != null && waypointRoute.waypointDataList.Count > 1)
             {
-                ConfigureForVRStreaming();
-
-                // Set VR wheel fix flag to prevent job interference
-                SetVRWheelFixActive(true);
-
-                // Apply the complete wheel fix immediately
-                CompleteWheelFixForVR();
-
-                // Schedule delayed fixes
-                StartCoroutine(DelayedCompleteWheelFix());
-
-                // Reset flag after a delay
-                StartCoroutine(ResetVRWheelFlag());
+                // Controller created DriveTarget, but make sure it's positioned correctly
+                driveTarget.position = waypointRoute.waypointDataList[1]._transform.position;
+                Debug.Log($"Validated DriveTarget position for {name} at {driveTarget.position}");
             }
         }
-
-        private IEnumerator ResetVRWheelFlag()
-        {
-            yield return new WaitForSeconds(10f); // Longer delay to ensure fix completes
-            SetVRWheelFixActive(false);
-            Debug.Log($"VR wheel fix flag reset for {name}");
-        }
-
-        private IEnumerator DelayedCompleteWheelFix()
-        {
-            yield return new WaitForSeconds(2f);
-            CompleteWheelFixForVR();
-            yield return new WaitForSeconds(3f);
-            CompleteWheelFixForVR();
-        }
-
-        public void DiagnoseWheelContact()
-        {
-            if (!Application.isEditor)
-            {
-                Debug.Log($"=== WHEEL CONTACT DIAGNOSTIC for {name} ===");
-                for (int i = 0; i < _wheels.Length; i++)
-                {
-                    if (_wheels[i].collider != null)
-                    {
-                        WheelCollider wc = _wheels[i].collider;
-                        WheelHit hit;
-                        bool grounded = wc.GetGroundHit(out hit);
-                        Debug.Log($"Wheel {i}: Grounded={grounded}, Position={wc.transform.position}");
-                        Debug.Log($"Wheel {i}: Radius={wc.radius}, SuspensionDistance={wc.suspensionDistance}");
-                        if (grounded)
-                        {
-                            // Calculate distance from wheel center to ground contact point
-                            float distanceToGround = Vector3.Distance(wc.transform.position, hit.point);
-                            Debug.Log($"Wheel {i}: Ground={hit.collider.name}, ContactPoint={hit.point}, Distance={distanceToGround:F2}m");
-                            Debug.Log($"Wheel {i}: Hit Normal={hit.normal}, Force={hit.force}");
-                        }
-                        else
-                        {
-                            // Check what's below with raycast
-                            Vector3 wheelPos = wc.transform.position;
-                            if (Physics.Raycast(wheelPos, Vector3.down, out RaycastHit rayHit, 5f))
-                            {
-                                Debug.Log($"Wheel {i}: Raycast found ground {rayHit.distance}m below: {rayHit.collider.name}");
-                            }
-                            else
-                            {
-                                Debug.LogError($"Wheel {i}: NO GROUND within 5m!");
-                            }
-                        }
-                    }
-                    // Check visual mesh
-                    if (_wheels[i].meshTransform != null)
-                    {
-                        MeshRenderer mr = _wheels[i].meshTransform.GetComponent<MeshRenderer>();
-                        Debug.Log($"Visual Wheel {i}: Position={_wheels[i].meshTransform.position}, Visible={mr?.enabled}");
-                    }
-                    else
-                    {
-                        Debug.LogError($"Visual Wheel {i}: NULL MESH TRANSFORM!");
-                    }
-                }
-                Debug.Log("=== END WHEEL DIAGNOSTIC ===");
-            }
-        }
-
         public void ReinitializeRouteConnection()
         {
             // Skip if already has valid route
@@ -1260,7 +1132,7 @@
 
             Debug.Log($"Car {name} (type {vehicleType}) changed to route {onReachWaypointSettings.parentRoute.name}");
         }
-        void FixedUpdate()
+        void Update()
         {
             UpdateTurningState();
         }
@@ -1655,86 +1527,33 @@
             }
         }
 
-        private bool IsSceneCameraCheck()
-        {
-            try
-            {
-                if (Camera.current == null)
-                {
-                    Debug.Log($"[VISIBILITY] {name}: Camera.current is null");
-                    return false;
-                }
-
-                string cameraName = Camera.current.name;
-                bool isSceneCamera = cameraName == "SceneCamera" || cameraName.Contains("Scene");
-
-                if (Application.isEditor || Debug.isDebugBuild)
-                {
-                    Debug.Log($"[VISIBILITY] {name}: Camera.current = {cameraName}, isSceneCamera = {isSceneCamera}");
-                }
-
-                return isSceneCamera;
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"[VISIBILITY] {name}: Exception in IsSceneCameraCheck: {ex.Message}");
-                return false;
-            }
-        }
-
-        void OnBecameInvisible()
-        {
-            if (IsSceneCameraCheck())
-                return;
-
-            Debug.Log($"[VISIBILITY] {name}: OnBecameInvisible - setting visible to FALSE");
-
-            if (AITrafficController.Instance != null && assignedIndex >= 0)
-            {
-                AITrafficController.Instance.SetVisibleState(assignedIndex, false);
-            }
-        }
-
-        void OnBecameVisible()
-        {
-            if (IsSceneCameraCheck())
-                return;
-
-            Debug.Log($"[VISIBILITY] {name}: OnBecameVisible - setting visible to TRUE");
-
-            if (AITrafficController.Instance != null && assignedIndex >= 0)
-            {
-                AITrafficController.Instance.SetVisibleState(assignedIndex, true);
-            }
-        }
-
 
         #endregion
 
         #region Callbacks
-        //        void OnBecameInvisible()
-        //        {
-        //#if UNITY_EDITOR
-        //            if (Camera.current != null)
-        //            {
-        //                if (Camera.current.name == "SceneCamera")
-        //                    return;
-        //            }
-        //#endif
-        //            AITrafficController.Instance.SetVisibleState(assignedIndex, false);
-        //        }
+        void OnBecameInvisible()
+        {
+#if UNITY_EDITOR
+            if (Camera.current != null)
+            {
+                if (Camera.current.name == "SceneCamera")
+                    return;
+            }
+#endif
+            AITrafficController.Instance.SetVisibleState(assignedIndex, false);
+        }
 
-        //        void OnBecameVisible()
-        //        {
-        //#if UNITY_EDITOR
-        //            if (Camera.current != null)
-        //            {
-        //                if (Camera.current.name == "SceneCamera")
-        //                    return;
-        //            }
-        //#endif
-        //            AITrafficController.Instance.SetVisibleState(assignedIndex, true);
-        //        }
+        void OnBecameVisible()
+        {
+#if UNITY_EDITOR
+            if (Camera.current != null)
+            {
+                if (Camera.current.name == "SceneCamera")
+                    return;
+            }
+#endif
+            AITrafficController.Instance.SetVisibleState(assignedIndex, true);
+        }
         #endregion
 
         IEnumerator ResumeDrivingTimer(float _stopTime)
@@ -1742,207 +1561,7 @@
             yield return new WaitForSeconds(_stopTime);
             StartDriving();
         }
-        // Add this to AITrafficCar.cs
-        // Add this method to AITrafficCar.cs
-
-        // Add this to AITrafficCar.cs
-
-        public void ConfigureForVRStreaming()
-        {
-            if (rb == null) rb = GetComponent<Rigidbody>();
-
-            Debug.Log($"Configuring {name} for VR streaming");
-
-            // CRITICAL: Use STS-compatible physics settings (not 90Hz!)
-            if (!Application.isEditor)
-            {
-                // STS works best at 60Hz, not 90Hz
-                Time.fixedDeltaTime = 1f / 60f;
-
-                // Use moderate solver settings that work with STS job system
-                Physics.defaultSolverIterations = 8;  // Not 12!
-                Physics.defaultSolverVelocityIterations = 4; // Not 6!
-            }
-
-            if (rb != null)
-            {
-                // VR streaming optimized rigidbody settings
-                rb.sleepThreshold = 0.01f; // Prevent sleeping during network delays
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
-                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-
-                // Ensure reasonable mass and drag for VR
-                if (rb.mass < 0.5f) rb.mass = 1200f; // Car-like mass
-                if (rb.drag < 0.1f) rb.drag = 0.3f;
-                if (rb.angularDrag < 0.1f) rb.angularDrag = 3f;
-
-                // Force wake up
-                rb.WakeUp();
-            }
-
-            // CRITICAL: Fix wheels properly for VR builds
-            if (!Application.isEditor)
-            {
-                // Call the void method directly, no coroutine needed
-                CompleteWheelFixForVR();
-
-                // Also start the delayed fix coroutine
-                StartCoroutine(DelayedCompleteWheelFix());
-            }
-        }
-        // Add this to your AITrafficCar class - this is the COMPLETE solution
-
-        // REPLACE your CompleteWheelFixForVR method with this version that FORCES local positions:
-
-        public void CompleteWheelFixForVR()
-        {
-            if (Application.isEditor) return;
-
-            Debug.Log($"ULTIMATE VR FIX: Starting for {name} at position {transform.position}");
-
-            if (_wheels == null || _wheels.Length < 4)
-            {
-                Debug.LogError($"Car {name} has invalid wheel array!");
-                return;
-            }
-
-            // STEP 1: Ensure car is at proper ground level (accounting for your -34 ground)
-            Rigidbody rb = GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                // Stop all movement during fix
-                rb.velocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
-                rb.isKinematic = true;
-
-                // Check if car is at reasonable height above your -34 ground
-                if (transform.position.y < -32f) // If car is below ground level
-                {
-                    Vector3 correctedPos = transform.position;
-                    correctedPos.y = -32f; // Just above your -34 ground
-                    transform.position = correctedPos;
-                    Debug.Log($"ULTIMATE VR FIX: Moved {name} to proper height: {correctedPos}");
-                }
-            }
-
-            // STEP 2: CRITICAL - Force correct LOCAL positions (not world positions!)
-            Vector3[] localWheelPositions = new Vector3[]
-            {
-        new Vector3(0.6f, -0.4f, 1.2f),   // Front Right - LOCAL to car
-        new Vector3(-0.6f, -0.4f, 1.2f),  // Front Left - LOCAL to car
-        new Vector3(0.6f, -0.4f, -1.2f),  // Back Right - LOCAL to car
-        new Vector3(-0.6f, -0.4f, -1.2f)  // Back Left - LOCAL to car
-            };
-
-            for (int i = 0; i < 4 && i < _wheels.Length; i++)
-            {
-                // Fix wheel colliders first
-                if (_wheels[i].collider != null)
-                {
-                    WheelCollider wc = _wheels[i].collider;
-
-                    // CRITICAL: Ensure proper parent relationship
-                    wc.transform.SetParent(transform, false);
-                    wc.transform.localPosition = localWheelPositions[i];
-                    wc.transform.localRotation = Quaternion.identity;
-
-                    // Reset wheel collider settings
-                    wc.radius = 0.35f;
-                    wc.suspensionDistance = 0.3f;
-                    wc.mass = 20f;
-
-                    // Set suspension spring
-                    JointSpring spring = wc.suspensionSpring;
-                    spring.spring = 35000f;
-                    spring.damper = 4500f;
-                    spring.targetPosition = 0.5f;
-                    wc.suspensionSpring = spring;
-
-                    // Force reset
-                    wc.enabled = false;
-                    wc.enabled = true;
-
-                    Debug.Log($"ULTIMATE VR FIX: Fixed wheel collider {i} LOCAL position {localWheelPositions[i]}");
-                }
-
-                // STEP 3: CRITICAL - Fix visual meshes with FORCED local positions
-                if (_wheels[i].meshTransform != null)
-                {
-                    // FORCE parent relationship - this is critical!
-                    _wheels[i].meshTransform.SetParent(transform, false);
-
-                    // FORCE local position (not world position!)
-                    _wheels[i].meshTransform.localPosition = localWheelPositions[i];
-                    _wheels[i].meshTransform.localRotation = Quaternion.identity;
-                    _wheels[i].meshTransform.localScale = Vector3.one;
-
-                    // Force mesh to be visible
-                    MeshRenderer meshRenderer = _wheels[i].meshTransform.GetComponent<MeshRenderer>();
-                    if (meshRenderer != null)
-                    {
-                        meshRenderer.enabled = true;
-                        meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-                    }
-
-                    // CRITICAL: Log the actual positions to verify
-                    Debug.Log($"ULTIMATE VR FIX: Wheel {i} - LOCAL pos: {_wheels[i].meshTransform.localPosition}, WORLD pos: {_wheels[i].meshTransform.position}");
-                }
-            }
-
-            // STEP 4: DO NOT update controller arrays - this might be causing the problem!
-            // Let's see if skipping this fixes the issue
-            Debug.Log($"ULTIMATE VR FIX: Skipping controller array updates for {name}");
-
-            // STEP 5: Re-enable physics
-            if (rb != null)
-            {
-                rb.isKinematic = false;
-                rb.WakeUp();
-            }
-
-            // Reset turning state
-            isTurning = false;
-            turningStartTime = 0f;
-
-            Debug.Log($"ULTIMATE VR FIX: Complete for {name} - Car at {transform.position}");
-        }
-        private Vector3[] GetCorrectWheelPositions()
-        {
-            // Default car positions
-            Vector3[] positions = new Vector3[]
-            {
-        new Vector3(0.6f, -0.5f, 1.2f),   // Front Right
-        new Vector3(-0.6f, -0.5f, 1.2f),  // Front Left  
-        new Vector3(0.6f, -0.5f, -1.2f),  // Back Right
-        new Vector3(-0.6f, -0.5f, -1.2f)  // Back Left
-            };
-
-            // Adjust for different vehicle types
-            if (name.ToLower().Contains("bus"))
-            {
-                // Buses need different wheel spacing
-                positions = new Vector3[]
-                {
-            new Vector3(1.0f, -0.7f, 2.0f),   // Front Right
-            new Vector3(-1.0f, -0.7f, 2.0f),  // Front Left  
-            new Vector3(1.0f, -0.7f, -2.0f),  // Back Right
-            new Vector3(-1.0f, -0.7f, -2.0f)  // Back Left
-                };
-            }
-            else if (name.ToLower().Contains("truck") || name.ToLower().Contains("jeep"))
-            {
-                // Trucks/jeeps need slightly different spacing
-                positions = new Vector3[]
-                {
-            new Vector3(0.8f, -0.6f, 1.5f),   // Front Right
-            new Vector3(-0.8f, -0.6f, 1.5f),  // Front Left  
-            new Vector3(0.8f, -0.6f, -1.5f),  // Back Right
-            new Vector3(-0.8f, -0.6f, -1.5f)  // Back Left
-                };
-            }
-
-            return positions;
-        }
+        // Make sure you have this coroutine defined elsewhere in the class
 
     }
 }
