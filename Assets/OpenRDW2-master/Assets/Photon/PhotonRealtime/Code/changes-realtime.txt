@@ -75,7 +75,7 @@ Version 4.1.8.1 (12. March 2024 - rev7444)
 
 Version 4.1.8.0 (31. January 2024 - rev7364)
     Changed: Code for GamePropertyKey.MaxPlayersInt. Was 244 is now 243 to avoid incompatibilities. This is a breaking change. Affected versions v4.1.7.2 to v4.1.7.4 must be replaced or edited!
-    Important: Due to breaking changes, all clients with versions v4.1.7.2 to v4.1.7.4 must be updated to fix "JoinRandom" with MaxPlayers being not zero. Alternatively change GamePropertyKey.MaxPlayersInt to 243 if your project compiles the LoadBalancingApi.
+    Important: Due to breaking changes, all clients with versions v4.1.7.2 to v4.1.7.4 must be updated to fix "JoinRandom" with MaxPlayers being not zero. Alternatively change GamePropertyKey.MaxPlayersInt to 243 if   project compiles the LoadBalancingApi.
     Changed: Enum EncryptionMode to only have Payload Encryption and Datagram Encryption GCM (which requires AuthMode being set to AuthOnceWss). The other modes are outdated by now.
     Note: To use Datagram Encryption, you need a native plugin per platform. This can be requested via mail: developer@photonengine.com
     Updated: The Particle Demo has been updated. It is no longer inheriting and extending the LoadBalancingClient, Room and Player classes, which is not recommended, really. It now shows how to use callbacks, too.
@@ -148,7 +148,7 @@ Version 4.1.6.18 (20. September 2022 - rev6501)
     Removed: Surplus variable "overtime" in RegionPingCoroutine and RegionPingThreaded.
 
 Version 4.1.6.17 (02. August 2022 - rev6472)
-    Added: DisconnectCause.ApplicationQuit. Can be used when your app disconnects on application quit: lbc.Disconnect(DisconnectCause.ApplicationQuit).
+    Added: DisconnectCause.ApplicationQuit. Can be used when   app disconnects on application quit: lbc.Disconnect(DisconnectCause.ApplicationQuit).
     Note: The ConnectionHandler will use this to differentiate a regular disconnect from one that is triggered by Unity / app-quit.
 
 Version 4.1.6.16 (22. June 2022)
@@ -157,7 +157,7 @@ Version 4.1.6.16 (22. June 2022)
     Changed: HTTP Ping class for Best Region selection in WebGL changed from Unity's WWW class to UnityWebRequest.
 
 Version 4.1.6.15 (10. June 2022)
-    Changed: Sharding / Clustering support. Clients will no longer connect to a random cluster by default. To do so, make sure to add "/*" to the region code, if your game supports sharding / multiple clusters. This is only done in very high CCU cases.
+    Changed: Sharding / Clustering support. Clients will no longer connect to a random cluster by default. To do so, make sure to add "/*" to the region code, if   game supports sharding / multiple clusters. This is only done in very high CCU cases.
 
 Version 4.1.6.14 (26. April 2022)
     Added: Warning log if SocketWebTcp could not be found at runtime in Unity WebGL exports.
@@ -220,7 +220,7 @@ Version 4.1.5.2 (12. March 2021)
 
 Version 4.1.5.1 (09. March 2021)
     Removed: Setting of protocol 1.6 when connecting directly to a Master Server. This was a workaround for older Photon Server SDKs.
-    Note: If you host Photon yourself, you can set the LoadBalancingClient.SerializationProtocol to SerializationProtocol.GpBinaryV16, before you connect.
+    Note: If you host Photon  self, you can set the LoadBalancingClient.SerializationProtocol to SerializationProtocol.GpBinaryV16, before you connect.
     Changed: OpLeaveRoom will now clear the GameServerAddress and private room-entering cache. This cleans the state and prevents accidental success for ReconnectAndRejoinRoom calls.
     Changed: ReconnectToMaster will check if MasterServerAddress and authToken are known. These are minimum requirements to reconnect to the master (after a connection loss).
     Added: CustomAuthenticationType.Playstation5 (value 12).
@@ -342,7 +342,7 @@ Version 4.1.2.20 (12. December 2019 - rev5296)
     Added: LoadBalancingClient.ConnectUsingSettings(AppSettings appSettings). This allows Best Region connect, setting a custom name server and much more.
     Changed: Connect() is now ConnectToMasterServer(). Unlike ConnectUsingSettings(), this requires some settings to be done on the client.
     Added: Return parameter for all methods that set properties on the server.
-    Note: Room.SetCustomProperties returns bool. If you did override this, your project will have errors, make sure to fix the return type.
+    Note: Room.SetCustomProperties returns bool. If you did override this,   project will have errors, make sure to fix the return type.
     Changed: Failed Authentication will no longer call the OnDisconnected callback twice. This should better align with expectations.
     Internal: Pinging regions via coroutine (when Threads are unavailable) now uses only one GameObject for all pinging.
 
@@ -474,7 +474,7 @@ Version 4.1.1.2 (13. September 2016 - rev3652)
 
 Version 4.1.1.0 (15. August 2016 - rev3536)
     Fixed: Room.ClearExpectedUsers() is now sending it's current, local "expected users" to update the server with "CAS" (Check and Swap). This gives the client an update when the values become valid (which updates the local cache after the roundtrip).
-    Added: Support for the 'Server Side Master Client' feature. The Room will read master client updates from the server accordingly. Room.SetMasterClient() enables you to override the server's selection (provided it did not change before your operation gets executed).
+    Added: Support for the 'Server Side Master Client' feature. The Room will read master client updates from the server accordingly. Room.SetMasterClient() enables you to override the server's selection (provided it did not change before   operation gets executed).
     Changed: Option for bool WebForward into the new "WebFlags". This allows fine control of which data is being sent to WebHooks. This affects all SetProperties, OpWebRPC and the RaiseEventOptions.
     Added: WebRPC.cs to the LoadBalancing API folder (was available separately before). It contains WebFlags and WebRpcResponse.
 
@@ -518,7 +518,7 @@ Version 4.0.0.10 (14. July 2015 - rev2988)
     Changed: LoadBalancingClient.UserId no longer directly stores the id but puts it into AuthValues. This means, the UserId could also be set via setting AuthValues.
     Changed: The API of AuthenticationValues. There is now the UserId and AddAuthParameter() replaces the less general SetAuthParameters() (which only set specific key/values).
     Changed: PlayerName gets renamed to NickName, so PhotonPlayer.Name becomes .NickName and LoadBalancingClient.Name becomes .NickName, too. The old naming is marked as obsolete.
-    Changed: Particle Demo now connects to the Cloud by default (because it's easier to setup and try). You can define your own Master Server (Photon OnPremise) of course.
+    Changed: Particle Demo now connects to the Cloud by default (because it's easier to setup and try). You can define   own Master Server (Photon OnPremise) of course.
     Added: GamePropertyKey.MasterClientId (248) and ParameterCode.MasterClientId (203)
     Added: ParameterCode.ExpectedValues (231)
     Added: ParameterCode.SuppressRoomEvents (237)

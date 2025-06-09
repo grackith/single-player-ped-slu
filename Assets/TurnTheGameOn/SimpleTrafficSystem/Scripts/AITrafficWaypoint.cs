@@ -1,6 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Collections;
+using UnityEngine;
 
 namespace TurnTheGameOn.SimpleTrafficSystem
 {
@@ -244,10 +244,10 @@ namespace TurnTheGameOn.SimpleTrafficSystem
             }
             onReachWaypointSettings.newRoutePoints = newWaypointList.ToArray();
         }
-        // Add this to the AITrafficWaypoint class or create a partial class extension
+
 
 
     }
 
-    
-    }
+
+}

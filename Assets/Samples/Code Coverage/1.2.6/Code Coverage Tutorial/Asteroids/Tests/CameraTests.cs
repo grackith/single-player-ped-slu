@@ -9,7 +9,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
 
-public class CameraTests 
+public class CameraTests
 {
     GameObject cameraPrefab;
     LoadSceneParameters loadSceneParameters;
@@ -26,7 +26,7 @@ public class CameraTests
         loadSceneParameters = new LoadSceneParameters(LoadSceneMode.Single, LocalPhysicsMode.None);
 
         Object asteroidsScene = ((GameObject)Resources.Load("TestsReferences")).GetComponent<TestsReferences>().asteroidsScene;
-        
+
 #if UNITY_EDITOR
         asteroidsScenePath = AssetDatabase.GetAssetPath(asteroidsScene);
 #endif
@@ -45,7 +45,7 @@ public class CameraTests
         Assert.IsTrue(cameraPrefab.GetComponent<Camera>().clearFlags == CameraClearFlags.Skybox);
         Assert.IsTrue(cameraPrefab.GetComponent<Camera>().orthographic);
     }
-    
+
     [UnityTest]
     public IEnumerator _03_CameraExistsInScene()
     {

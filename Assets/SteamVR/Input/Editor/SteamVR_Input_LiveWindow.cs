@@ -1,17 +1,6 @@
-﻿using UnityEditor;
+﻿using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
-
-using System.CodeDom;
-using Microsoft.CSharp;
-using System.IO;
-using System.CodeDom.Compiler;
-
-using System.Linq;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Linq.Expressions;
-using System;
-using UnityEditorInternal;
 
 namespace Valve.VR
 {
@@ -150,11 +139,11 @@ namespace Valve.VR
                     }
 
                     EditorGUILayout.BeginHorizontal();
-                        setFoldouts[source][set.GetShortName()] = EditorGUILayout.Foldout(setFoldouts[source][set.GetShortName()], set.GetShortName());
+                    setFoldouts[source][set.GetShortName()] = EditorGUILayout.Foldout(setFoldouts[source][set.GetShortName()], set.GetShortName());
 
-                        EditorGUILayout.LabelField(activeText, labelStyle);
+                    EditorGUILayout.LabelField(activeText, labelStyle);
 
-                        GUI.backgroundColor = defaultColor;
+                    GUI.backgroundColor = defaultColor;
                     EditorGUILayout.EndHorizontal();
 
                     if (setFoldouts[source][set.GetShortName()] == false)

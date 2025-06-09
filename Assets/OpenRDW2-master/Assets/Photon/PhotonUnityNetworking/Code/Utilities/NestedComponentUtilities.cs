@@ -184,7 +184,8 @@ namespace Photon.Pun
                     return null;
 
                 par = par.parent;
-            };
+            }
+            ;
 
             return null;
         }

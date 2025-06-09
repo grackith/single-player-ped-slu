@@ -1,13 +1,11 @@
-﻿using UnityEditor.SettingsManagement;
-
-namespace UnityEditor.SettingsManagement.Examples
+﻿namespace UnityEditor.SettingsManagement.Examples
 {
     /// <summary>
     /// This class will act as a manager for the <see cref="Settings"/> singleton.
     /// </summary>
     static class MySettingsManager
     {
-        // Replace this with your own package name. Project settings will be stored in a JSON file in a directory matching
+        // Replace this with   own package name. Project settings will be stored in a JSON file in a directory matching
         // this name.
         internal const string k_PackageName = "com.unity.settings-manager-examples";
 

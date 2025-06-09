@@ -1,7 +1,7 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
     using System.Collections.Generic;
+    using UnityEngine;
     using UnityEngine.Events;
 
     [System.Serializable]
@@ -30,6 +30,6 @@
         public UnityEvent OnReachWaypointEvent;
         [HideInInspector] public Vector3 position;
         // Add to AITrafficWaypoint class
-        
+
     }
 }

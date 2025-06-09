@@ -6,7 +6,7 @@
 
 namespace Photon.Chat
 {
-    /// <summary>Contains commonly used status values for SetOnlineStatus. You can define your own.</summary>
+    /// <summary>Contains commonly used status values for SetOnlineStatus. You can define   own.</summary>
     /// <remarks>
     /// While "online" (value 2 and up), the status message will be sent to anyone who has you on his friend list.
     ///

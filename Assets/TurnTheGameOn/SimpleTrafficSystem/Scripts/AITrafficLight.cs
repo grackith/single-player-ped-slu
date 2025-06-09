@@ -1,8 +1,7 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
     using System.Collections.Generic;
-    using System.Linq;
+    using UnityEngine;
 
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficlight")]
     public class AITrafficLight : MonoBehaviour
@@ -20,7 +19,7 @@
 
         public void EnableRedLight()
         {
-           
+
             if (waypointRoute) waypointRoute.StopForTrafficlight(true);
             for (int i = 0; i < waypointRoutes.Count; i++)
             {

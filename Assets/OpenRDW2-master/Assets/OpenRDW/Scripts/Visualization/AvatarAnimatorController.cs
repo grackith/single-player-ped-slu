@@ -1,12 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class AvatarAnimatorController : MonoBehaviour
 {
     [HideInInspector]
     public int avatarId;
-    
+
     private GlobalConfiguration globalConfiguration;
     private RedirectionManager redirectionManager;
     private Vector3 prePos;
@@ -17,15 +15,16 @@ public class AvatarAnimatorController : MonoBehaviour
         {
             redirectionManager = globalConfiguration.redirectedAvatars[avatarId].GetComponent<RedirectionManager>();
         }
-        catch {
+        catch
+        {
 
-        }        
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
-        var animator = GetComponentInChildren<Animator>();        
+        var animator = GetComponentInChildren<Animator>();
         var walkSpeed = (redirectionManager.currPos - prePos).magnitude / globalConfiguration.GetDeltaTime();
         UpdateAnimator(animator, walkSpeed, globalConfiguration.GetDeltaTime());
         prePos = redirectionManager.currPos;
@@ -33,8 +32,8 @@ public class AvatarAnimatorController : MonoBehaviour
     public static void UpdateAnimator(Animator animator, float walkSpeed, float time)
     {
         if (animator == null)
-            return;        
-        
+            return;
+
         animator.SetFloat("walkSpeed", walkSpeed);
 
         //update animator
@@ -43,7 +42,7 @@ public class AvatarAnimatorController : MonoBehaviour
         //Can't call Animator.Update on inactive object
         if (animator.gameObject.activeSelf)
             animator.Update(time);
-        
-        animator.speed = 0;        
+
+        animator.speed = 0;
     }
 }

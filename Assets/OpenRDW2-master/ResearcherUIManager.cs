@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.XR.Interaction.Toolkit;
 
 /// <summary>
 /// Manages a researcher UI panel that exists within the VR world but is controlled by keyboard shortcuts

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 
 namespace Valve.VR
@@ -223,7 +218,7 @@ namespace Valve.VR
             {
                 if (getFromOpposite)
                 {
-                    bool confirm = EditorUtility.DisplayDialog("SteamVR", string.Format("This will overwrite your current {0} skeleton data. (with data from the {1} skeleton)", thisSourceString, oppositeSourceString), "Overwrite", "Cancel");
+                    bool confirm = EditorUtility.DisplayDialog("SteamVR", string.Format("This will overwrite   current {0} skeleton data. (with data from the {1} skeleton)", thisSourceString, oppositeSourceString), "Overwrite", "Cancel");
                     if (confirm)
                     {
                         Vector3 reflectedPosition = new Vector3(-oppositeSkeleton.transform.localPosition.x, oppositeSkeleton.transform.localPosition.y, oppositeSkeleton.transform.localPosition.z);
@@ -339,7 +334,7 @@ namespace Valve.VR
 
             if (forcePose)
             {
-                bool confirm = EditorUtility.DisplayDialog("SteamVR", string.Format("This will overwrite your current skeleton data. (with data from the {0} reference pose)", forceToReferencePose.ToString()), "Overwrite", "Cancel");
+                bool confirm = EditorUtility.DisplayDialog("SteamVR", string.Format("This will overwrite   current skeleton data. (with data from the {0} reference pose)", forceToReferencePose.ToString()), "Overwrite", "Cancel");
                 if (confirm)
                 {
                     if (forceToReferencePose == EVRSkeletalReferencePose.GripLimit)

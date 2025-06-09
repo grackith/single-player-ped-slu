@@ -1,7 +1,7 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
     using UnityEditor;
+    using UnityEngine;
 
     [CustomEditor(typeof(AITrafficCar))]
     public class Editor_AITrafficCar : Editor
@@ -170,19 +170,19 @@
 
             for (int i = 0; i < allChildTransforms.Length; i++)
             {
-                    MeshRenderer rend = allChildTransforms[i].GetComponent<MeshRenderer>();
-                    if (rend != null)
+                MeshRenderer rend = allChildTransforms[i].GetComponent<MeshRenderer>();
+                if (rend != null)
+                {
+                    for (int j = 0; j < rend.sharedMaterials.Length; j++)
                     {
-                        for (int j = 0; j < rend.sharedMaterials.Length; j++)
+                        if (rend.sharedMaterials[j].name == STSPrefs_Editor.brakeMaterialName)
                         {
-                            if (rend.sharedMaterials[j].name == STSPrefs_Editor.brakeMaterialName)
-                            {
-                                _car.brakeMaterialMesh = rend;
-                                _car.brakeMaterialIndex = j;
-                                break;
-                            }
+                            _car.brakeMaterialMesh = rend;
+                            _car.brakeMaterialIndex = j;
+                            break;
                         }
                     }
+                }
             }
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(_car.gameObject.scene);
         }

@@ -1,15 +1,12 @@
 ﻿#if (UNITY_EDITOR && UNITY_2019_1_OR_NEWER)
 
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Unity.XR.OpenVR.SimpleJSON;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
-using UnityEditor.PackageManager.UI;
 using UnityEngine;
-using UnityEngine.Networking;
 
 namespace Unity.XR.OpenVR
 {
@@ -61,7 +58,7 @@ namespace Unity.XR.OpenVR
         {
             EditorApplication.update -= Update;
             EditorApplication.update += Update;
-            
+
             if (force)
             {
                 RemoveScopedRegistry();
@@ -70,9 +67,9 @@ namespace Unity.XR.OpenVR
 
         static OpenVRPackageInstaller()
         {
-            #if OPENVR_XR_API //if we're updating, go ahead and just start
+#if OPENVR_XR_API //if we're updating, go ahead and just start
             Start();
-            #endif
+#endif
         }
 
         /// <summary>
@@ -121,7 +118,7 @@ namespace Unity.XR.OpenVR
 
                                 string latestTarball = GetLatestTarballVersion();
 
-                                if (latestTarball != null && latestTarball.CompareTo(existingPackage.version) == 1) 
+                                if (latestTarball != null && latestTarball.CompareTo(existingPackage.version) == 1)
                                 {
                                     //we have a tarball higher than the currently installed version
                                     string upgradeString = string.Format("This SteamVR Unity Plugin has a newer version of the Unity XR OpenVR package than you have installed. Would you like to upgrade?\n\nCurrent: {0}\nUpgrade: {1} (recommended)", existingPackage.version, latestTarball);
@@ -146,10 +143,10 @@ namespace Unity.XR.OpenVR
                             }
                             else
                             {
-                                #if UNITY_2020_1_OR_NEWER
+#if UNITY_2020_1_OR_NEWER
                                 RemoveScopedRegistry(); //just install if we're on 2020 and they don't have the package
                                 return;
-                                #else
+#else
                                 //they don't have the package yet. Ask if they want to install (only for 2019)
                                 bool blankInstall = UnityEditor.EditorUtility.DisplayDialog("OpenVR XR Installer", "The SteamVR Unity Plugin can be used with the legacy Unity VR API (Unity 5.4 - 2019) or with the Unity XR API (2019+). Would you like to install OpenVR for Unity XR?", "Install", "Cancel");
                                 if (blankInstall)
@@ -168,7 +165,7 @@ namespace Unity.XR.OpenVR
                                         return;
                                     }
                                 }
-                                #endif
+#endif
                             }
                         }
                     }

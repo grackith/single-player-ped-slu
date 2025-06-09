@@ -1,9 +1,7 @@
-﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using AvatarInfo = ExperimentSetup.AvatarInfo;
+using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
 
 public class MovementManager : MonoBehaviour
 {

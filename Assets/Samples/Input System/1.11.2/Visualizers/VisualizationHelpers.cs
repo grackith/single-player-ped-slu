@@ -1,7 +1,7 @@
 using System;
-using UnityEngine.InputSystem.Utilities;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.InputSystem.Utilities;
 
 ////REVIEW: for vector2 visualizers of sticks, it could be useful to also visualize deadzones and raw values
 
@@ -484,7 +484,7 @@ namespace UnityEngine.InputSystem.Samples
                     Debug.Assert(samples[count - 1].frame < frame, "Frame numbers must be ascending");
                 }
 
-                return ref samples.Append(new FrameSample {frame = frame}).value;
+                return ref samples.Append(new FrameSample { frame = frame }).value;
             }
 
             private float m_TotalTimeUnitsShown;

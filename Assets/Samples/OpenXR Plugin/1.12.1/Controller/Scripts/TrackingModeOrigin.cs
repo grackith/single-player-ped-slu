@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.XR;
 
 namespace UnityEngine.XR.OpenXR.Samples.ControllerSample
 {

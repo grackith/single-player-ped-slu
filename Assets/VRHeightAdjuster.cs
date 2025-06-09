@@ -1,6 +1,5 @@
-using UnityEngine;
-using UnityEngine.XR;
 using TMPro; // Include this if you want to display the current height
+using UnityEngine;
 
 public class VRHeightAdjuster : MonoBehaviour
 {

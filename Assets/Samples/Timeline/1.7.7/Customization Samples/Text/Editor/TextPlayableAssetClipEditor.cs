@@ -1,7 +1,6 @@
 #if TEXT_TRACK_REQUIRES_TEXTMESH_PRO
 
 using UnityEditor.Timeline;
-using UnityEngine;
 using UnityEngine.Timeline;
 
 namespace Timeline.Samples

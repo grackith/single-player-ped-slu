@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -26,7 +25,8 @@ namespace UnityEditor.Searcher
                 scienceTexture = Resources.Load<Texture2D>("twotone_science_white_18dp");
                 cookingTexture = Resources.Load<Texture2D>("twotone_outdoor_grill_white_18dp");
                 namesTexture = Resources.Load<Texture2D>("twotone_emoji_people_white_18dp");
-            } else
+            }
+            else
             {
                 bookTexture = Resources.Load<Texture2D>("twotone_book_black_18dp");
                 scienceTexture = Resources.Load<Texture2D>("twotone_science_black_18dp");
@@ -110,7 +110,7 @@ namespace UnityEditor.Searcher
             SearcherDatabaseBase bookDatabase = SearcherDatabase.Load(databaseDir + "/Books");
 
             var foodDatabase = SearcherDatabase.Create(foodItems, databaseDir + "/Foods");
-            var searcher = new Searcher(new[]{ foodDatabase, bookDatabase }, "Popup Example");
+            var searcher = new Searcher(new[] { foodDatabase, bookDatabase }, "Popup Example");
             var searcherControl = new SearcherControl();
             searcherControl.Setup(searcher, x => Debug.Log(x != null ? x.Name : "none"), null, null);
 

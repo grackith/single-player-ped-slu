@@ -1,5 +1,5 @@
-using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace UnityEngine.XR.OpenXR.Samples.ControllerSample
 {

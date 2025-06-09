@@ -1,9 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.XR;
-using UnityEngine.XR.OpenXR.Input;
 using UnityEngine.InputSystem;
+using UnityEngine.XR.OpenXR.Input;
 
 /// <summary>
 /// Example code for Vulkan Late latching support. For use cases example, please check out Controller Sample - Head object, LeftHand/Aim object and RightHand/Grip object.

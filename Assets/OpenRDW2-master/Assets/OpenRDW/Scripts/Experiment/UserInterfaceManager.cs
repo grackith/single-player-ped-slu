@@ -1,8 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
-using System.IO;
 
 public class UserInterfaceManager : MonoBehaviour
 {
@@ -22,7 +19,8 @@ public class UserInterfaceManager : MonoBehaviour
     {
 
     }
-    public void GetCommandFilePaths() {        
+    public void GetCommandFilePaths()
+    {
         commandFiles = new List<string>();
 
         if (!globalConfiguration.multiCmdFiles)
@@ -42,7 +40,8 @@ public class UserInterfaceManager : MonoBehaviour
             }
         }
     }
-    public void SetActivePanelExperimentComplete(bool active) {
+    public void SetActivePanelExperimentComplete(bool active)
+    {
         panelExperimentComplete.SetActive(active);
     }
 }

@@ -94,8 +94,8 @@ namespace Valve.VR.InteractionSystem
 #if (UNITY_5_4)
                 lineRenderers[i].SetWidth(thickness, thickness);
 #else
-				lineRenderers[i].startWidth = thickness * scale;
-				lineRenderers[i].endWidth = thickness * scale;
+                lineRenderers[i].startWidth = thickness * scale;
+                lineRenderers[i].endWidth = thickness * scale;
 #endif
                 lineRenderers[i].enabled = false;
             }
@@ -246,8 +246,8 @@ namespace Valve.VR.InteractionSystem
 #if (UNITY_5_4)
                 lineRenderers[i].SetColors(color, color);
 #else
-				lineRenderers[i].startColor = color;
-				lineRenderers[i].endColor = color;
+                lineRenderers[i].startColor = color;
+                lineRenderers[i].endColor = color;
 #endif
             }
         }

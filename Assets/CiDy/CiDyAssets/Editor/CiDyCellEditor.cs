@@ -1,9 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using UnityEditor;
 using UnityEngine;
-using UnityEditor;
-using UnityEngine.UI;
-using System.IO;
 
 namespace CiDy
 {
@@ -38,7 +34,7 @@ namespace CiDy
 
             EditorGUILayout.Space();
             GUILayout.Label("---Cell Generation---", EditorStyles.boldLabel);
-            if (GUILayout.Button("Generate Cell",GUILayout.Height(60)))
+            if (GUILayout.Button("Generate Cell", GUILayout.Height(60)))
             {
                 //Update Cell
                 if (cell)

@@ -1,7 +1,5 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Events;
 
 /// <summary>
 /// Simplified TrackingSpaceManager that works with the new RedirectionManager approach
@@ -14,7 +12,7 @@ public class TrackingSpaceManager : MonoBehaviour
     public float physicalLength = 14.0f;
 
     [Header("References")]
-    public Transform xrOrigin; // Your XR Origin Hands (XR Rig)
+    public Transform xrOrigin; //   XR Origin Hands (XR Rig)
     public Transform headTransform; // Usually Main Camera under XR Origin
 
     [Header("Visual Feedback Settings")]

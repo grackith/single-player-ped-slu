@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System;
@@ -531,7 +530,7 @@ public static bool GetCommandDirPath(out string path)
     public static string GetProjectPath()
     {
 #if UNITY_EDITOR
-                return Application.dataPath.Substring(0, Application.dataPath.Length - 7) + "/";
+        return Application.dataPath.Substring(0, Application.dataPath.Length - 7) + "/";
 #else
         return Application.dataPath;
 #endif

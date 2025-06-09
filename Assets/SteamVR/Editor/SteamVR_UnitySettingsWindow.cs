@@ -4,9 +4,9 @@
 //
 //=============================================================================
 
-using UnityEngine;
-using UnityEditor;
 using System.IO;
+using UnityEditor;
+using UnityEngine;
 
 namespace Valve.VR
 {
@@ -59,7 +59,7 @@ namespace Valve.VR
 #endif
 
 #if UNITY_2018_1_OR_NEWER
-    const FullScreenMode recommended_FullScreenMode = FullScreenMode.FullScreenWindow;
+        const FullScreenMode recommended_FullScreenMode = FullScreenMode.FullScreenWindow;
 #endif
         static SteamVR_UnitySettingsWindow window;
 
@@ -77,7 +77,7 @@ namespace Valve.VR
 #if (UNITY_5_4 || UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
                 PlayerSettings.showUnitySplashScreen != recommended_ShowUnitySplashScreen) ||
 #else
-				PlayerSettings.SplashScreen.show != recommended_ShowUnitySplashScreen) ||
+                PlayerSettings.SplashScreen.show != recommended_ShowUnitySplashScreen) ||
 #endif
 
 #if UNITY_2018_1_OR_NEWER
@@ -183,7 +183,7 @@ namespace Valve.VR
 #if (UNITY_5_5 || UNITY_5_4 || UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
                     EditorUserBuildSettings.SwitchActiveBuildTarget(recommended_BuildTarget);
 #else
-				EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, recommended_BuildTarget);
+                    EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, recommended_BuildTarget);
 #endif
                 }
 
@@ -222,29 +222,29 @@ namespace Valve.VR
                 GUILayout.EndHorizontal();
             }
 #else
-		if (!EditorPrefs.HasKey(ignore + showUnitySplashScreen) &&
-			PlayerSettings.SplashScreen.show != recommended_ShowUnitySplashScreen)
-		{
-			++numItems;
+            if (!EditorPrefs.HasKey(ignore + showUnitySplashScreen) &&
+                PlayerSettings.SplashScreen.show != recommended_ShowUnitySplashScreen)
+            {
+                ++numItems;
 
-			GUILayout.Label(showUnitySplashScreen + string.Format(currentValue, PlayerSettings.SplashScreen.show));
+                GUILayout.Label(showUnitySplashScreen + string.Format(currentValue, PlayerSettings.SplashScreen.show));
 
-			GUILayout.BeginHorizontal();
+                GUILayout.BeginHorizontal();
 
-			if (GUILayout.Button(string.Format(useRecommended, recommended_ShowUnitySplashScreen)))
-			{
-				PlayerSettings.SplashScreen.show = recommended_ShowUnitySplashScreen;
-			}
+                if (GUILayout.Button(string.Format(useRecommended, recommended_ShowUnitySplashScreen)))
+                {
+                    PlayerSettings.SplashScreen.show = recommended_ShowUnitySplashScreen;
+                }
 
-			GUILayout.FlexibleSpace();
+                GUILayout.FlexibleSpace();
 
-			if (GUILayout.Button("Ignore"))
-			{
-				EditorPrefs.SetBool(ignore + showUnitySplashScreen, true);
-			}
+                if (GUILayout.Button("Ignore"))
+                {
+                    EditorPrefs.SetBool(ignore + showUnitySplashScreen, true);
+                }
 
-			GUILayout.EndHorizontal();
-		}
+                GUILayout.EndHorizontal();
+            }
 #endif
 
 #if UNITY_2018_1_OR_NEWER
@@ -374,8 +374,8 @@ namespace Valve.VR
                 GUILayout.EndHorizontal();
             }
 #if UNITY_2018_1_OR_NEWER
-        if (!EditorPrefs.HasKey(ignore + defaultIsFullScreen) &&
-			PlayerSettings.fullScreenMode != recommended_FullScreenMode)
+            if (!EditorPrefs.HasKey(ignore + defaultIsFullScreen) &&
+                PlayerSettings.fullScreenMode != recommended_FullScreenMode)
 #else
             if (!EditorPrefs.HasKey(ignore + fullscreenMode) &&
                 PlayerSettings.d3d11FullscreenMode != recommended_FullscreenMode)
@@ -384,7 +384,7 @@ namespace Valve.VR
                 ++numItems;
 
 #if UNITY_2018_1_OR_NEWER
-            GUILayout.Label(fullscreenMode + string.Format(currentValue, PlayerSettings.fullScreenMode));
+                GUILayout.Label(fullscreenMode + string.Format(currentValue, PlayerSettings.fullScreenMode));
 #else
                 GUILayout.Label(fullscreenMode + string.Format(currentValue, PlayerSettings.d3d11FullscreenMode));
 #endif
@@ -394,7 +394,7 @@ namespace Valve.VR
                 if (GUILayout.Button(string.Format(useRecommended, recommended_FullscreenMode)))
                 {
 #if UNITY_2018_1_OR_NEWER
-                PlayerSettings.fullScreenMode = recommended_FullScreenMode;
+                    PlayerSettings.fullScreenMode = recommended_FullScreenMode;
 #else
                     PlayerSettings.d3d11FullscreenMode = recommended_FullscreenMode;
 #endif
@@ -574,18 +574,18 @@ namespace Valve.VR
 #if (UNITY_5_5 || UNITY_5_4 || UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
                         EditorUserBuildSettings.SwitchActiveBuildTarget(recommended_BuildTarget);
 #else
-					EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, recommended_BuildTarget);
+                        EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, recommended_BuildTarget);
 #endif
                     if (!EditorPrefs.HasKey(ignore + showUnitySplashScreen))
 #if (UNITY_5_4 || UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
                         PlayerSettings.showUnitySplashScreen = recommended_ShowUnitySplashScreen;
 #else
-					PlayerSettings.SplashScreen.show = recommended_ShowUnitySplashScreen;
+                        PlayerSettings.SplashScreen.show = recommended_ShowUnitySplashScreen;
 #endif
 
 #if UNITY_2018_1_OR_NEWER
-                if (!EditorPrefs.HasKey(ignore + defaultIsFullScreen))
-                    PlayerSettings.fullScreenMode = recommended_FullScreenMode;
+                    if (!EditorPrefs.HasKey(ignore + defaultIsFullScreen))
+                        PlayerSettings.fullScreenMode = recommended_FullScreenMode;
 #else
                     if (!EditorPrefs.HasKey(ignore + defaultIsFullScreen))
                         PlayerSettings.defaultIsFullScreen = recommended_DefaultIsFullScreen;
@@ -635,16 +635,16 @@ namespace Valve.VR
 #if (UNITY_5_4 || UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
                         if (PlayerSettings.showUnitySplashScreen != recommended_ShowUnitySplashScreen)
 #else
-					if (PlayerSettings.SplashScreen.show != recommended_ShowUnitySplashScreen)
+                        if (PlayerSettings.SplashScreen.show != recommended_ShowUnitySplashScreen)
 #endif
                             EditorPrefs.SetBool(ignore + showUnitySplashScreen, true);
 
 #if UNITY_2018_1_OR_NEWER
-                    if (PlayerSettings.fullScreenMode != recommended_FullScreenMode)
-                    {
-                        EditorPrefs.SetBool(ignore + defaultIsFullScreen, true);
-                        EditorPrefs.SetBool(ignore + fullscreenMode, true);
-                    }
+                        if (PlayerSettings.fullScreenMode != recommended_FullScreenMode)
+                        {
+                            EditorPrefs.SetBool(ignore + defaultIsFullScreen, true);
+                            EditorPrefs.SetBool(ignore + fullscreenMode, true);
+                        }
 #else
                         if (PlayerSettings.defaultIsFullScreen != recommended_DefaultIsFullScreen)
                             EditorPrefs.SetBool(ignore + defaultIsFullScreen, true);

@@ -1,12 +1,11 @@
-using UnityEngine;
 using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
 public class BusRouteSetup : MonoBehaviour
 {
     public AITrafficWaypointRoute initialRoute;
     public AITrafficWaypointRoute busStopRoute;
 
-    // Call this in the editor to set up your routes correctly
     [ContextMenu("Set Up Bus Routes")]
     public void SetUpBusRoutes()
     {

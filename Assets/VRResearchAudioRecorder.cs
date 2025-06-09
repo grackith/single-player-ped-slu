@@ -1,10 +1,7 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 
 /// <summary>
 /// Handles audio recording for participant feedback during VR research sessions
@@ -225,7 +222,7 @@ public class VRResearchAudioRecorder : MonoBehaviour
         }
     }
 
-    // Simple method to save WAV directly if we don't have access to the data collector
+    // ssave WAV directly if we don't have access to the data collector
     private void SaveWavFile(string filePath, AudioClip clip)
     {
         // Create directory if needed

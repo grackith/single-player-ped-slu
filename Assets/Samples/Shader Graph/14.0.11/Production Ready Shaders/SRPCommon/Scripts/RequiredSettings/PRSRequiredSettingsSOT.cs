@@ -1,8 +1,5 @@
 # if UNITY_EDITOR
-using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.Rendering;
-using UnityEngine;
 
 namespace UnityEngine.Rendering
 {
@@ -21,7 +18,7 @@ namespace UnityEngine.Rendering
                 if (requiredSettings == null || requiredSettings.Count == 0)
                     return true;
 
-                foreach(var setting in requiredSettings)
+                foreach (var setting in requiredSettings)
                 {
                     if (!setting.state)
                         return false;

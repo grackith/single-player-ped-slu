@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
@@ -143,14 +142,14 @@ public class CustomDevice : InputDevice, IInputUpdateCallbackReceiver
 {
     // [InitializeOnLoad] will ensure this gets called on every domain (re)load
     // in the editor.
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     static CustomDevice()
     {
         // Trigger our RegisterLayout code in the editor.
         Initialize();
     }
 
-    #endif
+#endif
 
     // In the player, [RuntimeInitializeOnLoadMethod] will make sure our
     // initialization code gets called during startup.
@@ -164,7 +163,7 @@ public class CustomDevice : InputDevice, IInputUpdateCallbackReceiver
         // a description. See the documentation of InputDeviceMatcher for more
         // details.
         //
-        // NOTE: In case your device is more dynamic in nature and cannot have a single
+        // NOTE: In case   device is more dynamic in nature and cannot have a single
         //       static layout, there is also the possibility to build layouts on the fly.
         //       Check out the API documentation for InputSystem.onFindLayoutForDevice and
         //       for InputSystem.RegisterLayoutBuilder.
@@ -237,19 +236,19 @@ public class CustomDevice : InputDevice, IInputUpdateCallbackReceiver
     // NOTE: Nothing of the following is necessary if you have a device that is
     //       detected and sent input for by the Unity runtime itself, i.e. that is
     //       picked up from the underlying platform APIs by Unity itself. In this
-    //       case, when your device is connected, Unity will automatically report an
+    //       case, when   device is connected, Unity will automatically report an
     //       InputDeviceDescription and all you have to do is make sure that the
     //       InputDeviceMatcher you supply to RegisterLayout matches that description.
     //
     //       Also, IInputUpdateCallbackReceiver and any other manual queuing of input
     //       is unnecessary in that case as Unity will queue input for the device.
 
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     [MenuItem("Tools/Custom Device Sample/Create Device")]
     private static void CreateDevice()
     {
         // This is the code that you would normally run at the point where
-        // you discover devices of your custom type.
+        // you discover devices of   custom type.
         InputSystem.AddDevice(new InputDeviceDescription
         {
             interfaceName = "Custom",
@@ -268,7 +267,7 @@ public class CustomDevice : InputDevice, IInputUpdateCallbackReceiver
             InputSystem.RemoveDevice(customDevice);
     }
 
-    #endif
+#endif
 
     // So the other part we need is to actually feed input for the device. Notice
     // that we already have the IInputUpdateCallbackReceiver interface on our class.
@@ -280,7 +279,7 @@ public class CustomDevice : InputDevice, IInputUpdateCallbackReceiver
     //
     // NOTE: We don't have to do this here. InputSystem.QueueEvent can be called from
     //       anywhere, including from threads. So if, for example, you have a background
-    //       thread polling input from your device, that's where you can also queue
+    //       thread polling input from   device, that's where you can also queue
     //       its input events.
     //
     // Again, we don't have actual input to read here. So we just make up some stuff
@@ -316,7 +315,7 @@ public class CustomDevice : InputDevice, IInputUpdateCallbackReceiver
         //          under the domain of the input system. InputDevices themselves
         //          cannot private store their own separate state.
         //
-        //          What you *can* do however, is simply add fields your state struct
+        //          What you *can* do however, is simply add fields   state struct
         //          (CustomDeviceState in our case) that contain the state you want
         //          to keep. It is not necessary to expose these as InputControls if
         //          you don't want to.

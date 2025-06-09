@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// Add this to your RDWConfigurationAsset
 [CreateAssetMenu(fileName = "RDWConfiguration", menuName = "RDW/Configuration")]
 public class RDWConfigurationAsset : ScriptableObject
 {

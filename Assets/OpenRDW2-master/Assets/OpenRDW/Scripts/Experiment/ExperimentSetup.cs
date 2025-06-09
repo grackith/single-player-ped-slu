@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
 using TrackingSpaceChoice = GlobalConfiguration.TrackingSpaceChoice;
@@ -40,7 +39,7 @@ public class ExperimentSetup
         //clone an avatar info
         public AvatarInfo Copy()
         {
-            return new AvatarInfo(redirector, resetter, pathSeedChoice, waypoints, waypointsFilePath, samplingIntervals, samplingIntervalsFilePath, vePathName, physicalInitPose,virtualInitPose, physicalSpaceIndex, randomSeed);
+            return new AvatarInfo(redirector, resetter, pathSeedChoice, waypoints, waypointsFilePath, samplingIntervals, samplingIntervalsFilePath, vePathName, physicalInitPose, virtualInitPose, physicalSpaceIndex, randomSeed);
         }
     }
     public List<AvatarInfo> avatars;

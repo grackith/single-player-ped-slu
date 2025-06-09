@@ -1,22 +1,19 @@
 using System.Collections.Generic;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Rendering;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 using UnityEngine.UIElements.Experimental;
-using System.Text.RegularExpressions;
-using System.Text;
-using System;
-using System.Collections;
-using System.Reflection;
-using UnityEngine.Rendering;
 
 [InitializeOnLoad]
 [CustomEditor(typeof(PRSSamplesShowcase))]
 public class PRSSamplesShowcaseEditor : Editor
 {
     private static readonly string UXMLPath = "SamplesSelectionUXML";
-    public static readonly string[] supportedExtensions = {".shadergraph", ".vfx", ".cs", ".hlsl", ".shader", ".asset",".mat",".fbx",".prefab"};
+    public static readonly string[] supportedExtensions = { ".shadergraph", ".vfx", ".cs", ".hlsl", ".shader", ".asset", ".mat", ".fbx", ".prefab" };
 
     SerializedProperty currentIndex;
     Color headlineColor;
@@ -48,7 +45,7 @@ public class PRSSamplesShowcaseEditor : Editor
         PRSSamplesShowcase.OnUpdateSamplesInspector -= UpdateSamplesInspector;
     }
 
-        public void UpdateSamplesInspector()
+    public void UpdateSamplesInspector()
     {
         PRSSamplesShowcase self;
         try
@@ -60,7 +57,7 @@ public class PRSSamplesShowcaseEditor : Editor
             return;
         }
 
-        if (dropdownField !=null && self != null)
+        if (dropdownField != null && self != null)
         {
             dropdownField.value = choices[self.currentIndex]; //make sure samples description is updated from what the scene is showing, even during runtime input or inspector duplication
         }
@@ -77,7 +74,7 @@ public class PRSSamplesShowcaseEditor : Editor
         var self = (PRSSamplesShowcase)target;
 
         //colors
-        headlineColor =  EditorGUIUtility.isProSkin ? self.headlineDarkColor : self.headlineLightColor;
+        headlineColor = EditorGUIUtility.isProSkin ? self.headlineDarkColor : self.headlineLightColor;
         openColor = EditorGUIUtility.isProSkin ? self.openDarkColor : self.openLightColor;
         highlightColor = EditorGUIUtility.isProSkin ? self.highlightDarkColor : self.highlightLightColor;
         codeColor = EditorGUIUtility.isProSkin ? self.codeDarkColor : self.codeLightColor;
@@ -103,7 +100,7 @@ public class PRSSamplesShowcaseEditor : Editor
 
             PRSSamplesShowcase.SanitizedDescriptions = new Dictionary<string, string>();
             PRSSamplesShowcase.SanitizedTitles = new Dictionary<string, string>();
-            foreach(GameObject prefab in self.samplesPrefabs)
+            foreach (GameObject prefab in self.samplesPrefabs)
             {
                 PRSSample currentSample = sampleJsonObject.FindSampleWithPrefab(prefab);
                 if (currentSample == null)
@@ -202,7 +199,7 @@ public class PRSSamplesShowcaseEditor : Editor
         UpdateRequiredSettingsDisplay();
 
         // Add open window behaviour
-        root.Q<Button>(name = "OpenInWindowButton").clicked += () => {EditorWindow.GetWindow<PRSSamplesWindow>("Samples Showcase", true, System.Type.GetType("UnityEditor.InspectorWindow,UnityEditor.dll"));};
+        root.Q<Button>(name = "OpenInWindowButton").clicked += () => { EditorWindow.GetWindow<PRSSamplesWindow>("Samples Showcase", true, System.Type.GetType("UnityEditor.InspectorWindow,UnityEditor.dll")); };
 
 
         return root;
@@ -244,11 +241,11 @@ public class PRSSamplesShowcaseEditor : Editor
         }
 
         bool displayBox = false;
-        foreach(var settingVEPair in requiredSettingsVE)
+        foreach (var settingVEPair in requiredSettingsVE)
         {
             var state = settingVEPair.Key.state;
             displayBox |= !state;
-            settingVEPair.Value.style.display = (state)? DisplayStyle.None : DisplayStyle.Flex;
+            settingVEPair.Value.style.display = (state) ? DisplayStyle.None : DisplayStyle.Flex;
         }
         requiredSettingsBox.style.display = (displayBox) ? DisplayStyle.Flex : DisplayStyle.None;
     }
@@ -277,7 +274,7 @@ public class PRSSamplesShowcaseEditor : Editor
         serializedObject.ApplyModifiedProperties();
     }
 
-    
+
 
     private string CreateMarkdown(VisualElement element, string text)
     {
@@ -292,8 +289,8 @@ public class PRSSamplesShowcaseEditor : Editor
         // Links
         parsedText = Regex.Replace(parsedText, @"<(link=\""([\s\S]+?)\""[\s\S]*?)>", m =>
         {
-            return $"<{m.Groups[1].Value}><color=#{ColorUtility.ToHtmlStringRGBA( IsLinkFile(m.Groups[2].Value)? openColor : highlightColor)}>";
-            });
+            return $"<{m.Groups[1].Value}><color=#{ColorUtility.ToHtmlStringRGBA(IsLinkFile(m.Groups[2].Value) ? openColor : highlightColor)}>";
+        });
         parsedText = parsedText.Replace("</link>", "</color></link>");
 
         // Titles
@@ -326,9 +323,9 @@ public class PRSSamplesShowcaseEditor : Editor
         return parsedText;
     }
 
-    
 
-    public static bool IsLinkFile( string linkID )
+
+    public static bool IsLinkFile(string linkID)
     {
         foreach (string extension in supportedExtensions)
         {
@@ -344,13 +341,14 @@ public class PRSSamplesShowcaseEditor : Editor
         string filenameOnly = System.IO.Path.GetFileNameWithoutExtension(filename);
 
         // Searching for asset with the filename
-        string[] results = AssetDatabase.FindAssets($"{filenameOnly}",  null);
+        string[] results = AssetDatabase.FindAssets($"{filenameOnly}", null);
         foreach (string result in results)
         {
             string path = AssetDatabase.GUIDToAssetPath(result);
             // Making sure everything matches.
             // /!\ will return the first if there's duplicate
-            if(path.EndsWith(filename)){
+            if (path.EndsWith(filename))
+            {
                 return path;
             }
         }

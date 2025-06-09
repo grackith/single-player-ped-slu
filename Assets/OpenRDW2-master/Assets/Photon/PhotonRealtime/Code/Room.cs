@@ -16,15 +16,12 @@
 
 namespace Photon.Realtime
 {
-    using System;
-    using System.Collections;
     using System.Collections.Generic;
     using ExitGames.Client.Photon;
 
-    #if SUPPORTED_UNITY || NETFX_CORE
+#if SUPPORTED_UNITY || NETFX_CORE
     using Hashtable = ExitGames.Client.Photon.Hashtable;
-    using SupportClass = ExitGames.Client.Photon.SupportClass;
-    #endif
+#endif
 
 
     /// <summary>
@@ -33,7 +30,7 @@ namespace Photon.Realtime
     /// <remarks>
     /// Contains a list of current players, their properties and those of this room, too.
     /// A room instance has a number of "well known" properties like IsOpen, MaxPlayers which can be changed.
-    /// Your own, custom properties can be set via SetCustomProperties() while being in the room.
+    ///   own, custom properties can be set via SetCustomProperties() while being in the room.
     ///
     /// Typically, this class should be extended by a game-specific implementation with logic and extra features.
     /// </remarks>
@@ -304,10 +301,10 @@ namespace Photon.Realtime
         /// <summary>Define if actor or room properties with null values are removed on the server or kept.</summary>
         public bool DeleteNullProperties { get; private set; }
 
-        #if SERVERSDK
+#if SERVERSDK
         /// <summary>Define if rooms should have unique UserId per actor and that UserIds are used instead of actor number in rejoin.</summary>
         public bool CheckUserOnJoin { get; private set; }
-        #endif
+#endif
 
 
         /// <summary>Creates a Room (representation) with given name and properties and the "listing options" as provided by parameters.</summary>
@@ -341,9 +338,9 @@ namespace Photon.Realtime
             this.SuppressPlayerInfo = (roomFlags & (int)RoomOptionBit.SuppressPlayerInfo) != 0;
             this.PublishUserId = (roomFlags & (int)RoomOptionBit.PublishUserId) != 0;
             this.DeleteNullProperties = (roomFlags & (int)RoomOptionBit.DeleteNullProps) != 0;
-            #if SERVERSDK
+#if SERVERSDK
             this.CheckUserOnJoin = (roomFlags & (int)RoomOptionBit.CheckUserOnJoin) != 0;
-            #endif
+#endif
             this.autoCleanUp = (roomFlags & (int)RoomOptionBit.DeleteCacheOnLeave) != 0;
         }
 
@@ -399,7 +396,7 @@ namespace Photon.Realtime
         /// </remarks>
         /// <param name="propertiesToSet">Hashtable of Custom Properties that changes.</param>
         /// <param name="expectedProperties">Provide some keys/values to use as condition for setting the new values. Client must be in room.</param>
-        /// <param name="webFlags">Defines if this SetCustomProperties-operation gets forwarded to your WebHooks. Client must be in room.</param>
+        /// <param name="webFlags">Defines if this SetCustomProperties-operation gets forwarded to   WebHooks. Client must be in room.</param>
         /// <returns>
         /// False if propertiesToSet is null or empty or have zero string keys.
         /// True in offline mode even if expectedProperties or webFlags are used.
@@ -458,7 +455,7 @@ namespace Photon.Realtime
 
         /// <summary>
         /// Removes a player from this room's Players Dictionary.
-        /// This is internally used by the LoadBalancing API. There is usually no need to remove players yourself.
+        /// This is internally used by the LoadBalancing API. There is usually no need to remove players  self.
         /// This is not a way to "kick" players.
         /// </summary>
         protected internal virtual void RemovePlayer(Player player)
@@ -476,7 +473,7 @@ namespace Photon.Realtime
         }
 
         /// <summary>
-        /// Asks the server to assign another player as Master Client of your current room.
+        /// Asks the server to assign another player as Master Client of   current room.
         /// </summary>
         /// <remarks>
         /// RaiseEvent has the option to send messages only to the Master Client of a room.

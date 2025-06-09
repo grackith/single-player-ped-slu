@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.XR.OpenXR.Features;
 using UnityEngine.XR.OpenXR.Samples.InterceptFeature;
 
 namespace UnityEditor.XR.OpenXR.Samples.InterceptFeature
@@ -12,7 +11,7 @@ namespace UnityEditor.XR.OpenXR.Samples.InterceptFeature
 
         void OnEnable()
         {
-            // lookup any serialized properties you would want to draw in your UI.
+            // lookup any serialized properties you would want to draw in   UI.
             message = serializedObject.FindProperty("message");
         }
 

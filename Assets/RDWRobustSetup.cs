@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
 
 [RequireComponent(typeof(GlobalConfiguration))]

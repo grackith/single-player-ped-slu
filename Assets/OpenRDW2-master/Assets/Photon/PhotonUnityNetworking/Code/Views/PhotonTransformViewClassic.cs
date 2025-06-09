@@ -11,8 +11,8 @@
 
 namespace Photon.Pun
 {
-    using UnityEngine;
     using System.Collections.Generic;
+    using UnityEngine;
 
 
     /// <summary>
@@ -20,7 +20,7 @@ namespace Photon.Pun
     /// of a GameObject. It also gives you many different options to make
     /// the synchronized values appear smooth, even when the data is only
     /// send a couple of times per second.
-    /// Simply add the component to your GameObject and make sure that
+    /// Simply add the component to   GameObject and make sure that
     /// the PhotonTransformViewClassic is added to the list of observed components
     /// </summary>
     [AddComponentMenu("Photon Networking/Photon Transform View Classic")]
@@ -111,7 +111,7 @@ namespace Photon.Pun
 
         /// <summary>
         /// These values are synchronized to the remote objects if the interpolation mode
-        /// or the extrapolation mode SynchronizeValues is used. Your movement script should pass on
+        /// or the extrapolation mode SynchronizeValues is used.   movement script should pass on
         /// the current speed (in units/second) and turning speed (in angles/second) so the remote
         /// object can use them to predict the objects movement.
         /// </summary>
@@ -228,7 +228,7 @@ namespace Photon.Pun
 
         /// <summary>
         /// These values are synchronized to the remote objects if the interpolation mode
-        /// or the extrapolation mode SynchronizeValues is used. Your movement script should pass on
+        /// or the extrapolation mode SynchronizeValues is used.   movement script should pass on
         /// the current speed (in units/second) and turning speed (in angles/second) so the remote
         /// object can use them to predict the objects movement.
         /// </summary>

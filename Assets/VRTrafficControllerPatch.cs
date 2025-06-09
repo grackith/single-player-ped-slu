@@ -1,8 +1,8 @@
-using UnityEngine;
 using System.Collections;
 using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
-// Add this component to your AITrafficController GameObject
+// Add this component to   AITrafficController GameObject
 // This patches the VR configuration process to prevent cars from getting stuck
 public class VRTrafficControllerPatch : MonoBehaviour
 {

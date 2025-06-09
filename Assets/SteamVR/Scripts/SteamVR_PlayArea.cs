@@ -4,10 +4,9 @@
 //
 //=============================================================================
 
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
-using System.Collections;
-using Valve.VR;
 
 namespace Valve.VR
 {
@@ -44,7 +43,7 @@ namespace Valve.VR
                 var chaperone = OpenVR.Chaperone;
                 bool success = (chaperone != null) && chaperone.GetPlayAreaRect(ref pRect);
                 if (!success)
-                    Debug.LogWarning("<b>[SteamVR]</b> Failed to get Calibrated Play Area bounds!  Make sure you have tracking first, and that your space is calibrated.");
+                    Debug.LogWarning("<b>[SteamVR]</b> Failed to get Calibrated Play Area bounds!  Make sure you have tracking first, and that   space is calibrated.");
 
                 if (temporarySession)
                     SteamVR.ExitTemporarySession();

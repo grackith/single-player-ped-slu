@@ -8,16 +8,11 @@
 // <author>developer@exitgames.com</author>
 // ----------------------------------------------------------------------------
 
+using ExitGames.Client.Photon;
+using Photon.Realtime;
 using System;
 using UnityEditor;
 using UnityEngine;
-
-using Photon.Pun;
-
-using ExitGames.Client.Photon;
-using System.Collections.Generic;
-using System.Reflection;
-using Photon.Realtime;
 
 namespace Photon.Pun
 {
@@ -103,7 +98,7 @@ namespace Photon.Pun
                 EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("AppVersion"));
                 EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("UseNameServer"), new GUIContent("Use Name Server", "Photon Cloud requires this checked.\nUncheck for Photon Server SDK (OnPremise)."));
                 EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("FixedRegion"), new GUIContent("Fixed Region", "Photon Cloud setting, needs a Name Server.\nDefine one region to always connect to.\nLeave empty to use the best region from a server-side region list."));
-                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("Server"), new GUIContent("Server", "Typically empty for Photon Cloud.\nFor Photon OnPremise, enter your host name or IP. Also uncheck \"Use Name Server\" for older Photon OnPremise servers."));
+                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("Server"), new GUIContent("Server", "Typically empty for Photon Cloud.\nFor Photon OnPremise, enter   host name or IP. Also uncheck \"Use Name Server\" for older Photon OnPremise servers."));
                 EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("Port"), new GUIContent("Port", "Leave 0 to use default Photon Cloud ports for the Name Server.\nOnPremise defaults to 5055 for UDP and 4530 for TCP."));
                 EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("ProxyServer"), new GUIContent("Proxy Server", "HTTP Proxy Server for WebSocket connection. See LoadBalancingClient.ProxyServerAddress for options."));
                 EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("Protocol"), new GUIContent("Protocol", "Use UDP where possible.\nWSS works on WebGL and Xbox exports.\nDefine WEBSOCKET for use on other platforms."));
@@ -126,7 +121,7 @@ namespace Photon.Pun
 
             if (!string.IsNullOrEmpty(PhotonNetwork.BestRegionSummaryInPreferences))
             {
-                this.regionsPrefsList = PhotonNetwork.BestRegionSummaryInPreferences.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries);
+                this.regionsPrefsList = PhotonNetwork.BestRegionSummaryInPreferences.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
                 if (this.regionsPrefsList.Length < 2)
                 {
                     this.prefLabel = notAvailableLabel;
@@ -193,7 +188,7 @@ namespace Photon.Pun
                 EditorGUI.LabelField(copyrect, new GUIContent("", "Copy Hashcode to Clipboard"));
                 if (GUI.Button(copyrect, PhotonGUI.CopyIcon, GUIStyle.none))
                 {
-                    Debug.Log("RPC-List HashCode copied into your ClipBoard: " + this.rpcCrc + ". Make sure clients that send each other RPCs have the same RPC-List.");
+                    Debug.Log("RPC-List HashCode copied into   ClipBoard: " + this.rpcCrc + ". Make sure clients that send each other RPCs have the same RPC-List.");
                     EditorGUIUtility.systemCopyBuffer = this.rpcCrc;
                 }
                 EditorGUI.SelectableLabel(hashrect, this.rpcCrc);

@@ -8,13 +8,13 @@ using static GlobalConfiguration;
 public class RDWSceneAvatarConnector : MonoBehaviour
 {
     [Header("Scene References")]
-    [Tooltip("Drag your existing Redirected Avatar GameObject here")]
+    [Tooltip("Drag   existing Redirected Avatar GameObject here")]
     public GameObject existingRedirectedAvatar;
 
-    [Tooltip("Drag your X Bot prefab here")]
+    [Tooltip("Drag   X Bot prefab here")]
     public GameObject xBotPrefab;
 
-    [Tooltip("Drag your existing TrackingSpace0 here")]
+    [Tooltip("Drag   existing TrackingSpace0 here")]
     public GameObject existingTrackingSpace;
 
     [Header("Avatar Settings")]

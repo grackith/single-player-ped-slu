@@ -1,10 +1,9 @@
-using UnityEngine;
-using TurnTheGameOn.SimpleTrafficSystem;
 using System.Collections;
+using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
 /// <summary>
 /// CRITICAL: Enhanced wheel coordinator that handles all vehicle types and VR streaming issues
-/// This replaces and improves upon your existing wheel fixing systems
 /// </summary>
 public class EnhancedWheelCoordinator : MonoBehaviour
 {
@@ -259,9 +258,9 @@ public class EnhancedWheelCoordinator : MonoBehaviour
         }
     }
 
-    
 
-    
+
+
 
     private void EnsureVehicleGroundAlignment(AITrafficCar vehicle, VehicleType type)
     {

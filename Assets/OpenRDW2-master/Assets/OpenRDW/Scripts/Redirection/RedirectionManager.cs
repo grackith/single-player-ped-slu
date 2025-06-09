@@ -1,8 +1,6 @@
-﻿using UnityEngine;
-using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
+using UnityEngine;
 
 public class RedirectionManager : MonoBehaviour
 {
@@ -14,8 +12,8 @@ public class RedirectionManager : MonoBehaviour
     public enum ResetterChoice { None, TwoOneTurn, FreezeTurn, MR2C, R2G, SFR2G, SeparateSpace };
 
     [Header("Physical Space Settings")]
-    public float physicalWidth = 8.4f;  // Your exact width 
-    public float physicalLength = 14.0f; // Your exact length
+    public float physicalWidth = 8.4f;  //  exact width 
+    public float physicalLength = 14.0f; //  exact length
 
     [HideInInspector]
     public float gt; // translation gain
@@ -49,7 +47,7 @@ public class RedirectionManager : MonoBehaviour
     [Header("OpenRDW Integration")]
     public bool waitingForReadySignal = true;
     private bool experimentStarted = false;
-   
+
 
     //record the time standing on the same position
     private float samePosTime;
@@ -398,7 +396,7 @@ public class RedirectionManager : MonoBehaviour
         }
     }
 
-    
+
 
     void Update()
     {
@@ -420,7 +418,7 @@ public class RedirectionManager : MonoBehaviour
             EndExperiment();
         }
 
-        // Your existing keyboard shortcuts
+        //   existing keyboard shortcuts
         if (Input.GetKeyDown(KeyCode.F5))
         {
             ResetTrackingSpaceAlignment();
@@ -516,7 +514,7 @@ public class RedirectionManager : MonoBehaviour
             }
             else
             {
-                // Try alternative paths if your XR setup is different
+                // Try alternative paths if   XR setup is different
                 Camera cam = xrOrigin.GetComponentInChildren<Camera>();
                 if (cam != null)
                 {
@@ -565,7 +563,7 @@ public class RedirectionManager : MonoBehaviour
         Debug.Log($"Verification - Real position: {verifyRealPos}");
     }
 
-    // Your ResetTrackingSpaceAlignment method (for manual reset if needed)
+    //   ResetTrackingSpaceAlignment method (for manual reset if needed)
     public void ResetTrackingSpaceAlignment()
     {
         if (headTransform == null)
@@ -659,7 +657,7 @@ public class RedirectionManager : MonoBehaviour
             globalConfiguration.physicalSpaces != null &&
             globalConfiguration.physicalSpaces.Count > 0)
         {
-            // Create rectangle with YOUR exact dimensions
+            // Create rectangle with   exact dimensions
             List<Vector2> trackingSpacePoints = new List<Vector2>
             {
                 new Vector2(physicalWidth/2, physicalLength/2),   // Front Right
@@ -1416,14 +1414,14 @@ public class RedirectionManager : MonoBehaviour
             }
         }
 
-        // Use YOUR enum system, not the OpenRDW enums
+        // Use   enum system, not the OpenRDW enums
         Debug.Log($"Setting up redirector: {redirectorChoice}, resetter: {resetterChoice}");
 
         // Remove any existing components
         RemoveRedirector();
         RemoveResetter();
 
-        // Add and configure the appropriate redirector using YOUR enum
+        // Add and configure the appropriate redirector using   enum
         System.Type redirectorType = GetRedirectorType(redirectorChoice);
         if (redirectorType != null)
         {
@@ -1432,7 +1430,7 @@ public class RedirectionManager : MonoBehaviour
             Debug.Log($"Added redirector component: {redirectorType.Name}");
         }
 
-        // Add and configure the appropriate resetter using YOUR enum
+        // Add and configure the appropriate resetter using   enum
         System.Type resetterType = GetResetterType(resetterChoice);
         if (resetterType != null)
         {
@@ -1628,7 +1626,7 @@ public class RedirectionManager : MonoBehaviour
         }
     }
 
-    
+
 
     // Add these methods to the RedirectionManager.cs file
     public void ToggleTrackingSpaceVisualization()
@@ -1648,50 +1646,7 @@ public class RedirectionManager : MonoBehaviour
         }
     }
 
-    //private void CreateCornerMarkers()
-    //{
-    //    if (trackingSpace == null || globalConfiguration == null ||
-    //        globalConfiguration.physicalSpaces == null ||
-    //        globalConfiguration.physicalSpaces.Count == 0)
-    //        return;
 
-    //    var physicalSpace = globalConfiguration.physicalSpaces[0];
-
-    //    // Create markers at each corner
-    //    int i = 0;
-    //    foreach (var point in physicalSpace.trackingSpace)
-    //    {
-    //        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-    //        marker.name = $"Corner_{i++}";
-    //        Vector3 worldPos = trackingSpace.TransformPoint(new Vector3(point.x, 0, point.y));
-    //        marker.transform.position = worldPos;
-    //        marker.transform.localScale = Vector3.one * 0.2f;
-    //        marker.GetComponent<Renderer>().material.color = Color.green;
-
-    //        // Add text labels with coordinates
-    //        GameObject text = new GameObject("Label");
-    //        text.transform.position = worldPos + Vector3.up * 0.3f;
-    //        TextMesh textMesh = text.AddComponent<TextMesh>();
-    //        textMesh.text = $"({point.x:F2}, {point.y:F2})";
-    //        textMesh.fontSize = 50;
-    //        textMesh.characterSize = 0.05f;
-    //        textMesh.anchor = TextAnchor.MiddleCenter;
-
-    //        Destroy(marker, 30f); // Clean up after 30 seconds
-    //        Destroy(text, 30f);
-    //    }
-
-    //    // Create central marker
-    //    GameObject center = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-    //    center.transform.position = trackingSpace.position + Vector3.up * 0.01f;
-    //    center.transform.localScale = new Vector3(0.5f, 0.02f, 0.5f);
-    //    center.GetComponent<Renderer>().material.color = Color.red;
-    //    Destroy(center, 30f);
-
-    //    Debug.Log($"Created tracking space markers: Green spheres=corners, Red cylinder=center");
-    //}
-
-    // Add this method to RedirectionManager.cs
     public void LogTrackingSpaceInfo()
     {
         Debug.Log("==== TRACKING SPACE DIAGNOSTIC ====");
@@ -1742,7 +1697,7 @@ public class RedirectionManager : MonoBehaviour
         Debug.Log("==================================");
     }
 
-    // In your RedirectionManager Start() or calibration method:
+    // In   RedirectionManager Start() or calibration method:
     private void SetupTrackingSpaceReference()
     {
         // Find or create the tracking space
@@ -1892,7 +1847,7 @@ public class RedirectionManager : MonoBehaviour
         UpdateCurrentUserState();
     }
 
-    
+
 
     // REMOVE any method that automatically corrects drift by moving tracking space
     // The CheckAndCorrectPhysicalSpaceDrift method should be DELETED or modified to NOT move tracking space
@@ -1961,7 +1916,7 @@ public class RedirectionManager : MonoBehaviour
         return Mathf.Min(distToRightBoundary, distToLeftBoundary, distToFrontBoundary, distToBackBoundary);
     }
 
-    // Add this method to RedirectionManager
+
     public void SetupForRealHumanExperiment()
     {
         if (movementManager != null)
@@ -1983,13 +1938,13 @@ public class RedirectionManager : MonoBehaviour
             UpdateResetter(typeof(FreezeTurnResetter));
         }
     }
-    // Add this method to your RedirectionManager.cs to maintain compatibility
+
 
     public void UpdateRedirector(System.Type redirectorType)
     {
         Debug.Log($"UpdateRedirector called with specific type: {redirectorType?.Name}");
 
-        // Convert the System.Type back to your enum
+        // Convert the System.Type back to   enum
         if (redirectorType == typeof(NullRedirector))
             redirectorChoice = RedirectorChoice.None;
         else if (redirectorType == typeof(S2CRedirector))
@@ -2020,7 +1975,7 @@ public class RedirectionManager : MonoBehaviour
         UpdateRedirector();
     }
 
-    // Update your StartRDWExperiment method in RedirectionManager:
+    // Update   StartRDWExperiment method in RedirectionManager:
     private void StartRDWExperiment()
     {
         Debug.Log("'R' key pressed - Starting RDW experiment");

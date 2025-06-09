@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.XR.ARSubsystems;
+﻿using UnityEngine;
 
 public class TrackingSpaceInitializer : MonoBehaviour
 {
@@ -53,7 +50,7 @@ public class TrackingSpaceInitializer : MonoBehaviour
             // Store the reference for future use
             persistentTrackingSpace = trackingSpace;
         }
-        
+
 
         // Explicitly find the redirection manager
         redirectionManager = FindObjectOfType<RedirectionManager>();
@@ -212,7 +209,7 @@ public class TrackingSpaceInitializer : MonoBehaviour
                 // This regenerates the mesh for the physical space boundaries
                 redirectionManager.visualizationManager.GenerateTrackingSpaceMesh(redirectionManager.globalConfiguration.physicalSpaces);
 
-                // This updates the visual markers using your method
+                // This updates the visual markers using   method
                 redirectionManager.visualizationManager.UpdateVisualizations();
             }
 

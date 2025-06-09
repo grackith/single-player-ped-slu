@@ -1,6 +1,5 @@
-﻿using UnityEngine;
-using System.Collections;
-using UnityEngine.SceneManagement;
+﻿using System.Collections;
+using UnityEngine;
 
 namespace Valve.VR.InteractionSystem.Sample
 {

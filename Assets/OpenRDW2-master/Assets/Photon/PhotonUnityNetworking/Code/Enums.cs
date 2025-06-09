@@ -31,7 +31,7 @@ namespace Photon.Pun
     }
 
 
-    /// <summary>Enum of "target" options for RPCs. These define which remote clients get your RPC call. </summary>
+    /// <summary>Enum of "target" options for RPCs. These define which remote clients get   RPC call. </summary>
     /// \ingroup publicApi
     public enum RpcTarget
     {

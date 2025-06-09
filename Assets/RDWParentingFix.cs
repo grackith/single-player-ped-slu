@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 [DefaultExecutionOrder(-300)] // Run very early
 public class RDWParentingFix : MonoBehaviour

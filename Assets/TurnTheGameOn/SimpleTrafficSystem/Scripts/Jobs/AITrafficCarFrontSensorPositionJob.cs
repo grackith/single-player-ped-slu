@@ -1,8 +1,8 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
-    using Unity.Collections;
     using Unity.Burst;
+    using Unity.Collections;
+    using UnityEngine;
     using UnityEngine.Jobs;
 
     [BurstCompile]

@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class BusStopWaypointManager : MonoBehaviour
 {
-    public Transform busStopLocation; // Assign your bus stop transform
+    public Transform busStopLocation;
     public float waypointUpdateInterval = 3.0f; // How often to update dynamic waypoint
 
     private RedirectionManager redirectionManager;

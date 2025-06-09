@@ -1,6 +1,4 @@
 ﻿using Photon.Pun;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 //record avatar info for network synchronization
 public class AvatarInfoForNetworking : MonoBehaviourPunCallbacks, IPunObservable

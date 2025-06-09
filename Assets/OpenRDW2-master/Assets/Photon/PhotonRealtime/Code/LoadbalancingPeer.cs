@@ -17,18 +17,14 @@
 namespace Photon.Realtime
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using ExitGames.Client.Photon;
 
-    #if SUPPORTED_UNITY
-    using UnityEngine;
-    using Debug = UnityEngine.Debug;
-    #endif
-    #if SUPPORTED_UNITY || NETFX_CORE
+#if SUPPORTED_UNITY
+#endif
+#if SUPPORTED_UNITY || NETFX_CORE
     using Hashtable = ExitGames.Client.Photon.Hashtable;
-    using SupportClass = ExitGames.Client.Photon.SupportClass;
-    #endif
+#endif
 
 
     /// <summary>
@@ -82,7 +78,7 @@ namespace Photon.Realtime
         private void ConfigUnitySockets()
         {
             Type websocketType = null;
-            #if (UNITY_XBOXONE || UNITY_GAMECORE) && !UNITY_EDITOR
+#if (UNITY_XBOXONE || UNITY_GAMECORE) && !UNITY_EDITOR
             websocketType = Type.GetType("ExitGames.Client.Photon.SocketNativeSource, Assembly-CSharp", false);
             if (websocketType == null)
             {
@@ -96,7 +92,7 @@ namespace Photon.Realtime
             {
                 this.SocketImplementationConfig[ConnectionProtocol.Udp] = websocketType;    // on Xbox, the native socket plugin supports UDP as well
             }
-            #else
+#else
             // to support WebGL export in Unity, we find and assign the SocketWebTcp class (if it's in the project).
             // alternatively class SocketWebTcp might be in the Photon3Unity3D.dll
             websocketType = Type.GetType("ExitGames.Client.Photon.SocketWebTcp, PhotonWebSocket", false);
@@ -108,13 +104,13 @@ namespace Photon.Realtime
             {
                 websocketType = Type.GetType("ExitGames.Client.Photon.SocketWebTcp, Assembly-CSharp", false);
             }
-            #if UNITY_WEBGL
+#if UNITY_WEBGL
             if (websocketType == null && this.DebugOut >= DebugLevel.WARNING)
             {
                 this.Listener.DebugReturn(DebugLevel.WARNING, "SocketWebTcp type not found in the usual Assemblies. This is required as wrapper for the browser WebSocket API. Make sure to make the PhotonLibs\\WebSocket code available.");
             }
-            #endif
-            #endif
+#endif
+#endif
 
             if (websocketType != null)
             {
@@ -226,17 +222,17 @@ namespace Photon.Realtime
                 gameProperties[GamePropertyKey.CleanupCacheOnLeave] = false;    // this is only informational for the clients which join
             }
 
-            #if SERVERSDK
+#if SERVERSDK
             op[ParameterCode.CheckUserOnJoin] = roomOptions.CheckUserOnJoin;
             if (roomOptions.CheckUserOnJoin)
             {
                 flags = flags | (int) RoomOptionBit.CheckUserOnJoin;
             }
-            #else
+#else
             // in PUN v1.88 and PUN 2, CheckUserOnJoin is set by default:
-            flags = flags | (int) RoomOptionBit.CheckUserOnJoin;
+            flags = flags | (int)RoomOptionBit.CheckUserOnJoin;
             op[ParameterCode.CheckUserOnJoin] = true;
-            #endif
+#endif
 
             if (roomOptions.PlayerTtl > 0 || roomOptions.PlayerTtl == -1)
             {
@@ -761,7 +757,7 @@ namespace Photon.Realtime
                 opParameters.Add(ParameterCode.ExpectedValues, expectedProperties);
             }
 
-            if (webflags!=null && webflags.HttpForward)
+            if (webflags != null && webflags.HttpForward)
             {
                 opParameters[ParameterCode.EventForward] = webflags.WebhookFlags;
             }
@@ -778,7 +774,7 @@ namespace Photon.Realtime
         /// See: EstablishEncryption(). Check encryption with IsEncryptionAvailable.
         /// This operation is allowed only once per connection (multiple calls will have ErrorCode != Ok).
         /// </remarks>
-        /// <param name="appId">Your application's name or ID to authenticate. This is assigned by Photon Cloud (webpage).</param>
+        /// <param name="appId">  application's name or ID to authenticate. This is assigned by Photon Cloud (webpage).</param>
         /// <param name="appVersion">The client's version (clients with differing client appVersions are separated and players don't meet).</param>
         /// <param name="authValues">Contains all values relevant for authentication. Even without account system (external Custom Auth), the clients are allowed to identify themselves.</param>
         /// <param name="regionCode">Optional region code, if the client should connect to a specific Photon Cloud Region.</param>
@@ -852,7 +848,7 @@ namespace Photon.Realtime
         /// See: EstablishEncryption(). Check encryption with IsEncryptionAvailable.
         /// This operation is allowed only once per connection (multiple calls will have ErrorCode != Ok).
         /// </remarks>
-        /// <param name="appId">Your application's name or ID to authenticate. This is assigned by Photon Cloud (webpage).</param>
+        /// <param name="appId">  application's name or ID to authenticate. This is assigned by Photon Cloud (webpage).</param>
         /// <param name="appVersion">The client's version (clients with differing client appVersions are separated and players don't meet).</param>
         /// <param name="authValues">Optional authentication values. The client can set no values or a UserId or some parameters for Custom Authentication by a server.</param>
         /// <param name="regionCode">Optional region code, if the client should connect to a specific Photon Cloud Region.</param>
@@ -863,7 +859,7 @@ namespace Photon.Realtime
         {
             if (this.DebugOut >= DebugLevel.INFO)
             {
-                this.Listener.DebugReturn(DebugLevel.INFO, "OpAuthenticateOnce(): authValues = "  + authValues + ", region = " + regionCode + ", encryption = " + encryptionMode);
+                this.Listener.DebugReturn(DebugLevel.INFO, "OpAuthenticateOnce(): authValues = " + authValues + ", region = " + regionCode + ", encryption = " + encryptionMode);
             }
 
             var opParameters = new Dictionary<byte, object>();
@@ -963,7 +959,7 @@ namespace Photon.Realtime
         /// Send an event with custom code/type and any content to the other players in the same room.
         /// </summary>
         /// <remarks>This override explicitly uses another parameter order to not mix it up with the implementation for Hashtable only.</remarks>
-        /// <param name="eventCode">Identifies this type of event (and the content). Your game's event codes can start with 0.</param>
+        /// <param name="eventCode">Identifies this type of event (and the content).   game's event codes can start with 0.</param>
         /// <param name="customEventContent">Any serializable datatype (including Hashtable like the other OpRaiseEvent overloads).</param>
         /// <param name="raiseEventOptions">Contains (slightly) less often used options. If you pass null, the default options will be used.</param>
         /// <param name="sendOptions">Send options for reliable, encryption etc</param>
@@ -1124,7 +1120,7 @@ namespace Photon.Realtime
         public TypedLobby TypedLobby;
         /// <summary>SQL query to filter room matches. For default-typed lobbies, use ExpectedCustomRoomProperties instead.</summary>
         public string SqlLobbyFilter;
-        /// <summary>The expected users list blocks player slots for your friends or team mates to join the room, too.</summary>
+        /// <summary>The expected users list blocks player slots for   friends or team mates to join the room, too.</summary>
         /// <remarks>See: https://doc.photonengine.com/en-us/pun/v2/lobby-and-matchmaking/matchmaking-and-lobby#matchmaking_slot_reservation </remarks>
         public string[] ExpectedUsers;
         /// <summary>Ticket for matchmaking. Provided by a plugin / server and contains a list of party members who should join the same room (among other things).</summary>
@@ -1198,7 +1194,7 @@ namespace Photon.Realtime
         /// <summary>(32766) GameId (name) already in use (can't create another). Change name.</summary>
         public const int GameIdAlreadyExists = 0x7FFF - 1;
 
-        /// <summary>(32765) Game is full. This rarely happens when some player joined the room before your join completed.</summary>
+        /// <summary>(32765) Game is full. This rarely happens when some player joined the room before   join completed.</summary>
         public const int GameFull = 0x7FFF - 2;
 
         /// <summary>(32764) Game is closed and can't be joined. Join another game.</summary>
@@ -1241,7 +1237,7 @@ namespace Photon.Realtime
         /// <summary>(32756) Authorization on the Photon Cloud failed because the app's subscription does not allow to use a particular region's server.</summary>
         /// <remarks>
         /// Some subscription plans for the Photon Cloud are region-bound. Servers of other regions can't be used then.
-        /// Check your master server address and compare it with your Photon Cloud Dashboard's info.
+        /// Check   master server address and compare it with   Photon Cloud Dashboard's info.
         /// https://dashboard.photonengine.com
         ///
         /// OpAuthorize is part of connection workflow but only on the Photon Cloud, this error can happen.
@@ -1320,7 +1316,7 @@ namespace Photon.Realtime
         /// </summary>
         public const int InvalidEncryptionParameters = 32741; // 0x7FFF - 24,
 
-}
+    }
 
 
     /// <summary>
@@ -1396,7 +1392,7 @@ namespace Photon.Realtime
     /// <summary>
     /// Class for constants. These values are for events defined by Photon LoadBalancing.
     /// </summary>
-    /// <remarks>They start at 255 and go DOWN. Your own in-game events can start at 0. These constants are used internally.</remarks>
+    /// <remarks>They start at 255 and go DOWN.   own in-game events can start at 0. These constants are used internally.</remarks>
     public class EventCode
     {
         /// <summary>(230) Initial list of RoomInfos (in lobby on Master)</summary>
@@ -1493,10 +1489,10 @@ namespace Photon.Realtime
         /// <summary>(225) User's ID</summary>
         public const byte UserId = 225;
 
-        /// <summary>(224) Your application's ID: a name on your own Photon or a GUID on the Photon Cloud</summary>
+        /// <summary>(224)   application's ID: a name on   own Photon or a GUID on the Photon Cloud</summary>
         public const byte ApplicationId = 224;
 
-        /// <summary>(223) Not used currently (as "Position"). If you get queued before connect, this is your position</summary>
+        /// <summary>(223) Not used currently (as "Position"). If you get queued before connect, this is   position</summary>
         public const byte Position = 223;
 
         /// <summary>(223) Modifies the matchmaking algorithm used for OpJoinRandom. Allowed parameter values are defined in enum MatchmakingMode.</summary>
@@ -1508,7 +1504,7 @@ namespace Photon.Realtime
         /// <summary>(221) Internally used to establish encryption</summary>
         public const byte Token = 221;
 
-        /// <summary>(220) Version of your application</summary>
+        /// <summary>(220) Version of   application</summary>
         public const byte AppVersion = 220;
 
         /// <summary>(210) Internally used in case of hosting by Azure</summary>
@@ -1928,7 +1924,7 @@ namespace Photon.Realtime
         /// <summary>The room's custom properties to set. Use string keys!</summary>
         /// <remarks>
         /// Custom room properties are any key-values you need to define the game's setup.
-        /// The shorter your keys are, the better.
+        /// The shorter   keys are, the better.
         /// Example: Map, Mode (could be "m" when used with "Map"), TileSet (could be "t").
         /// </remarks>
         public Hashtable CustomRoomProperties;
@@ -1998,9 +1994,9 @@ namespace Photon.Realtime
         public bool BroadcastPropsChangeToAll { get { return this.broadcastPropsChangeToAll; } set { this.broadcastPropsChangeToAll = value; } }
         private bool broadcastPropsChangeToAll = true;
 
-        #if SERVERSDK
+#if SERVERSDK
         public bool CheckUserOnJoin { get; set; }
-        #endif
+#endif
     }
 
 
@@ -2039,7 +2035,7 @@ namespace Photon.Realtime
 
     /// <summary>Types of lobbies define their behaviour and capabilities. Check each value for details.</summary>
     /// <remarks>Values of this enum must be matched by the server.</remarks>
-    public enum LobbyType :byte
+    public enum LobbyType : byte
     {
         /// <summary>Standard type and behaviour: While joined to this lobby clients get room-lists and JoinRandomRoom can use a simple filter to match properties (perfectly).</summary>
         Default = 0,
@@ -2214,7 +2210,7 @@ namespace Photon.Realtime
         private CustomAuthenticationType authType = CustomAuthenticationType.None;
 
         /// <summary>The type of authentication provider that should be used. Defaults to None (no auth whatsoever).</summary>
-        /// <remarks>Several auth providers are available and CustomAuthenticationType.Custom can be used if you build your own service.</remarks>
+        /// <remarks>Several auth providers are available and CustomAuthenticationType.Custom can be used if you build   own service.</remarks>
         public CustomAuthenticationType AuthType
         {
             get { return authType; }

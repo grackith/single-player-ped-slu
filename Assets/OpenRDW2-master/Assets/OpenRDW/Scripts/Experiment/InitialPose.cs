@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class InitialPose
 {
@@ -16,10 +14,12 @@ public class InitialPose
         this.initialPosition = Vector2.zero;
         this.initialForward = Vector2.up;
     }
-    public static InitialPose GetDefaultInitialPose() {
+    public static InitialPose GetDefaultInitialPose()
+    {
         return new InitialPose(Vector2.zero, Vector2.up);
     }
-    public static InitialPose Copy(InitialPose initialPose) {
+    public static InitialPose Copy(InitialPose initialPose)
+    {
         return new InitialPose(initialPose.initialPosition, initialPose.initialForward);
     }
 }

@@ -1,10 +1,5 @@
 #if UNITY_EDITOR
-using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.Rendering;
 using UnityEditor;
-using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace UnityEngine.Rendering
 {
@@ -78,7 +73,7 @@ namespace UnityEngine.Rendering
                 float floatValue;
                 float comparedValue = targetValue;
 
-                switch(valueType)
+                switch (valueType)
                 {
                     case PREValueType.Float:
                         floatValue = property.floatValue;
@@ -88,7 +83,7 @@ namespace UnityEngine.Rendering
                         comparedValue = (int)comparedValue;
                         break;
                     default:
-                            return property.boolValue == (targetValue > 0f);
+                        return property.boolValue == (targetValue > 0f);
                 }
 
                 switch (validationType)

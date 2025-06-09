@@ -1,5 +1,5 @@
-using UnityEngine.InputSystem;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 // Using state of gamepad device directly.
 public class SimpleController_UsingState : MonoBehaviour

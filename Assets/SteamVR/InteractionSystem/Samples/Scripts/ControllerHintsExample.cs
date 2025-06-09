@@ -4,71 +4,70 @@
 //
 //=============================================================================
 
-using UnityEngine;
 using System.Collections;
-using Valve.VR;
+using UnityEngine;
 
 namespace Valve.VR.InteractionSystem.Sample
 {
-	//-------------------------------------------------------------------------
-	public class ControllerHintsExample : MonoBehaviour
-	{
-		private Coroutine buttonHintCoroutine;
-		private Coroutine textHintCoroutine;
+    //-------------------------------------------------------------------------
+    public class ControllerHintsExample : MonoBehaviour
+    {
+        private Coroutine buttonHintCoroutine;
+        private Coroutine textHintCoroutine;
 
-		//-------------------------------------------------
-		public void ShowButtonHints( Hand hand )
-		{
-			if ( buttonHintCoroutine != null )
-			{
-				StopCoroutine( buttonHintCoroutine );
-			}
-			buttonHintCoroutine = StartCoroutine( TestButtonHints( hand ) );
-		}
-
-
-		//-------------------------------------------------
-		public void ShowTextHints( Hand hand )
-		{
-			if ( textHintCoroutine != null )
-			{
-				StopCoroutine( textHintCoroutine );
-			}
-			textHintCoroutine = StartCoroutine( TestTextHints( hand ) );
-		}
+        //-------------------------------------------------
+        public void ShowButtonHints(Hand hand)
+        {
+            if (buttonHintCoroutine != null)
+            {
+                StopCoroutine(buttonHintCoroutine);
+            }
+            buttonHintCoroutine = StartCoroutine(TestButtonHints(hand));
+        }
 
 
-		//-------------------------------------------------
-		public void DisableHints()
-		{
-			if ( buttonHintCoroutine != null )
-			{
-				StopCoroutine( buttonHintCoroutine );
-				buttonHintCoroutine = null;
-			}
-
-			if ( textHintCoroutine != null )
-			{
-				StopCoroutine( textHintCoroutine );
-				textHintCoroutine = null;
-			}
-
-			foreach ( Hand hand in Player.instance.hands )
-			{
-				ControllerButtonHints.HideAllButtonHints( hand );
-				ControllerButtonHints.HideAllTextHints( hand );
-			}
-		}
+        //-------------------------------------------------
+        public void ShowTextHints(Hand hand)
+        {
+            if (textHintCoroutine != null)
+            {
+                StopCoroutine(textHintCoroutine);
+            }
+            textHintCoroutine = StartCoroutine(TestTextHints(hand));
+        }
 
 
-		//-------------------------------------------------
-		// Cycles through all the button hints on the controller
-		//-------------------------------------------------
-		private IEnumerator TestButtonHints( Hand hand )
-		{
-			ControllerButtonHints.HideAllButtonHints( hand );
+        //-------------------------------------------------
+        public void DisableHints()
+        {
+            if (buttonHintCoroutine != null)
+            {
+                StopCoroutine(buttonHintCoroutine);
+                buttonHintCoroutine = null;
+            }
 
-			while ( true )
+            if (textHintCoroutine != null)
+            {
+                StopCoroutine(textHintCoroutine);
+                textHintCoroutine = null;
+            }
+
+            foreach (Hand hand in Player.instance.hands)
+            {
+                ControllerButtonHints.HideAllButtonHints(hand);
+                ControllerButtonHints.HideAllTextHints(hand);
+            }
+        }
+
+
+        //-------------------------------------------------
+        // Cycles through all the button hints on the controller
+        //-------------------------------------------------
+        private IEnumerator TestButtonHints(Hand hand)
+        {
+            ControllerButtonHints.HideAllButtonHints(hand);
+
+            while (true)
             {
                 for (int actionIndex = 0; actionIndex < SteamVR_Input.actionsIn.Length; actionIndex++)
                 {
@@ -83,20 +82,20 @@ namespace Valve.VR.InteractionSystem.Sample
                     yield return null;
                 }
 
-				ControllerButtonHints.HideAllButtonHints( hand );
-				yield return new WaitForSeconds( 1.0f );
-			}
-		}
+                ControllerButtonHints.HideAllButtonHints(hand);
+                yield return new WaitForSeconds(1.0f);
+            }
+        }
 
 
-		//-------------------------------------------------
-		// Cycles through all the text hints on the controller
-		//-------------------------------------------------
-		private IEnumerator TestTextHints( Hand hand )
-		{
-			ControllerButtonHints.HideAllTextHints( hand );
+        //-------------------------------------------------
+        // Cycles through all the text hints on the controller
+        //-------------------------------------------------
+        private IEnumerator TestTextHints(Hand hand)
+        {
+            ControllerButtonHints.HideAllTextHints(hand);
 
-			while ( true )
+            while (true)
             {
                 for (int actionIndex = 0; actionIndex < SteamVR_Input.actionsIn.Length; actionIndex++)
                 {
@@ -113,7 +112,7 @@ namespace Valve.VR.InteractionSystem.Sample
 
                 ControllerButtonHints.HideAllTextHints(hand);
                 yield return new WaitForSeconds(3.0f);
-			}
-		}
-	}
+            }
+        }
+    }
 }

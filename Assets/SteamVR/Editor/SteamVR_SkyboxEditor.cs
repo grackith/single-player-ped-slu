@@ -4,12 +4,9 @@
 //
 //=============================================================================
 
-using UnityEngine;
-using UnityEditor;
-using System.Text;
-using System.Collections.Generic;
-using Valve.VR;
 using System.IO;
+using UnityEditor;
+using UnityEngine;
 
 namespace Valve.VR
 {
@@ -22,7 +19,7 @@ namespace Valve.VR
             "skybox's textures.  Note: This skybox is only used to override what shows up " +
             "in the compositor (e.g. when loading levels).  Add a Camera component to this " +
             "object to override default settings like which layers to render.  Additionally, " +
-            "by specifying your own targetTexture, you can control the size of the textures " +
+            "by specifying   own targetTexture, you can control the size of the textures " +
             "and other properties like antialiasing.  Don't forget to disable the camera.\n\n" +
             "For stereo screenshots, a panorama is render for each eye using the specified " +
             "ipd (in millimeters) broken up into segments cellSize pixels square to optimize " +
@@ -130,7 +127,7 @@ namespace Valve.VR
 #if (UNITY_5_4 || UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
                         importer.textureFormat = TextureImporterFormat.RGB24;
 #else
-					importer.textureCompression = TextureImporterCompression.Uncompressed;
+                        importer.textureCompression = TextureImporterCompression.Uncompressed;
 #endif
                         importer.wrapMode = TextureWrapMode.Clamp;
                         importer.mipmapEnabled = false;
@@ -366,10 +363,10 @@ namespace Valve.VR
 #if (UNITY_5_4 || UNITY_5_3 || UNITY_5_2 || UNITY_5_1 || UNITY_5_0)
                         importer.SetPlatformTextureSettings("Standalone", width, TextureImporterFormat.RGB24);
 #else
-					var settings = importer.GetPlatformTextureSettings("Standalone");
-					settings.textureCompression = TextureImporterCompression.Uncompressed;
-					settings.maxTextureSize = width;
-					importer.SetPlatformTextureSettings(settings);
+                        var settings = importer.GetPlatformTextureSettings("Standalone");
+                        settings.textureCompression = TextureImporterCompression.Uncompressed;
+                        settings.maxTextureSize = width;
+                        importer.SetPlatformTextureSettings(settings);
 #endif
                         importer.SaveAndReimport();
 

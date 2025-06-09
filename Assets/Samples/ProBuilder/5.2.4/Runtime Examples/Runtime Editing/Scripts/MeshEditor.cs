@@ -55,7 +55,7 @@ namespace ProBuilder.Examples
 
         void Update()
         {
-            if(!m_DragState.active)
+            if (!m_DragState.active)
                 m_Selection = Utility.PickFace(m_SceneCamera, Input.mousePosition);
 
             HandleInput();

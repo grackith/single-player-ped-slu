@@ -1,8 +1,4 @@
 using UnityEngine;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
 
 public class SidewalkRDWHelper : MonoBehaviour
 {
@@ -33,7 +29,7 @@ public class SidewalkRDWHelper : MonoBehaviour
     public float offSidewalkResetBuffer = 0.7f;  // Normal buffer off sidewalks
 
     [Header("Curvature Detection")]
-    public LayerMask sidewalkLayer; // Set this to your "Highway" layer
+    public LayerMask sidewalkLayer; // Set this to   "Highway" layer
     public float checkRadius = 0.5f; // How far to check for sidewalk
 
     // Internal tracking

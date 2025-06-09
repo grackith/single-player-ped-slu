@@ -1,10 +1,10 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
-    using UnityEngine.SceneManagement;
+    using System.Collections.Generic;
     using UnityEditor;
     using UnityEditor.SceneManagement;
-    using System.Collections.Generic;
+    using UnityEngine;
+    using UnityEngine.SceneManagement;
 
     public class Editor_STSWindow : EditorWindow
     {

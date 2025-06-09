@@ -23,14 +23,13 @@
 
 namespace Photon.Pun
 {
+    using ExitGames.Client.Photon;
+    using Photon.Realtime;
     using System;
     using System.Collections.Generic;
     using System.Reflection;
-    using ExitGames.Client.Photon;
     using UnityEngine;
     using UnityEngine.SceneManagement;
-    using Photon.Realtime;
-    using SupportClassPun = ExitGames.Client.Photon.SupportClass;
 
 
     /// <summary>Replacement for RPC attribute with different name. Used to flag methods as remote-callable.</summary>
@@ -39,7 +38,7 @@ namespace Photon.Pun
     }
 
     /// <summary>
-    /// This class adds the property photonView, while logging a warning when your game still uses the networkView.
+    /// This class adds the property photonView, while logging a warning when   game still uses the networkView.
     /// </summary>
     public class MonoBehaviourPun : MonoBehaviour
     {
@@ -57,18 +56,18 @@ namespace Photon.Pun
         {
             get
             {
-                #if UNITY_EDITOR
+#if UNITY_EDITOR
                 // In the editor we want to avoid caching this at design time, so changes in PV structure appear immediately.
                 if (!Application.isPlaying || this.pvCache == null)
                 {
                     this.pvCache = PhotonView.Get(this);
                 }
-                #else
+#else
                 if (this.pvCache == null)
                 {
                     this.pvCache = PhotonView.Get(this);
                 }
-                #endif
+#endif
                 return this.pvCache;
             }
         }
@@ -98,13 +97,13 @@ namespace Photon.Pun
     /// Instead, you should override those and call <code>base.OnEnable</code> and <code>base.OnDisable</code>.
     ///
     /// Visual Studio and MonoDevelop should provide the list of methods when you begin typing "override".
-    /// <b>Your implementation does not have to call "base.method()".</b>
+    /// <b>  implementation does not have to call "base.method()".</b>
     ///
     /// This class implements all callback interfaces and extends <see cref="Photon.Pun.MonoBehaviourPun"/>.
     /// </remarks>
     /// \ingroup callbacks
     // the documentation for the interface methods becomes inherited when Doxygen builds it.
-    public class MonoBehaviourPunCallbacks : MonoBehaviourPun, IConnectionCallbacks , IMatchmakingCallbacks , IInRoomCallbacks, ILobbyCallbacks, IWebRpcCallback, IErrorInfoCallback
+    public class MonoBehaviourPunCallbacks : MonoBehaviourPun, IConnectionCallbacks, IMatchmakingCallbacks, IInRoomCallbacks, ILobbyCallbacks, IWebRpcCallback, IErrorInfoCallback
     {
         public virtual void OnEnable()
         {
@@ -123,7 +122,7 @@ namespace Photon.Pun
         /// After the (low level transport) connection is established, the client will automatically send
         /// the Authentication operation, which needs to get a response before the client can call other operations.
         ///
-        /// Your logic should wait for either: OnRegionListReceived or OnConnectedToMaster.
+        ///   logic should wait for either: OnRegionListReceived or OnConnectedToMaster.
         ///
         /// This callback is useful to detect if the server can be reached at all (technically).
         /// Most often, it's enough to implement OnDisconnected().
@@ -231,7 +230,7 @@ namespace Photon.Pun
         }
 
         /// <summary>
-        /// Called when the Name Server provided a list of regions for your title.
+        /// Called when the Name Server provided a list of regions for   title.
         /// </summary>
         /// <remarks>Check the RegionHandler class description, to make use of the provided values.</remarks>
         /// <param name="regionHandler">The currently used RegionHandler.</param>
@@ -268,7 +267,7 @@ namespace Photon.Pun
         /// Called when a remote player entered the room. This Player is already added to the playerlist.
         /// </summary>
         /// <remarks>
-        /// If your game starts with a certain number of players, this callback can be useful to check the
+        /// If   game starts with a certain number of players, this callback can be useful to check the
         /// Room.playerCount and find out if you can start.
         /// </remarks>
         public virtual void OnPlayerEnteredRoom(Player newPlayer)
@@ -280,7 +279,7 @@ namespace Photon.Pun
         /// </summary>
         /// <remarks>
         /// If another player leaves the room or if the server detects a lost connection, this callback will
-        /// be used to notify your game logic.
+        /// be used to notify   game logic.
         ///
         /// Depending on the room's setup, players may become inactive, which means they may return and retake
         /// their spot in the room. In such cases, the Player stays in the Room.Players dictionary.
@@ -349,19 +348,19 @@ namespace Photon.Pun
         /// After calling OpFindFriends, the Master Server will cache the friend list and send updates to the friend
         /// list. The friends includes the name, userId, online state and the room (if any) for each requested user/friend.
         ///
-        /// Use the friendList to update your UI and store it, if the UI should highlight changes.
+        /// Use the friendList to update   UI and store it, if the UI should highlight changes.
         /// </remarks>
         public virtual void OnFriendListUpdate(List<FriendInfo> friendList)
         {
         }
 
         /// <summary>
-        /// Called when your Custom Authentication service responds with additional data.
+        /// Called when   Custom Authentication service responds with additional data.
         /// </summary>
         /// <remarks>
         /// Custom Authentication services can include some custom data in their response.
         /// When present, that data is made available in this callback as Dictionary.
-        /// While the keys of your data have to be strings, the values can be either string or a number (in Json).
+        /// While the keys of   data have to be strings, the values can be either string or a number (in Json).
         /// You need to make extra sure, that the value type is the one you expect. Numbers become (currently) int64.
         ///
         /// Example: void OnCustomAuthenticationResponse(Dictionary&lt;string, object&gt; data) { ... }
@@ -381,11 +380,11 @@ namespace Photon.Pun
         /// During development of a game, it might also fail due to wrong configuration on the server side.
         /// In those cases, logging the debugMessage is very important.
         ///
-        /// Unless you setup a custom authentication service for your app (in the [Dashboard](https://dashboard.photonengine.com)),
+        /// Unless you setup a custom authentication service for   app (in the [Dashboard](https://dashboard.photonengine.com)),
         /// this won't be called!
         /// </remarks>
         /// <param name="debugMessage">Contains a debug message why authentication failed. This has to be fixed during development.</param>
-        public virtual void OnCustomAuthenticationFailed (string debugMessage)
+        public virtual void OnCustomAuthenticationFailed(string debugMessage)
         {
         }
 
@@ -444,7 +443,7 @@ namespace Photon.Pun
         {
             get
             {
-                uint u = (uint) this.timeInt;
+                uint u = (uint)this.timeInt;
                 double t = u;
                 return t / 1000.0d;
             }
@@ -550,7 +549,7 @@ namespace Photon.Pun
         {
             if (pos != newWriteData.Count)
             {
-                throw new Exception("SetWriteStream failed, because count does not match position value. pos: "+ pos + " newWriteData.Count:" + newWriteData.Count);
+                throw new Exception("SetWriteStream failed, because count does not match position value. pos: " + pos + " newWriteData.Count:" + newWriteData.Count);
             }
             this.writeData = newWriteData;
             this.currentItem = pos;
@@ -639,7 +638,7 @@ namespace Photon.Pun
             {
                 if (this.readData.Length > this.currentItem)
                 {
-                    myBool = (bool) this.readData[this.currentItem];
+                    myBool = (bool)this.readData[this.currentItem];
                     this.currentItem++;
                 }
             }
@@ -658,7 +657,7 @@ namespace Photon.Pun
             {
                 if (this.readData.Length > this.currentItem)
                 {
-                    myInt = (int) this.readData[this.currentItem];
+                    myInt = (int)this.readData[this.currentItem];
                     this.currentItem++;
                 }
             }
@@ -677,7 +676,7 @@ namespace Photon.Pun
             {
                 if (this.readData.Length > this.currentItem)
                 {
-                    value = (string) this.readData[this.currentItem];
+                    value = (string)this.readData[this.currentItem];
                     this.currentItem++;
                 }
             }
@@ -735,7 +734,7 @@ namespace Photon.Pun
             {
                 if (this.readData.Length > this.currentItem)
                 {
-                    value = (short) this.readData[this.currentItem];
+                    value = (short)this.readData[this.currentItem];
                     this.currentItem++;
                 }
             }
@@ -754,7 +753,7 @@ namespace Photon.Pun
             {
                 if (this.readData.Length > this.currentItem)
                 {
-                    obj = (float) this.readData[this.currentItem];
+                    obj = (float)this.readData[this.currentItem];
                     this.currentItem++;
                 }
             }
@@ -773,7 +772,7 @@ namespace Photon.Pun
             {
                 if (this.readData.Length > this.currentItem)
                 {
-                    obj = (Player) this.readData[this.currentItem];
+                    obj = (Player)this.readData[this.currentItem];
                     this.currentItem++;
                 }
             }
@@ -792,7 +791,7 @@ namespace Photon.Pun
             {
                 if (this.readData.Length > this.currentItem)
                 {
-                    obj = (Vector3) this.readData[this.currentItem];
+                    obj = (Vector3)this.readData[this.currentItem];
                     this.currentItem++;
                 }
             }
@@ -811,7 +810,7 @@ namespace Photon.Pun
             {
                 if (this.readData.Length > this.currentItem)
                 {
-                    obj = (Vector2) this.readData[this.currentItem];
+                    obj = (Vector2)this.readData[this.currentItem];
                     this.currentItem++;
                 }
             }
@@ -830,7 +829,7 @@ namespace Photon.Pun
             {
                 if (this.readData.Length > this.currentItem)
                 {
-                    obj = (Quaternion) this.readData[this.currentItem];
+                    obj = (Quaternion)this.readData[this.currentItem];
                     this.currentItem++;
                 }
             }
@@ -855,13 +854,13 @@ namespace Photon.Pun
         }
 
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         /// <summary>In Editor, we can access the active scene's name.</summary>
         public static string EditorActiveSceneName
         {
             get { return SceneManager.GetActiveScene().name; }
         }
-        #endif
+#endif
     }
 
 
@@ -904,7 +903,7 @@ namespace Photon.Pun
             bool wasActive = res.activeSelf;
             if (wasActive) res.SetActive(false);
 
-            GameObject instance =GameObject.Instantiate(res, position, rotation) as GameObject;
+            GameObject instance = GameObject.Instantiate(res, position, rotation) as GameObject;
 
             if (wasActive) res.SetActive(true);
             return instance;
@@ -975,20 +974,20 @@ namespace Photon.Pun
 
         public static bool CheckIsAssignableFrom(this Type to, Type from)
         {
-            #if !NETFX_CORE
+#if !NETFX_CORE
             return to.IsAssignableFrom(from);
-            #else
+#else
             return to.GetTypeInfo().IsAssignableFrom(from.GetTypeInfo());
-            #endif
+#endif
         }
 
         public static bool CheckIsInterface(this Type to)
         {
-            #if !NETFX_CORE
+#if !NETFX_CORE
             return to.IsInterface;
-            #else
+#else
             return to.GetTypeInfo().IsInterface;
-            #endif
+#endif
         }
     }
 }

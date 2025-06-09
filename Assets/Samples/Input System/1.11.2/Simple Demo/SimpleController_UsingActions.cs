@@ -1,6 +1,6 @@
 using System.Collections;
-using UnityEngine.InputSystem;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Interactions;
 
 // Using simple actions with callbacks.

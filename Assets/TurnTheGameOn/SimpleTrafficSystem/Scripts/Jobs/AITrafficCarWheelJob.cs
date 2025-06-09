@@ -5,9 +5,9 @@
 
 namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using Unity.Mathematics;
-    using Unity.Collections;
     using Unity.Burst;
+    using Unity.Collections;
+    using Unity.Mathematics;
     using UnityEngine.Jobs;
 
     [BurstCompile]

@@ -1,7 +1,7 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
     using UnityEditor;
+    using UnityEngine;
 
     [CustomEditor(typeof(AITrafficController))]
     public class Editor_AITrafficController : Editor

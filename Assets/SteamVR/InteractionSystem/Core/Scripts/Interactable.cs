@@ -4,10 +4,8 @@
 //
 //=============================================================================
 
-using UnityEngine;
-using UnityEngine.Events;
-using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Valve.VR.InteractionSystem
 {
@@ -55,7 +53,7 @@ namespace Valve.VR.InteractionSystem
         public SteamVR_Skeleton_Poser skeletonPoser;
 
         [Tooltip("Should the rendered hand lock on to and follow the object")]
-        public bool handFollowTransform= true;
+        public bool handFollowTransform = true;
 
 
         [Tooltip("Set whether or not you want this interactible to highlight when hovering over it")]

@@ -1,18 +1,11 @@
-﻿using UnityEditor;
-using UnityEngine;
-
-using System.CodeDom;
-using Microsoft.CSharp;
-using System.IO;
-using System.CodeDom.Compiler;
-
-using System.Linq;
+﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 using System.Linq.Expressions;
-using System;
+using System.Reflection;
+using UnityEditor;
 using UnityEditorInternal;
-using Valve.Newtonsoft.Json;
+using UnityEngine;
 
 namespace Valve.VR
 {
@@ -287,13 +280,13 @@ namespace Valve.VR
 
         private bool CopyOrClose()
         {
-            bool copyExamples = UnityEditor.EditorUtility.DisplayDialog("Copy Examples", "It looks like your project is missing an actions.json. Would you like to use the example files?", "Yes", "No");
+            bool copyExamples = UnityEditor.EditorUtility.DisplayDialog("Copy Examples", "It looks like   project is missing an actions.json. Would you like to use the example files?", "Yes", "No");
             if (copyExamples)
             {
                 SteamVR_CopyExampleInputFiles.CopyFiles(true);
                 System.Threading.Thread.Sleep(1000);
                 bool initializeSuccess = SteamVR_Input.InitializeFile();
-                EditorApplication.delayCall += SaveFile; 
+                EditorApplication.delayCall += SaveFile;
                 return initializeSuccess;
             }
             else
@@ -379,7 +372,7 @@ namespace Valve.VR
         private void OnGUI()
         {
             if (headerLabelStyle == null)
-                headerLabelStyle = new GUIStyle(EditorStyles.boldLabel); 
+                headerLabelStyle = new GUIStyle(EditorStyles.boldLabel);
 
             CheckFileInitialized();
 
@@ -400,11 +393,11 @@ namespace Valve.VR
             }
 
 #if UNITY_2017_1_OR_NEWER
-        if (EditorApplication.isCompiling)
-        {
-            EditorGUI.LabelField(new Rect(0, 0, 100, 20), "Compiling...");
-            return; //ongui gets more fussy after 2017
-        }
+            if (EditorApplication.isCompiling)
+            {
+                EditorGUI.LabelField(new Rect(0, 0, 100, 20), "Compiling...");
+                return; //ongui gets more fussy after 2017
+            }
 #endif
             CheckInitialized();
 
@@ -902,7 +895,7 @@ namespace Valve.VR
 
             if (delete)
             {
-                bool confirm = EditorUtility.DisplayDialog("Confirmation", "Are you sure you want to delete the input code files? This may make your project unable to compile.", "Delete", "Cancel");
+                bool confirm = EditorUtility.DisplayDialog("Confirmation", "Are you sure you want to delete the input code files? This may make   project unable to compile.", "Delete", "Cancel");
                 if (confirm)
                     SteamVR_Input_Generator.DeleteGeneratedFolder();
             }
@@ -929,8 +922,8 @@ namespace Valve.VR
         private void DrawPartial()
         {
             EditorGUILayout.LabelField("Partial bindings", headerLabelStyle);
-            EditorGUILayout.LabelField("This is for SteamVR related asset packages. Here you can create a folder containing your current action manifest and associated bindings that will automatically query users to import into their project and add to their actions when loaded (as long as they have the SteamVR asset).", multiLineStyle);
-            EditorGUILayout.LabelField("note: Please create action sets specific to your asset to avoid collisions.", smallMultiLineStyle);
+            EditorGUILayout.LabelField("This is for SteamVR related asset packages. Here you can create a folder containing   current action manifest and associated bindings that will automatically query users to import into their project and add to their actions when loaded (as long as they have the SteamVR asset).", multiLineStyle);
+            EditorGUILayout.LabelField("note: Please create action sets specific to   asset to avoid collisions.", smallMultiLineStyle);
 
             bool create = GUILayout.Button("Create");
             if (create)
@@ -1012,7 +1005,7 @@ namespace Valve.VR
 
 
             EditorGUILayout.LabelField("Partial input bindings", headerLabelStyle);
-            EditorGUILayout.LabelField("When you create a partial bindings folder you can include that anywhere inside your asset package folder and it will automatically be found and imported to the user's project on load.", multiLineStyle);
+            EditorGUILayout.LabelField("When you create a partial bindings folder you can include that anywhere inside   asset package folder and it will automatically be found and imported to the user's project on load.", multiLineStyle);
             EditorGUILayout.LabelField("note: You can rename the folder but do not rename any files inside.", smallMultiLineStyle);
 
             EditorGUILayout.Space();
@@ -1028,12 +1021,12 @@ namespace Valve.VR
             EditorGUILayout.Space();
 
             overwriteOldActions = EditorGUILayout.Toggle("Overwrite old actions", overwriteOldActions);
-            EditorGUILayout.LabelField("If the person importing your asset package has a previous version of your package this determines whether or not to overwrite actions and bindings that have the same name.", smallMultiLineStyle);
+            EditorGUILayout.LabelField("If the person importing   asset package has a previous version of   package this determines whether or not to overwrite actions and bindings that have the same name.", smallMultiLineStyle);
 
             EditorGUILayout.Space();
 
             removeOldVersionActions = EditorGUILayout.Toggle("Remove unused actions from old versions", overwriteOldActions);
-            EditorGUILayout.LabelField("If the person importing your asset package has a previous version of your package that has actions that are not used in the new version of your package this determines whether or not to delete those actions.", smallMultiLineStyle);
+            EditorGUILayout.LabelField("If the person importing   asset package has a previous version of   package that has actions that are not used in the new version of   package this determines whether or not to delete those actions.", smallMultiLineStyle);
 
             EditorGUILayout.Space();
             EditorGUILayout.Space();

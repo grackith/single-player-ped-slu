@@ -1,8 +1,6 @@
-﻿using UnityEngine;
+﻿using System.IO;
 using UnityEditor;
-using System.Collections;
 using UnityEditor.Callbacks;
-using System.IO;
 
 namespace Valve.VR
 {
@@ -11,7 +9,7 @@ namespace Valve.VR
         [PostProcessBuildAttribute(1)]
         public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
         {
-            
+
         }
 
         private static void UpdateAppKey(string newFilePath, string executableName)

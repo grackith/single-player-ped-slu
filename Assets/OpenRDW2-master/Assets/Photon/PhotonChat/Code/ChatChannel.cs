@@ -13,17 +13,15 @@ namespace Photon.Chat
     using System.Collections.Generic;
     using System.Text;
 
-    #if SUPPORTED_UNITY || NETFX_CORE
-    using Hashtable = ExitGames.Client.Photon.Hashtable;
-    using SupportClass = ExitGames.Client.Photon.SupportClass;
-    #endif
+#if SUPPORTED_UNITY || NETFX_CORE
+#endif
 
 
     /// <summary>
     /// A channel of communication in Photon Chat, updated by ChatClient and provided as READ ONLY.
     /// </summary>
     /// <remarks>
-    /// Contains messages and senders to use (read!) and display by your GUI.
+    /// Contains messages and senders to use (read!) and display by   GUI.
     /// Access these by:
     ///     ChatClient.PublicChannels
     ///     ChatClient.PrivateChannels
@@ -189,7 +187,7 @@ namespace Photon.Chat
         }
 
 
-        #if CHAT_EXTENDED
+#if CHAT_EXTENDED
         internal void ReadUserProperties(string userId, Dictionary<object, object> changedProperties)
         {
             if (this.usersProperties == null)
@@ -250,6 +248,6 @@ namespace Photon.Chat
         {
             return this.TryGetUserProperty(userId, propertyKey, out propertyValue);
         }
-        #endif
+#endif
     }
 }

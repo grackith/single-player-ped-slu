@@ -1,5 +1,5 @@
-using UnityEngine;
 using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
 /// <summary>
 /// Ensures wheel meshes stay properly positioned and synchronized with wheel colliders
@@ -272,7 +272,7 @@ public class WheelCoordinator : MonoBehaviour
         }
     }
 
-    // Add this to handle builds specifically
+
     private void OnEnable()
     {
         if (!Application.isEditor)

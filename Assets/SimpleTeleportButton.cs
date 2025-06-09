@@ -1,6 +1,6 @@
 using UnityEngine;
-using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.Events;
+using UnityEngine.XR.Interaction.Toolkit;
 
 public class SimpleTeleportButton : MonoBehaviour
 {
@@ -514,7 +514,7 @@ public class SimpleTeleportButton : MonoBehaviour
         }
     }
 
-    // Add these methods to your SimpleTeleportButton.cs class
+    // Add these methods to   SimpleTeleportButton.cs class
 
     // NEW: Method to force setup as a bus button (called by ScenarioManager)
     public void SetupAsBusButton()

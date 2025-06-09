@@ -1,18 +1,15 @@
 ﻿//======= Copyright (c) Valve Corporation, All rights reserved. ===============
 
-using UnityEngine;
-using System.Collections;
 using System;
-
 using System.Runtime.InteropServices;
-using System.Collections.Generic;
 using System.Text;
+using UnityEngine;
 
 namespace Valve.VR
 {
     [Serializable]
     /// <summary>
-    /// Skeleton Actions are our best approximation of where your hands are while holding vr controllers and pressing buttons. We give you 31 bones to help you animate hand models.
+    /// Skeleton Actions are our best approximation of where   hands are while holding vr controllers and pressing buttons. We give you 31 bones to help you animate hand models.
     /// For more information check out this blog post: https://steamcommunity.com/games/250820/announcements/detail/1690421280625220068
     /// </summary>
     public class SteamVR_Action_Skeleton : SteamVR_Action_Pose_Base<SteamVR_Action_Skeleton_Source_Map, SteamVR_Action_Skeleton_Source>, ISteamVR_Action_Skeleton_Source, ISerializationCallbackReceiver
@@ -96,7 +93,7 @@ namespace Valve.VR
         /// <summary>From the previous update: An array of the rotations of the bones from the most recent update. Relative to skeletalTransformSpace. See SteamVR_Skeleton_JointIndexes for bone indexes.</summary>
         public Quaternion[] lastBoneRotations { get { return sourceMap[SteamVR_Input_Sources.Any].lastBoneRotations; } }
 
-        /// <summary>The range of motion the we're using to get bone data from. With Controller being your hand while holding the controller.</summary>
+        /// <summary>The range of motion the we're using to get bone data from. With Controller being   hand while holding the controller.</summary>
         public EVRSkeletalMotionRange rangeOfMotion
         {
             get { return sourceMap[SteamVR_Input_Sources.Any].rangeOfMotion; }
@@ -377,8 +374,8 @@ namespace Valve.VR
         }
 
         /// <summary>
-        /// Set the range of the motion of the bones in this skeleton. Options are "With Controller" as if your hand is holding your VR controller.
-        /// Or "Without Controller" as if your hand is empty. This will set the range for the following update.
+        /// Set the range of the motion of the bones in this skeleton. Options are "With Controller" as if   hand is holding   VR controller.
+        /// Or "Without Controller" as if   hand is empty. This will set the range for the following update.
         /// </summary>
         public void SetRangeOfMotion(EVRSkeletalMotionRange range)
         {
@@ -706,7 +703,7 @@ namespace Valve.VR
     }
 
     /// <summary>
-    /// Skeleton Actions are our best approximation of where your hands are while holding vr controllers and pressing buttons. We give you 31 bones to help you animate hand models.
+    /// Skeleton Actions are our best approximation of where   hands are while holding vr controllers and pressing buttons. We give you 31 bones to help you animate hand models.
     /// For more information check out this blog post: https://steamcommunity.com/games/250820/announcements/detail/1690421280625220068
     /// </summary>
     public class SteamVR_Action_Skeleton_Source : SteamVR_Action_Pose_Source, ISteamVR_Action_Skeleton_Source
@@ -754,7 +751,7 @@ namespace Valve.VR
         public Quaternion[] lastBoneRotations { get; protected set; }
 
 
-        /// <summary>The range of motion the we're using to get bone data from. With Controller being your hand while holding the controller.</summary>
+        /// <summary>The range of motion the we're using to get bone data from. With Controller being   hand while holding the controller.</summary>
         public EVRSkeletalMotionRange rangeOfMotion { get; set; }
 
         /// <summary>The space to get bone data in. Parent space by default</summary>
@@ -1251,7 +1248,7 @@ namespace Valve.VR
         /// <summary>From the previous update: An array of the rotations of the bones from the most recent update. Relative to skeletalTransformSpace. See SteamVR_Skeleton_JointIndexes for bone indexes.</summary>
         Quaternion[] lastBoneRotations { get; }
 
-        /// <summary>The range of motion the we're using to get bone data from. With Controller being your hand while holding the controller.</summary>
+        /// <summary>The range of motion the we're using to get bone data from. With Controller being   hand while holding the controller.</summary>
         EVRSkeletalMotionRange rangeOfMotion { get; set; }
 
         /// <summary>The space to get bone data in. Parent space by default</summary>
@@ -1331,8 +1328,8 @@ namespace Valve.VR
     }
 
     /// <summary>
-    /// The change in range of the motion of the bones in the skeleton. Options are "With Controller" as if your hand is holding your VR controller.
-    /// Or "Without Controller" as if your hand is empty.
+    /// The change in range of the motion of the bones in the skeleton. Options are "With Controller" as if   hand is holding   VR controller.
+    /// Or "Without Controller" as if   hand is empty.
     /// </summary>
     public enum SkeletalMotionRangeChange
     {

@@ -26,7 +26,7 @@ namespace Photon.Chat
         /// <summary>(4) Not used yet.</summary>
         public const byte ChannelHistory = 4;
 
-        /// <summary>(5) Set your (client's) status.</summary>
+        /// <summary>(5) Set   (client's) status.</summary>
         public const byte UpdateStatus = 5;
         /// <summary>(6) Add friends the list of friends that should update you of their status.</summary>
         public const byte AddFriends = 6;

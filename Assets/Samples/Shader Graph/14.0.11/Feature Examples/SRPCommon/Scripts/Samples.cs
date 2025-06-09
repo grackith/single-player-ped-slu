@@ -26,16 +26,16 @@ public class Samples
 
         return newSamples;
     }
-    
+
     public Sample FindSampleWithPrefab(GameObject prefab)
     {
-        if ( prefabToSample.ContainsKey(prefab) )
+        if (prefabToSample.ContainsKey(prefab))
             return samples[prefabToSample[prefab]];
 
-        foreach(Sample sample in samples)
+        foreach (Sample sample in samples)
             if (sample.prefabName == prefab.name)
                 return sample;
-        
+
         Debug.LogWarning($"Sample not found with prefabName: {prefab.name}");
         return null;
     }

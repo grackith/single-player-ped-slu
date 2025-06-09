@@ -19,10 +19,9 @@
 namespace Photon.Realtime
 {
     using System;
-    using UnityEngine;
     using System.Collections.Generic;
     using System.Text.RegularExpressions;
-    using ExitGames.Client.Photon;
+    using UnityEngine;
 
 
     /// <summary>
@@ -61,7 +60,7 @@ namespace Photon.Realtime
         /// Attempts to create a Photon Cloud Account asynchronously. Blocked while RequestPendingResult is true.
         /// </summary>
         /// <remarks>
-        /// Once your callback is called, check ReturnCode, Message and AppId to get the result of this attempt.
+        /// Once   callback is called, check ReturnCode, Message and AppId to get the result of this attempt.
         /// </remarks>
         /// <param name="email">Email of the account.</param>
         /// <param name="serviceTypes">Defines which type of Photon-service is being requested.</param>
@@ -145,7 +144,7 @@ namespace Photon.Realtime
             string emailEscaped = UnityEngine.Networking.UnityWebRequest.EscapeURL(email);
             string st = UnityEngine.Networking.UnityWebRequest.EscapeURL(serviceTypes);
             string uv = UnityEngine.Networking.UnityWebRequest.EscapeURL(Application.unityVersion);
-            string serviceUrl = string.Format(ServiceUrl, string.IsNullOrEmpty(CustomContext) ? DefaultContext : CustomContext );
+            string serviceUrl = string.Format(ServiceUrl, string.IsNullOrEmpty(CustomContext) ? DefaultContext : CustomContext);
 
             return string.Format("{0}?email={1}&st={2}&uv={3}&av={4}", serviceUrl, emailEscaped, st, uv, originAv);
         }

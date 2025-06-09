@@ -1,12 +1,12 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 
-public class KeyboardController : MonoBehaviour {
+public class KeyboardController : MonoBehaviour
+{
 
     private GlobalConfiguration globalConfiguration;
     private RedirectionManager redirectionManager;
-    private MovementManager movementManager;    
+    private MovementManager movementManager;
     private NetworkManager networkManager;
 
     [Tooltip("Auto-Adjust automatically counters curvature as human naturally would.")]
@@ -14,7 +14,7 @@ public class KeyboardController : MonoBehaviour {
     bool useAutoAdjust = true;
 
     float lastCurvatureApplied = 0;
-    float lastRotationApplied = 0;    
+    float lastRotationApplied = 0;
 
     private void Awake()
     {
@@ -24,7 +24,8 @@ public class KeyboardController : MonoBehaviour {
         networkManager = globalConfiguration.GetComponentInChildren<NetworkManager>(true);
     }
 
-    public void MakeOneStepKeyboardMovement() {
+    public void MakeOneStepKeyboardMovement()
+    {
         if (globalConfiguration.movementController == GlobalConfiguration.MovementController.HMD)
             return;
         if (!globalConfiguration.avatarIsWalking
@@ -32,7 +33,7 @@ public class KeyboardController : MonoBehaviour {
             || globalConfiguration.currentShownAvatarId != movementManager.avatarId
             || (globalConfiguration.networkingMode && networkManager.avatarId != movementManager.avatarId))
             return;
-        
+
         Vector3 userForward = Utilities.FlattenedDir3D(transform.forward);
         Vector3 userRight = Utilities.FlattenedDir3D(transform.right);
         var deltaTime = redirectionManager.GetDeltaTime();

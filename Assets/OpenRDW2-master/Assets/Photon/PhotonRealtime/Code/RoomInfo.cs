@@ -18,13 +18,10 @@
 namespace Photon.Realtime
 {
     using System;
-    using System.Collections;
-    using ExitGames.Client.Photon;
 
-    #if SUPPORTED_UNITY || NETFX_CORE
+#if SUPPORTED_UNITY || NETFX_CORE
     using Hashtable = ExitGames.Client.Photon.Hashtable;
-    using SupportClass = ExitGames.Client.Photon.SupportClass;
-    #endif
+#endif
 
 
     /// <summary>
@@ -272,7 +269,7 @@ namespace Photon.Realtime
                 this.playerTtl = (int)propertiesToCache[GamePropertyKey.PlayerTtl];
             }
 
-            // merge the custom properties (from your application) to the cache (only string-typed keys will be kept)
+            // merge the custom properties (from   application) to the cache (only string-typed keys will be kept)
             this.customProperties.MergeStringKeys(propertiesToCache);
             this.customProperties.StripKeysWithNullValues();
         }

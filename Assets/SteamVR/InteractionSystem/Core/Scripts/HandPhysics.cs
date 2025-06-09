@@ -4,8 +4,6 @@
 //
 //=============================================================================
 
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Valve.VR.InteractionSystem
@@ -37,7 +35,7 @@ namespace Valve.VR.InteractionSystem
         {
             hand = GetComponent<Hand>();
             //spawn hand collider and link it to us
-            
+
             handCollider = ((GameObject)Instantiate(handColliderPrefab.gameObject)).GetComponent<HandCollider>();
             Vector3 localPosition = handCollider.transform.localPosition;
             Quaternion localRotation = handCollider.transform.localRotation;
@@ -154,11 +152,11 @@ namespace Valve.VR.InteractionSystem
 
             // set finger tip positions in wrist space
 
-            for(int finger = 0; finger < 5; finger++)
+            for (int finger = 0; finger < 5; finger++)
             {
                 int tip = SteamVR_Skeleton_JointIndexes.GetBoneForFingerTip(finger);
                 int bone = tip;
-                for(int i = 0; i < handCollider.fingerColliders[finger].Length; i++)
+                for (int i = 0; i < handCollider.fingerColliders[finger].Length; i++)
                 {
                     bone = tip - 1 - i; // start at distal and go down
                     if (handCollider.fingerColliders[finger][i] != null)
@@ -214,7 +212,7 @@ namespace Valve.VR.InteractionSystem
 
         Vector3 ProcessPos(int boneIndex, Vector3 pos)
         {
-            if(hand.skeleton.mirroring != SteamVR_Behaviour_Skeleton.MirrorType.None)
+            if (hand.skeleton.mirroring != SteamVR_Behaviour_Skeleton.MirrorType.None)
             {
                 return SteamVR_Behaviour_Skeleton.MirrorPosition(boneIndex, pos);
             }

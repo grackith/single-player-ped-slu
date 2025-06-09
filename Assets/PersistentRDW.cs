@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.IO; // Add this line
-using System.Linq; // This might also be helpful
+using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -26,10 +26,10 @@ public class PersistentRDW : MonoBehaviour
     public Vector3 physicalReferencePoint = Vector3.zero;
 
     [Tooltip("Direction player faces in physical space at start")]
-    
+
     public Vector3 physicalReferenceDirection = Vector3.forward; // (0,0,1)
-    public float physicalWidth = 8.4f;  // Your exact width 
-    public float physicalLength = 14.0f; // Your exact length
+    public float physicalWidth = 8.4f;  //   exact width 
+    public float physicalLength = 14.0f; //   exact length
     private Vector3 lastHeadPosition;
     private float driftCheckInterval = 3.0f; // Check every 3 seconds
     private float lastDriftCheckTime = 0f;
@@ -251,7 +251,7 @@ public class PersistentRDW : MonoBehaviour
         }
     }
 
-    
+
     private void UpdateAllVisualizations()
     {
         // Find all visualization managers
@@ -269,126 +269,6 @@ public class PersistentRDW : MonoBehaviour
         CreatePersistentCornerMarkers(5.0f, 13.5f);
     }
 
-    // 3. Add the private CreateSimpleCornerMarkers method
-
-    private void CreateSimpleCornerMarkers(float width, float length)
-    {
-        if (!TrackingSpaceVisualizationController.ShouldShowCornerMarkers())
-        {
-            Debug.Log("PersistentRDW: Simple corner markers disabled by master control");
-            return;
-        }
-        if (redirectionManager == null || redirectionManager.trackingSpace == null ||
-            globalConfig == null || globalConfig.physicalSpaces == null ||
-            globalConfig.physicalSpaces.Count == 0)
-        {
-            Debug.LogError("Cannot create corner markers - missing components");
-            return;
-        }
-
-        // Try to find existing marker holder and destroy it to prevent duplicates
-        GameObject existingHolder = GameObject.Find("CornerMarkers");
-        if (existingHolder != null)
-        {
-            GameObject.Destroy(existingHolder);
-        }
-
-        // Create a marker holder without tag dependency
-        GameObject markerHolder = new GameObject("CornerMarkers");
-
-        var physicalSpace = globalConfig.physicalSpaces[0];
-        int cornerIndex = 0;
-
-        foreach (var point in physicalSpace.trackingSpace)
-        {
-            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            marker.name = $"Corner_{cornerIndex}";
-
-            Vector3 worldPos = redirectionManager.trackingSpace.TransformPoint(
-                new Vector3(point.x, 0, point.y));
-
-            marker.transform.position = new Vector3(worldPos.x, 0.05f, worldPos.z);
-            marker.transform.localScale = Vector3.one * 0.2f;
-
-            // Different color for each corner for easier identification
-            Color cornerColor = cornerIndex == 0 ? Color.red :
-                              (cornerIndex == 1 ? Color.green :
-                              (cornerIndex == 2 ? Color.blue : Color.yellow));
-
-            marker.GetComponent<Renderer>().material.color = cornerColor;
-
-            // Create text label
-            GameObject textObj = new GameObject($"Label_{cornerIndex}");
-            textObj.transform.position = worldPos + Vector3.up * 0.3f;
-            TextMesh textMesh = textObj.AddComponent<TextMesh>();
-            textMesh.text = $"Corner {cornerIndex}\n({point.x:F2}, {point.y:F2})";
-            textMesh.fontSize = 48;
-            textMesh.characterSize = 0.05f;
-            textMesh.alignment = TextAlignment.Center;
-            textMesh.anchor = TextAnchor.MiddleCenter;
-            textMesh.color = Color.white;
-
-            // Set parent for organization
-            marker.transform.SetParent(markerHolder.transform);
-            textObj.transform.SetParent(marker.transform);
-
-            cornerIndex++;
-        }
-
-        // Add a center marker
-        GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        centerMarker.name = "CenterMarker";
-        centerMarker.transform.position = redirectionManager.trackingSpace.position + Vector3.up * 0.01f;
-        centerMarker.transform.localScale = new Vector3(0.5f, 0.02f, 0.5f);
-        centerMarker.GetComponent<Renderer>().material.color = Color.magenta;
-        centerMarker.transform.SetParent(markerHolder.transform);
-
-        // Add direction indicators
-        GameObject forwardIndicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        forwardIndicator.name = "ForwardIndicator";
-        forwardIndicator.transform.position = redirectionManager.trackingSpace.position +
-                                             redirectionManager.trackingSpace.forward * (length / 4) +
-                                             Vector3.up * 0.01f;
-        forwardIndicator.transform.rotation = redirectionManager.trackingSpace.rotation;
-        forwardIndicator.transform.localScale = new Vector3(0.1f, 0.01f, 1.0f);
-        forwardIndicator.GetComponent<Renderer>().material.color = Color.blue;
-        forwardIndicator.transform.SetParent(markerHolder.transform);
-
-        GameObject rightIndicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightIndicator.name = "RightIndicator";
-        rightIndicator.transform.position = redirectionManager.trackingSpace.position +
-                                           redirectionManager.trackingSpace.right * (width / 4) +
-                                           Vector3.up * 0.01f;
-        rightIndicator.transform.rotation = Quaternion.Euler(0, redirectionManager.trackingSpace.rotation.eulerAngles.y + 90, 0);
-        rightIndicator.transform.localScale = new Vector3(0.1f, 0.01f, 0.5f);
-        rightIndicator.GetComponent<Renderer>().material.color = Color.red;
-        rightIndicator.transform.SetParent(markerHolder.transform);
-
-        Debug.Log($"Created {cornerIndex} simple corner markers with color coding");
-
-        // Create tracking space dimension text
-        GameObject dimensionsText = new GameObject("DimensionsText");
-        dimensionsText.transform.position = redirectionManager.trackingSpace.position + Vector3.up * 2.0f;
-        TextMesh dimTextMesh = dimensionsText.AddComponent<TextMesh>();
-        dimTextMesh.text = $"TRACKING SPACE\n{width}m × {length}m";
-        dimTextMesh.fontSize = 80;
-        dimTextMesh.characterSize = 0.05f;
-        dimTextMesh.alignment = TextAlignment.Center;
-        dimTextMesh.anchor = TextAnchor.MiddleCenter;
-        dimTextMesh.color = Color.white;
-        dimensionsText.transform.SetParent(markerHolder.transform);
-
-        // Make the text face the player
-        if (redirectionManager.headTransform != null)
-        {
-            Vector3 dirToHead = redirectionManager.headTransform.position - dimensionsText.transform.position;
-            dirToHead.y = 0;
-            if (dirToHead != Vector3.zero)
-            {
-                dimensionsText.transform.rotation = Quaternion.LookRotation(dirToHead);
-            }
-        }
-    }
 
     // Call this when the scenario ends (when bus is caught)
     public void EndScenario()
@@ -507,9 +387,9 @@ public class PersistentRDW : MonoBehaviour
         // Unsubscribe from events
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
-    
 
-    // NEW METHOD: Clear all corner markers before creating new ones
+
+    //  Clear all corner markers before creating new ones
     public void ClearAllCornerMarkers()
     {
         // Find all objects tagged as corner markers
@@ -545,10 +425,7 @@ public class PersistentRDW : MonoBehaviour
         }
     }
 
-    // NEW METHOD: Create persistent corner markers
-    
 
-    // Add this to ScenarioManager or PersistentRDW
     public void FixRedirectedAvatarHierarchy()
     {
         GameObject redirectedAvatar = GameObject.Find("Redirected Avatar");
@@ -581,9 +458,6 @@ public class PersistentRDW : MonoBehaviour
         Debug.Log("Redirected Avatar hierarchy fixed");
     }
 
-    // NEW METHOD: Create direction indicators to show tracking space alignment
-
-    // Add this to PersistentRDW or another manager class
 
 
     private void CreateDirectionIndicators(Transform trackingSpace, float width, float length, Vector3 roadDirection = default)
@@ -595,7 +469,7 @@ public class PersistentRDW : MonoBehaviour
             return;
         }
 
-        // Your existing CreateDirectionIndicators code here...
+        //   existing CreateDirectionIndicators code here...
         Debug.Log("PersistentRDW: Creating direction indicators (master control allows)");
         // ... rest of existing method
         // Create forward direction indicator (blue) - along LONG dimension
@@ -682,7 +556,7 @@ public class PersistentRDW : MonoBehaviour
             Debug.Log("Direction indicators created: Blue = Long axis, Red = Short axis");
         }
     }
-    // Add this method to PersistentRDW.cs
+
     public void LogTrackingSpaceInfo()
     {
         Debug.Log("==== TRACKING SPACE DIAGNOSTIC ====");
@@ -758,9 +632,8 @@ public class PersistentRDW : MonoBehaviour
 
 
 
-    
 
-    // Add this as a public method in the PersistentRDW class
+
     public void AlignWith5x13_5Rectangle()
     {
         Debug.Log("Aligning tracking space with standard 5.0m × 13.5m rectangle");
@@ -782,7 +655,7 @@ public class PersistentRDW : MonoBehaviour
         AlignTrackingSpaceWithRoad(headPosition, forward, 5.0f, 13.5f);
     }
 
-    // Optional: Method to align based on your text file
+    // Optional: Method to align based on   text file
     public void AlignTrackingSpaceWithCustomFile(string filePath)
     {
         Debug.Log($"Aligning tracking space based on file: {filePath}");
@@ -804,8 +677,8 @@ public class PersistentRDW : MonoBehaviour
             // Parse rectangle from lines (assuming format as shown)
             if (lines.Length >= 6)
             {
-                // Parse rectangle coordinates (adjust parsing based on your file format)
-                // For your file format, we need to parse the second section (after the //)
+                // Parse rectangle coordinates (adjust parsing based on   file format)
+                // For   file format, we need to parse the second section (after the //)
                 int startLine = 0;
                 for (int i = 0; i < lines.Length; i++)
                 {
@@ -863,7 +736,7 @@ public class PersistentRDW : MonoBehaviour
         return Vector2.zero;
     }
 
-    // Add this to your PersistentRDW class
+
     public void EnablePersistentTrackingSpace()
     {
         Debug.Log("Enabling persistent tracking space visualization");
@@ -1107,7 +980,7 @@ public class PersistentRDW : MonoBehaviour
         // Remove collider
         Destroy(rightIndicator.GetComponent<Collider>());
     }
-    // Add this method to PersistentRDW
+
     public void UpdateTrackingSpaceVisualization()
     {
         // This can be called from LateUpdate to keep visualizations in sync with physical space
@@ -1191,7 +1064,7 @@ public class PersistentRDW : MonoBehaviour
         }
     }
 
-    // Add this to PersistentRDW
+
     void LateUpdate()
     {
         // Only update if we need to
@@ -1200,7 +1073,7 @@ public class PersistentRDW : MonoBehaviour
             //UpdateTrackingSpaceVisualization();
         }
     }
-    // Add this to your PersistentRDW class
+
     public void CreateFixedTrackingSpaceVisualization()
     {
         Debug.Log("Creating fixed tracking space visualization");
@@ -1259,7 +1132,7 @@ public class PersistentRDW : MonoBehaviour
             GameObject markersParent = new GameObject("FixedTrackingSpaceMarkers");
             markersParent.transform.position = trackingSpacePosition;
             markersParent.transform.rotation = trackingSpaceRotation;
-            markersParent.tag = "CornerMarker"; // If this tag is defined in your project
+            markersParent.tag = "CornerMarker"; // If this tag is defined in   project
 
             // Create corner markers in world space
             CreateFixedCornerMarkers(markersParent.transform, width, length);
@@ -1406,10 +1279,7 @@ public class PersistentRDW : MonoBehaviour
         Destroy(rightIndicator.GetComponent<Collider>());
     }
 
-    // Method to clear existing markers
 
-
-    // Add this to PersistentRDW.cs
     public void EnsurePhysicalSpaceDimensions(float width, float length)
     {
         if (globalConfig == null || globalConfig.physicalSpaces == null ||
@@ -1434,7 +1304,7 @@ public class PersistentRDW : MonoBehaviour
         Debug.Log($"Physical space dimensions set to {width}m × {length}m");
     }
 
-    // Add this method to visually highlight the space corners
+
     public void CreatePersistentCornerMarkers(float width, float length)
     {
         Debug.Log($"Creating persistent corner markers for {width}m × {length}m space");

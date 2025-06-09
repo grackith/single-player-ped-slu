@@ -6,11 +6,8 @@
 
 #if UNITY_UGUI_UI || !UNITY_2019_2_OR_NEWER
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using Valve.VR;
-using Valve.VR.InteractionSystem;
 
 namespace Valve.VR.InteractionSystem.Sample
 {

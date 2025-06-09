@@ -1,7 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using TMPro;
+using UnityEngine;
 
 public class SkyLandmark : MonoBehaviour
 {
@@ -284,7 +282,7 @@ public class SkyLandmark : MonoBehaviour
         timerText = tmp; // This now matches the variable type
 
         // Make the canvas face forward
-        
+
         // Face in different directions by changing the Y rotation value
         //textObj.transform.rotation = Quaternion.Euler(0, 0, 0);   // Face forward (Z axis)
         //textObj.transform.rotation = Quaternion.Euler(0, 90, 0);  // Face right (X axis)

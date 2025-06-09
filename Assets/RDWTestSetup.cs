@@ -1,6 +1,5 @@
-using UnityEngine;
 using System.Collections;
-using System.Collections.Generic;
+using UnityEngine;
 
 [RequireComponent(typeof(GlobalConfiguration))]
 public class RDWTestSetup : MonoBehaviour

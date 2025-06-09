@@ -1,5 +1,3 @@
-using System;
-
 using UnityEditor;
 using UnityEditor.XR.Management;
 
@@ -8,7 +6,7 @@ using UnityEngine;
 namespace Samples
 {
     /// <summary>
-    /// Sample loader UI demonstrating how to provide your own loader selection UI for the
+    /// Sample loader UI demonstrating how to provide   own loader selection UI for the
     /// loader selection list.
     /// </summary>
     [XRCustomLoaderUI("Samples.SampleLoader", BuildTargetGroup.Standalone)]

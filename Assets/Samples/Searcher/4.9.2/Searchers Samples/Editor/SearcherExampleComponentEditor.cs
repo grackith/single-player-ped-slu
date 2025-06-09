@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -17,7 +16,7 @@ namespace UnityEditor.Searcher
             for (var i = 0; i < 10; ++i)
                 children.Add(new SearcherItem("B-" + i));
 
-            var child = new SearcherItem("Child","", children);
+            var child = new SearcherItem("Child", "", children);
             root.AddChild(child);
 
             {
@@ -33,7 +32,8 @@ namespace UnityEditor.Searcher
                         editorWindow,
                         new List<SearcherItem> { root },
                         "Mouse Position",
-                        item => {
+                        item =>
+                        {
                             Debug.Log("Searcher item selected: " + (item?.Name ?? "<none>"));
                             return true;
                         },
@@ -60,7 +60,8 @@ namespace UnityEditor.Searcher
                         editorWindow,
                         new List<SearcherItem> { root },
                         "Button Center",
-                        item => {
+                        item =>
+                        {
                             Debug.Log("Searcher item selected: " + (item?.Name ?? "<none>"));
                             return true;
                         },

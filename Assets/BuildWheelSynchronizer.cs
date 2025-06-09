@@ -1,10 +1,9 @@
-using UnityEngine;
-using TurnTheGameOn.SimpleTrafficSystem;
 using System.Collections;
+using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
 /// <summary>
 /// Handles wheel synchronization specifically for builds where the job system might not work perfectly
-/// Add this to a GameObject in your scene (like ScenarioManager)
 /// </summary>
 public class BuildWheelSynchronizer : MonoBehaviour
 {

@@ -17,19 +17,16 @@
 namespace Photon.Realtime
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
     using ExitGames.Client.Photon;
 
-    #if SUPPORTED_UNITY
-    using UnityEngine;
+#if SUPPORTED_UNITY
     using Debug = UnityEngine.Debug;
-    #endif
-    #if SUPPORTED_UNITY || NETFX_CORE
+#endif
+#if SUPPORTED_UNITY || NETFX_CORE
     using Hashtable = ExitGames.Client.Photon.Hashtable;
-    using SupportClass = ExitGames.Client.Photon.SupportClass;
-    #endif
+#endif
 
 
     #region Enums
@@ -170,7 +167,7 @@ namespace Photon.Realtime
         /// <summary>OnStatusChanged: The server disconnected this client for unknown reasons.</summary>
         DisconnectByServerReasonUnknown,
 
-        /// <summary>OnOperationResponse: Authenticate in the Photon Cloud with invalid AppId. Update your subscription or contact Exit Games.</summary>
+        /// <summary>OnOperationResponse: Authenticate in the Photon Cloud with invalid AppId. Update   subscription or contact Exit Games.</summary>
         InvalidAuthentication,
 
         /// <summary>OnOperationResponse: Authenticate in the Photon Cloud with invalid client values or custom authentication setup in Cloud Dashboard.</summary>
@@ -179,10 +176,10 @@ namespace Photon.Realtime
         /// <summary>The authentication ticket should provide access to any Photon Cloud server without doing another authentication-service call. However, the ticket expired.</summary>
         AuthenticationTicketExpired,
 
-        /// <summary>OnOperationResponse: Authenticate (temporarily) failed when using a Photon Cloud subscription without CCU Burst. Update your subscription.</summary>
+        /// <summary>OnOperationResponse: Authenticate (temporarily) failed when using a Photon Cloud subscription without CCU Burst. Update   subscription.</summary>
         MaxCcuReached,
 
-        /// <summary>OnOperationResponse: Authenticate when the app's Photon Cloud subscription is locked to some (other) region(s). Update your subscription or master server address.</summary>
+        /// <summary>OnOperationResponse: Authenticate when the app's Photon Cloud subscription is locked to some (other) region(s). Update   subscription or master server address.</summary>
         InvalidRegion,
 
         /// <summary>OnOperationResponse: Operation that's (currently) not available for this client (not authorized usually). Only tracked for op Authenticate.</summary>
@@ -256,7 +253,7 @@ namespace Photon.Realtime
     /// <summary>Container for port definitions.</summary>
     public struct PhotonPortDefinition
     {
-        public static readonly PhotonPortDefinition AlternativeUdpPorts = new PhotonPortDefinition() { NameServerPort = 27000, MasterServerPort = 27001, GameServerPort = 27002};
+        public static readonly PhotonPortDefinition AlternativeUdpPorts = new PhotonPortDefinition() { NameServerPort = 27000, MasterServerPort = 27001, GameServerPort = 27002 };
 
         /// <summary>Typical ports: UDP: 5058 or 27000, TCP: 4533, WSS: 19093 or 443.</summary>
         public ushort NameServerPort;
@@ -275,8 +272,8 @@ namespace Photon.Realtime
     /// It keeps a state and will automatically execute transitions between the Master and Game Servers.
     /// </summary>
     /// <remarks>
-    /// This class (and the Player class) should be extended to implement your own game logic.
-    /// You can override CreatePlayer as "factory" method for Players and return your own Player instances.
+    /// This class (and the Player class) should be extended to implement   own game logic.
+    /// You can override CreatePlayer as "factory" method for Players and return   own Player instances.
     /// The State of this class is essential to know when a client is in a lobby (or just on the master)
     /// and when in a game where the actual gameplay should take place.
     /// Extension notes:
@@ -293,12 +290,12 @@ namespace Photon.Realtime
         /// </summary>
         public LoadBalancingPeer LoadBalancingPeer { get; private set; }
 
-        #if PHOTON_LOCATION
+#if PHOTON_LOCATION
         public LocationInfo LocationInfo
         {
             get { return this.RegionHandler?.Location?.LocationInfo; }
         }
-        #endif
+#endif
 
         /// <summary>
         /// Gets or sets the binary protocol version used by this client
@@ -319,10 +316,10 @@ namespace Photon.Realtime
             }
         }
 
-        /// <summary>The version of your client. A new version also creates a new "virtual app" to separate players from older client versions.</summary>
+        /// <summary>The version of   client. A new version also creates a new "virtual app" to separate players from older client versions.</summary>
         public string AppVersion { get; set; }
 
-        /// <summary>The AppID as assigned from the Photon Cloud. If you host yourself, this is the "regular" Photon Server Application Name (most likely: "LoadBalancing").</summary>
+        /// <summary>The AppID as assigned from the Photon Cloud. If you host  self, this is the "regular" Photon Server Application Name (most likely: "LoadBalancing").</summary>
         public string AppId { get; set; }
 
         /// <summary>The ClientAppType defines which sort of AppId should be expected. The LoadBalancingClient supports Realtime and Voice app types. Default: Realtime.</summary>
@@ -417,7 +414,7 @@ namespace Photon.Realtime
         /// <summary>The currently used server address (if any). The type of server is defined by Server property.</summary>
         public string CurrentServerAddress { get { return this.LoadBalancingPeer.ServerAddress; } }
 
-        /// <summary>Your Master Server address. In PhotonCloud, call ConnectToRegionMaster() to find your Master Server.</summary>
+        /// <summary>  Master Server address. In PhotonCloud, call ConnectToRegionMaster() to find   Master Server.</summary>
         /// <remarks>
         /// In the Photon Cloud, explicit definition of a Master Server Address is not best practice.
         /// The Photon Cloud has a "Name Server" which redirects clients to a specific Master Server (per Region and AppId).
@@ -494,7 +491,7 @@ namespace Photon.Realtime
 
 
         /// <summary>
-        /// A refined version of IsConnected which is true only if your connection is ready to send operations.
+        /// A refined version of IsConnected which is true only if   connection is ready to send operations.
         /// </summary>
         /// <remarks>
         /// Not all operations can be called on all types of servers. If an operation is unavailable on the currently connected server,
@@ -555,7 +552,7 @@ namespace Photon.Realtime
         /// <remarks>
         /// This is an alternative to extending LoadBalancingClient to override OnOperationResponse().
         ///
-        /// Note that OnOperationResponse gets executed before your Action is called.
+        /// Note that OnOperationResponse gets executed before   Action is called.
         /// That means for example: The OpJoinLobby response already set the state to "JoinedLobby"
         /// and the response to OpLeave already triggered the Disconnect before this is called.
         /// </remarks>
@@ -604,9 +601,9 @@ namespace Photon.Realtime
         public bool TelemetryEnabled = false;
 
         /// <summary>Tells us if "this session" was already reported. We want to send only one report in best case. Re-set on connect.</summary>
-        #pragma warning disable CS0414
+#pragma warning disable CS0414
         private bool telemetrySent = false;
-        #pragma warning restore CS0414
+#pragma warning restore CS0414
 
 
         /// <summary>
@@ -636,7 +633,7 @@ namespace Photon.Realtime
         ///
         /// Implement OptionalInfoCallbacks.OnLobbyStatisticsUpdate, to get the list of used lobbies.
         ///
-        /// The lobby statistics can be useful if your title dynamically uses lobbies, depending (e.g.)
+        /// The lobby statistics can be useful if   title dynamically uses lobbies, depending (e.g.)
         /// on current player activity or such.
         /// In this case, getting a list of available lobbies, their room-count and player-count can
         /// be useful info.
@@ -679,7 +676,7 @@ namespace Photon.Realtime
         /// On connect, if the UserId is null or empty, the client will copy the PlayName to UserId. If PlayerName is not set either
         /// (before connect), the server applies a temporary ID which stays unknown to this client and other clients.
         ///
-        /// The UserId is what's used in FindFriends and for fetching data for your account (with WebHooks e.g.).
+        /// The UserId is what's used in FindFriends and for fetching data for   account (with WebHooks e.g.).
         ///
         /// By convention, set this ID before you connect, not while being connected.
         /// There is no error but the ID won't change while being connected.
@@ -832,17 +829,17 @@ namespace Photon.Realtime
             this.LocalPlayer = this.CreatePlayer(string.Empty, -1, true, null); //TODO: Check if we can do this later
 
 
-            #if SUPPORTED_UNITY
+#if SUPPORTED_UNITY
             CustomTypesUnity.Register();
-            #endif
+#endif
 
-            #if UNITY_WEBGL
+#if UNITY_WEBGL
             if (this.LoadBalancingPeer.TransportProtocol == ConnectionProtocol.Tcp || this.LoadBalancingPeer.TransportProtocol == ConnectionProtocol.Udp)
             {
                 this.LoadBalancingPeer.Listener.DebugReturn(DebugLevel.WARNING, "WebGL requires WebSockets. Switching TransportProtocol to WebSocketSecure.");
                 this.LoadBalancingPeer.TransportProtocol = ConnectionProtocol.WebSocketSecure;
             }
-            #endif
+#endif
 
             this.State = ClientState.PeerCreated;
         }
@@ -1236,7 +1233,7 @@ namespace Photon.Realtime
         [Conditional("UNITY_WEBGL")]
         private void CheckConnectSetupWebGl()
         {
-            #if UNITY_WEBGL
+#if UNITY_WEBGL
             if (this.LoadBalancingPeer.TransportProtocol != ConnectionProtocol.WebSocket && this.LoadBalancingPeer.TransportProtocol != ConnectionProtocol.WebSocketSecure)
             {
                 this.DebugReturn(DebugLevel.WARNING, "WebGL requires WebSockets. Switching TransportProtocol to WebSocketSecure.");
@@ -1244,7 +1241,7 @@ namespace Photon.Realtime
             }
 
             this.EnableProtocolFallback = false; // no fallback on WebGL
-            #endif
+#endif
         }
 
         /// <summary>
@@ -1452,7 +1449,7 @@ namespace Photon.Realtime
         /// <param name="simulateTimeout">If true, a connection loss is simulated. If false, the simulation ends.</param>
         public void SimulateConnectionLoss(bool simulateTimeout)
         {
-            this.DebugReturn(DebugLevel.WARNING, "SimulateConnectionLoss() set to: "+simulateTimeout);
+            this.DebugReturn(DebugLevel.WARNING, "SimulateConnectionLoss() set to: " + simulateTimeout);
 
             if (simulateTimeout)
             {
@@ -1486,7 +1483,7 @@ namespace Photon.Realtime
                     return false;
                 }
 
-                ConnectionProtocol targetProtocolPastNameServer = this.ExpectedProtocol != null ? (ConnectionProtocol) this.ExpectedProtocol : this.LoadBalancingPeer.TransportProtocol;
+                ConnectionProtocol targetProtocolPastNameServer = this.ExpectedProtocol != null ? (ConnectionProtocol)this.ExpectedProtocol : this.LoadBalancingPeer.TransportProtocol;
                 return this.LoadBalancingPeer.OpAuthenticateOnce(this.AppId, this.AppVersion, this.AuthValues, this.CloudRegion, this.EncryptionMode, targetProtocolPastNameServer);
             }
         }
@@ -1943,7 +1940,7 @@ namespace Photon.Realtime
         /// Note: There will be no callbacks if this method returned false.
         ///
         /// A room's name has to be unique (per region, appid and gameversion).
-        /// When your title uses a global matchmaking or invitations (e.g. an external solution),
+        /// When   title uses a global matchmaking or invitations (e.g. an external solution),
         /// keep regions and the game versions in mind to join a room.
         ///
         ///
@@ -2305,7 +2302,7 @@ namespace Photon.Realtime
         /// <summary>
         /// Send an event with custom code/type and any content to the other players in the same room.
         /// </summary>
-        /// <param name="eventCode">Identifies this type of event (and the content). Your game's event codes can start with 0.</param>
+        /// <param name="eventCode">Identifies this type of event (and the content).   game's event codes can start with 0.</param>
         /// <param name="customEventContent">Any serializable datatype (including Hashtable like the other OpRaiseEvent overloads).</param>
         /// <param name="raiseEventOptions">Contains used send options. If you pass null, the default options will be used.</param>
         /// <param name="sendOptions">Send options for reliable, encryption etc</param>
@@ -2545,11 +2542,11 @@ namespace Photon.Realtime
         }
 
         /// <summary>
-        /// Factory method to create a player instance - override to get your own player-type with custom features.
+        /// Factory method to create a player instance - override to get   own player-type with custom features.
         /// </summary>
         /// <param name="actorName">The name of the player to be created. </param>
         /// <param name="actorNumber">The player ID (a.k.a. actorNumber) of the player to be created.</param>
-        /// <param name="isLocal">Sets the distinction if the player to be created is your player or if its assigned to someone else.</param>
+        /// <param name="isLocal">Sets the distinction if the player to be created is   player or if its assigned to someone else.</param>
         /// <param name="actorProperties">The custom properties for this new player</param>
         /// <returns>The newly created player</returns>
         protected internal virtual Player CreatePlayer(string actorName, int actorNumber, bool isLocal, Hashtable actorProperties)
@@ -2701,7 +2698,7 @@ namespace Photon.Realtime
             return this.IsConnected;
         }
 
-        #if PHOTON_TELEMETRY
+#if PHOTON_TELEMETRY
         /// <summary>If enabled, sends telemetry about the connection to a Photon service.</summary>
         /// <returns>True if a current report was sent. False if telemetry is disabled or a report was sent already.</returns>
         public bool SendTelemetry()
@@ -2717,7 +2714,7 @@ namespace Photon.Realtime
 
             return true;
         }
-        #endif
+#endif
 
         #endregion
 
@@ -2731,9 +2728,9 @@ namespace Photon.Realtime
             {
                 return;
             }
-            #if !SUPPORTED_UNITY
+#if !SUPPORTED_UNITY
             Debug.WriteLine(message);
-            #else
+#else
             if (level == DebugLevel.ERROR)
             {
                 Debug.LogError(message);
@@ -2750,7 +2747,7 @@ namespace Photon.Realtime
             {
                 Debug.Log(message);
             }
-            #endif
+#endif
         }
 
         private void CallbackRoomEnterFailed(OperationResponse operationResponse)
@@ -2776,11 +2773,11 @@ namespace Photon.Realtime
         /// Uses the OperationResponses provided by the server to advance the internal state and call ops as needed.
         /// </summary>
         /// <remarks>
-        /// When this method finishes, it will call your OnOpResponseAction (if any). This way, you can get any
+        /// When this method finishes, it will call   OnOpResponseAction (if any). This way, you can get any
         /// operation response without overriding this class.
         ///
-        /// To implement a more complex game/app logic, you should implement your own class that inherits the
-        /// LoadBalancingClient. Override this method to use your own operation-responses easily.
+        /// To implement a more complex game/app logic, you should implement   own class that inherits the
+        /// LoadBalancingClient. Override this method to use   own operation-responses easily.
         ///
         /// This method is essential to update the internal state of a LoadBalancingClient, so overriding methods
         /// must call base.OnOperationResponse().
@@ -2861,13 +2858,13 @@ namespace Photon.Realtime
                                 {
                                     this.UserId = incomingId;
                                     this.LocalPlayer.UserId = incomingId;
-                                    this.DebugReturn(DebugLevel.INFO, string.Format("Received your UserID from server. Updating local value to: {0}", this.UserId));
+                                    this.DebugReturn(DebugLevel.INFO, string.Format("Received   UserID from server. Updating local value to: {0}", this.UserId));
                                 }
                             }
                             if (operationResponse.Parameters.ContainsKey(ParameterCode.NickName))
                             {
                                 this.NickName = (string)operationResponse.Parameters[ParameterCode.NickName];
-                                this.DebugReturn(DebugLevel.INFO, string.Format("Received your NickName from server. Updating local value to: {0}", this.NickName));
+                                this.DebugReturn(DebugLevel.INFO, string.Format("Received   NickName from server. Updating local value to: {0}", this.NickName));
                             }
 
                             if (operationResponse.Parameters.ContainsKey(ParameterCode.EncryptionData))
@@ -2945,7 +2942,7 @@ namespace Photon.Realtime
 
                             this.enterRoomParamsCache.OnGameServer = true;
 
-                            if (this.lastJoinType == JoinType.JoinRoom || this.lastJoinType == JoinType.JoinRandomRoom  || this.lastJoinType == JoinType.JoinRandomOrCreateRoom || this.lastJoinType == JoinType.JoinOrCreateRoom)
+                            if (this.lastJoinType == JoinType.JoinRoom || this.lastJoinType == JoinType.JoinRandomRoom || this.lastJoinType == JoinType.JoinRandomOrCreateRoom || this.lastJoinType == JoinType.JoinOrCreateRoom)
                             {
                                 this.LoadBalancingPeer.OpJoinRoom(this.enterRoomParamsCache);
                             }
@@ -2970,7 +2967,7 @@ namespace Photon.Realtime
 
                     if (operationResponse.ReturnCode == ErrorCode.InvalidAuthentication)
                     {
-                        this.DebugReturn(DebugLevel.ERROR, string.Format("GetRegions failed. AppId is unknown on the (cloud) server. "+operationResponse.DebugMessage));
+                        this.DebugReturn(DebugLevel.ERROR, string.Format("GetRegions failed. AppId is unknown on the (cloud) server. " + operationResponse.DebugMessage));
                         this.Disconnect(DisconnectCause.InvalidAuthentication);
                         break;
                     }
@@ -3260,9 +3257,9 @@ namespace Photon.Realtime
                                 this.AuthValues.Token = null; // when leaving the server, invalidate the secret (but not the auth values)
                             }
 
-                            #if PHOTON_TELEMETRY
+#if PHOTON_TELEMETRY
                             this.SendTelemetry();
-                            #endif
+#endif
 
                             this.State = ClientState.Disconnected;
                             this.ConnectionCallbackTargets.OnDisconnected(this.DisconnectedCause);
@@ -3284,9 +3281,9 @@ namespace Photon.Realtime
 
                         default:
                             string stacktrace = "";
-                            #if DEBUG && !NETFX_CORE
+#if DEBUG && !NETFX_CORE
                             stacktrace = new System.Diagnostics.StackTrace(true).ToString();
-                            #endif
+#endif
                             this.DebugReturn(DebugLevel.WARNING, "Got a unexpected Disconnect in LoadBalancingClient State: " + this.State + ". Server: " + this.Server + " Trace: " + stacktrace);
 
                             if (this.AuthValues != null)
@@ -3656,7 +3653,7 @@ namespace Photon.Realtime
 
 
         /// <summary>
-        /// This operation makes Photon call your custom web-service by path/name with the given parameters (converted into Json).
+        /// This operation makes Photon call   custom web-service by path/name with the given parameters (converted into Json).
         /// Use <see cref="IWebRpcCallback.OnWebRpcResponse"/> as a callback.
         /// </summary>
         /// <remarks>
@@ -3664,7 +3661,7 @@ namespace Photon.Realtime
         /// which is configured server-side. The sent parameters get converted from C# types to Json. Vice versa, the response
         /// of the web-service will be converted to C# types and sent back as normal operation response.
         ///
-        /// To use this feature, you have to setup your server:
+        /// To use this feature, you have to setup   server:
         ///
         /// For a Photon Cloud application, <a href="https://doc.photonengine.com/en-us/realtime/current/reference/webhooks">
         /// visit the Dashboard </a> and setup "WebHooks". The BaseUrl is used for WebRPCs as well.
@@ -3838,7 +3835,7 @@ namespace Photon.Realtime
         /// After the (low level transport) connection is established, the client will automatically send
         /// the Authentication operation, which needs to get a response before the client can call other operations.
         ///
-        /// Your logic should wait for either: OnRegionListReceived or OnConnectedToMaster.
+        ///   logic should wait for either: OnRegionListReceived or OnConnectedToMaster.
         ///
         /// This callback is useful to detect if the server can be reached at all (technically).
         /// Most often, it's enough to implement OnDisconnected(DisconnectCause cause) and check for the cause.
@@ -3865,7 +3862,7 @@ namespace Photon.Realtime
         void OnDisconnected(DisconnectCause cause);
 
         /// <summary>
-        /// Called when the Name Server provided a list of regions for your title.
+        /// Called when the Name Server provided a list of regions for   title.
         /// </summary>
         /// <remarks>
         /// This callback is called as soon as the list is available. No pings were sent for Best Region selection yet.
@@ -3880,12 +3877,12 @@ namespace Photon.Realtime
 
 
         /// <summary>
-        /// Called when your Custom Authentication service responds with additional data.
+        /// Called when   Custom Authentication service responds with additional data.
         /// </summary>
         /// <remarks>
         /// Custom Authentication services can include some custom data in their response.
         /// When present, that data is made available in this callback as Dictionary.
-        /// While the keys of your data have to be strings, the values can be either string or a number (in Json).
+        /// While the keys of   data have to be strings, the values can be either string or a number (in Json).
         /// You need to make extra sure, that the value type is the one you expect. Numbers become (currently) int64.
         ///
         /// Example: void OnCustomAuthenticationResponse(Dictionary&lt;string, object&gt; data) { ... }
@@ -3903,7 +3900,7 @@ namespace Photon.Realtime
         /// During development of a game, it might also fail due to wrong configuration on the server side.
         /// In those cases, logging the debugMessage is very important.
         ///
-        /// Unless you setup a custom authentication service for your app (in the [Dashboard](https://dashboard.photonengine.com)),
+        /// Unless you setup a custom authentication service for   app (in the [Dashboard](https://dashboard.photonengine.com)),
         /// this won't be called!
         /// </remarks>
         /// <param name="debugMessage">Contains a debug message why authentication failed. This has to be fixed during development.</param>
@@ -3996,7 +3993,7 @@ namespace Photon.Realtime
         /// After calling OpFindFriends, the Master Server will cache the friend list and send updates to the friend
         /// list. The friends includes the name, userId, online state and the room (if any) for each requested user/friend.
         ///
-        /// Use the friendList to update your UI and store it, if the UI should highlight changes.
+        /// Use the friendList to update   UI and store it, if the UI should highlight changes.
         /// </remarks>
         void OnFriendListUpdate(List<FriendInfo> friendList);
 
@@ -4107,7 +4104,7 @@ namespace Photon.Realtime
         /// Called when a remote player entered the room. This Player is already added to the playerlist.
         /// </summary>
         /// <remarks>
-        /// If your game starts with a certain number of players, this callback can be useful to check the
+        /// If   game starts with a certain number of players, this callback can be useful to check the
         /// Room.playerCount and find out if you can start.
         /// </remarks>
         void OnPlayerEnteredRoom(Player newPlayer);
@@ -4117,7 +4114,7 @@ namespace Photon.Realtime
         /// </summary>
         /// <remarks>
         /// If another player leaves the room or if the server detects a lost connection, this callback will
-        /// be used to notify your game logic.
+        /// be used to notify   game logic.
         ///
         /// Depending on the room's setup, players may become inactive, which means they may return and retake
         /// their spot in the room. In such cases, the Player stays in the Room.Players dictionary.
@@ -4208,8 +4205,8 @@ namespace Photon.Realtime
         /// Called when the response to a WebRPC is available. See <see cref="LoadBalancingClient.OpWebRpc"/>.
         /// </summary>
         /// <remarks>
-        /// Important: The response.ReturnCode is 0 if Photon was able to reach your web-service.<br/>
-        /// The content of the response is what your web-service sent. You can create a WebRpcResponse from it.<br/>
+        /// Important: The response.ReturnCode is 0 if Photon was able to reach   web-service.<br/>
+        /// The content of the response is what   web-service sent. You can create a WebRpcResponse from it.<br/>
         /// Example: WebRpcResponse webResponse = new WebRpcResponse(operationResponse);<br/>
         ///
         /// Please note: Class OperationResponse is in a namespace which needs to be "used":<br/>
@@ -4232,7 +4229,7 @@ namespace Photon.Realtime
         ///            {
         ///                switch (webRpcResponse.Name)
         ///                {
-        ///                    // todo: add your code here
+        ///                    // todo: add   code here
         ///                 case GetGameListWebRpcMethodName: // example
         ///                    // ...
         ///                    break;

@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Layouts;
@@ -7,7 +6,6 @@ using UnityEngine.InputSystem.Utilities;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine.InputSystem.Editor;
-using UnityEngine.UIElements;
 #endif
 
 // Let's say we want to have a composite that takes an axis and uses

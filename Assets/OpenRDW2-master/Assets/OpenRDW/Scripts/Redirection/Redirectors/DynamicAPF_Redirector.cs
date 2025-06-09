@@ -1,9 +1,8 @@
 ﻿// Dynamic Artificial Potential Fields for Multi-User Redirected Walking
 // https://ieeexplore.ieee.org/abstract/document/9089569
 
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class DynamicAPF_Redirector : APF_Redirector
 {

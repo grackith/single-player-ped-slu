@@ -1,15 +1,12 @@
 using System.Collections;
-using UnityEngine;
-using TurnTheGameOn.SimpleTrafficSystem;
-using System.Linq;
 using System.Collections.Generic;
+using UnityEngine;
 
 
 /// <summary>
 /// Manages the AITrafficController to ensure only one exists and persists between scenes
 /// </summary>
 
-using UnityEngine.SceneManagement;
 
 
 
@@ -18,7 +15,7 @@ namespace TurnTheGameOn.SimpleTrafficSystem
     public class TrafficSystemManager : MonoBehaviour
     {
         private static TrafficSystemManager _instance;
-        // Add this to the TrafficSystemManager class
+
         public bool isSpawningInProgress = false;
         public static TrafficSystemManager Instance
         {
@@ -43,7 +40,7 @@ namespace TurnTheGameOn.SimpleTrafficSystem
         private List<AITrafficWaypointRoute> allWaypointRoutesList = new List<AITrafficWaypointRoute>();
 
         // Flag to indicate if we're currently rebuilding
-    
+
 
         // Flag to prevent duplicate detection during scenario transitions
         [HideInInspector]
@@ -236,10 +233,7 @@ namespace TurnTheGameOn.SimpleTrafficSystem
                 Debug.Log("TrafficSystemManager: Spawning completed");
             }
         }
-        // Refine the DisableTrafficSystemCoroutine to be more thorough
-        // This should be in the TrafficSystemManager class
-        // Add this to TrafficSystemManager.cs
-        // Add this to ensure the traffic controller is always valid and enabled
+
         public void EnsureTrafficControllerIsActive()
         {
             if (trafficController == null)

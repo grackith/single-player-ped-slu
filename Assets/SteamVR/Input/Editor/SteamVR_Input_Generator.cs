@@ -1,20 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using UnityEditor;
-using UnityEngine;
-
+﻿using Microsoft.CSharp;
+using System;
 using System.CodeDom;
-using Microsoft.CSharp;
-using System.IO;
 using System.CodeDom.Compiler;
-
-using System.Reflection;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Linq.Expressions;
-using UnityEditor.SceneManagement;
+using System.Reflection;
+using UnityEditor;
 using UnityEditor.Callbacks;
+using UnityEditor.SceneManagement;
+using UnityEngine;
 using Valve.Newtonsoft.Json;
 
 namespace Valve.VR

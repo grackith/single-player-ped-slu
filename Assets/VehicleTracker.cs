@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using System.Linq;
+using UnityEngine;
 
 /// <summary>
 /// Tracks vehicles in VR research scenarios
@@ -335,7 +335,7 @@ public class VehicleTracker : MonoBehaviour
         }
     }
 
-    // Add these methods to your VehicleTracker.cs class
+    // Add these methods to   VehicleTracker.cs class
     private int CountNearbyVehicles(float proximityThreshold)
     {
         if (playerTransform == null) return 0;

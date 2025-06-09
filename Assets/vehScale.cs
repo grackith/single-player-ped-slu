@@ -1,5 +1,5 @@
-using UnityEngine;
 using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
 public class vehScale : MonoBehaviour
 {
@@ -76,7 +76,7 @@ public class vehScale : MonoBehaviour
         }
 
         // Also suggest adjusting these controller parameters
-        Debug.Log("Consider adjusting these AITrafficController parameters for your scale factor:");
+        Debug.Log("Consider adjusting these AITrafficController parameters for   scale factor:");
         Debug.Log("- Increase stopThreshold (currently " + trafficController.stopThreshold +
                   ", suggested: " + (trafficController.stopThreshold / vehicleScaleFactor) + ")");
         Debug.Log("- Adjust minSpeedToChangeLanes if vehicles aren't changing lanes properly");

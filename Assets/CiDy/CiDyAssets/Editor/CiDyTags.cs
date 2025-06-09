@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEditor;
 
 [InitializeOnLoad]
@@ -35,8 +33,10 @@ public class CiDyTags
             for (int i = 0; i < numTags; i++)
             {
                 var existingTag = tags.GetArrayElementAtIndex(i);//Get Current Tag
-                for (int j = 0; j < cidyTags.Count; j++) {
-                    if (existingTag.stringValue == cidyTags[j]) {
+                for (int j = 0; j < cidyTags.Count; j++)
+                {
+                    if (existingTag.stringValue == cidyTags[j])
+                    {
                         //Duplicate Tag, So Remove it from Tags
                         cidyTags.RemoveAt(j);
                         break;
@@ -44,9 +44,10 @@ public class CiDyTags
                 }
             }
             //What Tags are Left?
-            for (int i = 0; i < cidyTags.Count; i++) {
-                tags.InsertArrayElementAtIndex(numTags+i);
-                tags.GetArrayElementAtIndex(numTags+i).stringValue = cidyTags[i];
+            for (int i = 0; i < cidyTags.Count; i++)
+            {
+                tags.InsertArrayElementAtIndex(numTags + i);
+                tags.GetArrayElementAtIndex(numTags + i).stringValue = cidyTags[i];
             }
             //Now Do the Layers
             var layers = so.FindProperty("layers");//Get Tags
@@ -71,7 +72,8 @@ public class CiDyTags
             {
                 var existingLayer = layers.GetArrayElementAtIndex(i);//Get Current Layer
                 //Is this Layer Spot Empty? and do we have any left over layers that need set?
-                if (existingLayer.stringValue == "" && cidyLayers.Count > 0) {
+                if (existingLayer.stringValue == "" && cidyLayers.Count > 0)
+                {
                     layers.GetArrayElementAtIndex(i).stringValue = cidyLayers[0];
                     cidyLayers.RemoveAt(0);//Update Layer
                 }

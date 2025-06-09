@@ -95,7 +95,7 @@ public static class InitCustomDeviceUsages
 // specific gamepad index.
 //
 // In practice, you would probably want to do the assignment in a place
-// where you handle your player setup/joining.
+// where you handle   player setup/joining.
 public class CustomDeviceUsages : MonoBehaviour
 {
     public int gamepadIndex;

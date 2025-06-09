@@ -1,11 +1,11 @@
 ﻿using UnityEngine;
 
-public class InGameMenuController : MonoBehaviour 
+public class InGameMenuController : MonoBehaviour
 {
     private GameObject pauseMenu;
     private bool pauseMenuActive = false;
 
-	void Start()
+    void Start()
     {
         pauseMenu = transform.GetChild(0).gameObject;
     }

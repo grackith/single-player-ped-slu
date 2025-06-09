@@ -85,7 +85,7 @@ public class VRResearchDataCollector : MonoBehaviour
     private float gazeStartTime;
 
     [Header("Eye Tracking References")]
-    public XRGazeInteractor gazeInteractor; // Drag your XR Gaze Interactor here
+    public XRGazeInteractor gazeInteractor; // Drag   XR Gaze Interactor here
     public bool useRealEyeTracking = true; // Toggle between real and simulated eye tracking
 
 

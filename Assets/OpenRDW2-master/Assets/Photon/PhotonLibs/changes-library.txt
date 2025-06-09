@@ -590,7 +590,7 @@ Chat:
 
 *** Version 4.1.1.15 (17. July 2017 - rev4232)
 WebSocket:
-    Changed: WebSockets are now treated like "addons", as their implementations are complex and potentially not running on some platforms (be it UWP or some Unity export). The Readme-Photon-WebSocket.txt tells you how to add them to your project and set them up.
+    Changed: WebSockets are now treated like "addons", as their implementations are complex and potentially not running on some platforms (be it UWP or some Unity export). The Readme-Photon-WebSocket.txt tells you how to add them to   project and set them up.
     Added: Folder "PhotonWebSocket" with SocketWebTcpCoroutine and SocketWebTcpThread classes, to support platforms with and without Thread API.
     Added: PingHttp.cs for Unity WebGL exports, to support "Best Region" selection in PUN.
 LoadBalancing:
@@ -709,7 +709,7 @@ Chat:
     Fixed: OpWebRPC documentation.
 LoadBalancing:
     Fixed: Room.ClearExpectedUsers() is now sending it's current, local "expected users" to update the server with "CAS" (Check and Swap). This gives the client an update when the values become valid (which updates the local cache after the roundtrip).
-    Added: Support for the 'Server Side Master Client' feature. The Room will read master client updates from the server accordingly. Room.SetMasterClient() enables you to override the server's selection (provided it did not change before your operation gets executed).
+    Added: Support for the 'Server Side Master Client' feature. The Room will read master client updates from the server accordingly. Room.SetMasterClient() enables you to override the server's selection (provided it did not change before   operation gets executed).
     Changed: Option for bool WebForward into the new "WebFlags". This allows fine control of which data is being sent to WebHooks. This affects all SetProperties, OpWebRPC and the RaiseEventOptions.
     Added: WebRPC.cs to the LoadBalancing API folder (was available separately before). It contains WebFlags and WebRpcResponse.
 Internal:
@@ -729,7 +729,7 @@ Internal:
 Internal:
     Removed: The wrapper for the optional "native encryption library" from most assemblies. It didn't get certified for the Windows Store and caused problems in the Unity WebPlayer. This will be provided on demand instead.
     Removed: Our upcoming protocol implementation until it's fully compatible with all supported platforms. Despite not being used, it also caused some issues on some Unity exports.
-    Changed: Usage of MemoryStream is being replaced with a StreamBuffer. This is our own implementation and always grants access to the underlying byte[] (which is not possible in Windows Phone / Store API in some cases). For your Custom Type serialization, replace MemoryStream with StreamBuffer. That's all.
+    Changed: Usage of MemoryStream is being replaced with a StreamBuffer. This is our own implementation and always grants access to the underlying byte[] (which is not possible in Windows Phone / Store API in some cases). For   Custom Type serialization, replace MemoryStream with StreamBuffer. That's all.
     Internal: Commands are now split into header and payload byte-arrays, instead of copying them into yet another buffer before sending them.
     Added: Support for IPv6 adresses in Photon Ping classes. This supports "Best Region" usage in PUN.
     Fixed: After DNS resolution, IPv6 adresses are preferred over IPv4 ones.
@@ -775,7 +775,7 @@ LoadBalancing:
     Fixed: EnetPeer.ExecuteCommand(). Fixed: Receiving a Disconnect-command didn't clear the receive-buffers. However, it has to be the last command executed.
     Note: The bug related to the Disconnect-command happened, when an app paused, queued incoming commands and executed the Disconnect while incoming commands were queued.
     Fixed: Setting of DisconnectTimeout for TCP connections (ReceiveTimeout and SendTimeout).
-    Changed: Our protocol serializes Enums implicitly as their underlying Type. This means you can easily send them but will lose the Type info (they don't arrive as your Enum type). This is now also working in Windows Store libraries (NETFX_CORE).
+    Changed: Our protocol serializes Enums implicitly as their underlying Type. This means you can easily send them but will lose the Type info (they don't arrive as   Enum type). This is now also working in Windows Store libraries (NETFX_CORE).
 LoadBalancing:
     Added: OpSetCustomPropertiesOfActor() and OpSetCustomPropertiesOfRoom() now check locally, if the client is currently in a room. It must be, to be able to set these properties. An exception exists for setting properties for the local player's actorNumber, but those are better set via LoadBalancingClient.LocalPlayer.
 Unity SDK:
@@ -826,7 +826,7 @@ Chat
     Added: support for RoomOptions.Plugins. Which we need now since we support multiple plugins per plugin dll - for testing purposes for instance.
     Fixed: The wrapper classes for the native sockets now do a Sleep(15) when there's nothing to receive. This reduces CPU load considerably.
     Fixed: Unity library SocketWebTcp class for websocket support. It requires a coroutine on a new GameObject which is now marked as DontDestroyOnLoad(go) and survives scene loading.
-    Fixed: The Windows 8 SDKs now include the release assemblies. This makes sure you can submit your app to the Windows Store.
+    Fixed: The Windows 8 SDKs now include the release assemblies. This makes sure you can submit   app to the Windows Store.
     Added: ConnectionProtocol WebSocket and WebSocketSecure. It's simply a different protocol, compared to UDP and TCP, so it should be separated.
     Internal: DoFraming is now a part of TPeer (was in IPhotonSocket). It's set by the ConnectionProtocol which avoids misconfiguration.
     Changed: SendPing can now send a ping binary message or enqueue the Ping Operation (when DoFraming is false).
@@ -838,7 +838,7 @@ Chat
     Added: PhotonPeer.QuickResendAttempts. Sets how many resend attempts for a reliable command will be done in quick succession (after RTT+4*Variance), before the time between repeats will be increased. Use with care and with low values.
     Added: IP/Hostname to logged exceptions when Connect fails. This is easier to support (e.g. DNS lookup fails).
     Fixed: Library for PUN+ export to WebGL. Originally, we forced UDP as protocol for PUN+ export, as the native sockets library doesn't support TCP. However, WebGL export introduced a new use case.
-    Added: LoadBalancingClient.EnableLobbyStatistics and .LobbyStatistics. They provide an overview which lobbies your game uses and how busy they are.
+    Added: LoadBalancingClient.EnableLobbyStatistics and .LobbyStatistics. They provide an overview which lobbies   game uses and how busy they are.
     Fixed: The LB Demo should set CustomProperties instead of directly setting (any) properties.
     Fixed: SocketWebTcp is completely empty, unless WEBSOCKET is defined. Before the file still contained the "using" part of the class.
 LoadBalancing (Realtime and Turnbased API)
@@ -849,12 +849,12 @@ LoadBalancing (Realtime and Turnbased API)
     Changed: LoadBalancingClient.UserId no longer directly stores the id but puts it into AuthValues. This means, the UserId could also be set via setting AuthValues.
     Changed: The API of AuthenticationValues. There is now the UserId and AddAuthParameter() replaces the less general SetAuthParameters() (which only set specific key/values).
     Changed: PlayerName gets renamed to NickName, so PhotonPlayer.Name becomes .NickName and LoadBalancingClient.Name becomes .NickName, too. The old naming is marked as obsolete.
-    Changed: Particle Demo now connects to the Cloud by default (because it's easier to setup and try). You can define your own Master Server (Photon OnPremise) of course.
+    Changed: Particle Demo now connects to the Cloud by default (because it's easier to setup and try). You can define   own Master Server (Photon OnPremise) of course.
     Added: GamePropertyKey.MasterClientId (248) and ParameterCode.MasterClientId (203)
     Added: ParameterCode.ExpectedValues (231)
     Added: ParameterCode.SuppressRoomEvents (237)
 Chat API:
-    Added: A Unity 4.6 demo with uGUI. It's missing a few features but should give you a good start to making your own.
+    Added: A Unity 4.6 demo with uGUI. It's missing a few features but should give you a good start to making   own.
     Added: Unity/WebGL support (merged from PUN).
     Added: Breaking! IChatClientListener.DebugReturn(). Photon lib and chat client log via this method (no logging to console by default).
     Changed: ChatClient.CustomAuthenticationValues is now .AuthValues. You can use those values to identify a user, even if you don't setup an external, custom authentication service.
@@ -864,7 +864,7 @@ Chat API:
     Added: ChatChannel.ToStringMessages(), which gets all messages in a single string, line by line. The format is "Sender:Message".
     Added: ChatClient.TryGetChannel() to find a channel only by name, no matter if public or private.
 Photon Unity SDK
-    Changed: Organization of APIs and Assemblies in SDK. Now you can copy the content of folder "PhotonAssets" into your project's Assets folder and you have all APIs.
+    Changed: Organization of APIs and Assemblies in SDK. Now you can copy the content of folder "PhotonAssets" into   project's Assets folder and you have all APIs.
     Added: PhotonAssets-U5 folder which includes only the Windows Universal DLL.
 
 *** Version 4.0.0.8 (14. January 2015 - rev2765)
@@ -1027,7 +1027,7 @@ LoadBalancing API
 
 *** Version 3.2.1.6 (15. August 2013 - rev2272)
     Changed: The library for Unity now contains a ExitGames.Client.Photon.Hashtable to be compatible with Win 8 exports. This must be used from now on!
-        Note: In Unity, the compiler will complain about ambiguous Hashtable definitions. To solve this, add this to the "using" part of your code: using Hashtable = ExitGames.Client.Photon.Hashtable;
+        Note: In Unity, the compiler will complain about ambiguous Hashtable definitions. To solve this, add this to the "using" part of   code: using Hashtable = ExitGames.Client.Photon.Hashtable;
     Removed: Builds for Silverlight and Windows Phone 7.1 (this is not affecting Windows 8 RT and Windows 8 Phone SDKs which are of course supported)
     Fixed: A null-reference check for a TCP connection's SendAcksOnly().
 
@@ -1137,7 +1137,7 @@ Windows 8 RT & Windows 8 Phone:
 *** Version 3.0.1.15 (27.11.2012 - rev1917)
     Note: Silverlight SDK release only!
     Updated: Silverlight projects with proper references (hopefully). In case you wonder: Some projects are included even though only their (source) files are linked in Silverlight. We can't reference DotNet projects directly, so we use the (shared) files instead.
-    Updated: Silverlight Particle Demo now has a basic gui and hopefully helps with your first steps.
+    Updated: Silverlight Particle Demo now has a basic gui and hopefully helps with   first steps.
 
 *** Version 3.0.1.14 (16.11.2012 - rev1891)
     Added: Interest Groups! In rooms, you might send events to an interest group, identified by a byte (255 groups are currently allowed). OpChangeGroups lets you add or remove groups you're interested in.
@@ -1317,7 +1317,7 @@ Internal:
 - Note: The API of the client libraries didn't change. The new features were added on top of the known API
 - Added: VS2010 solutions for DotNet and Windows Phone SDKs containing the demos and APIs in the package
 - Added: readme.txt with initial help to setup the Cloud/Loadbalancing demos
-- Added: default appId for Loadblanacing demos: "<insert your appid here>"
+- Added: default appId for Loadblanacing demos: "<insert   appid here>"
 
 *** Version 3.0.0.10
 - Added: When UDP StartConnection (internal method) fails, callbacks to OnStatusChanged(StatusCode.Disconnect) are now done additionally to the SecurityExceptionOnConnect and ExceptionOnConnect calls. This happens direcly inside PhotonPeer.Connect()!
@@ -1344,7 +1344,7 @@ Internal:
 - Fixed: Udp fragment reassembly in case fragments are received out of order and incoming queue was not yet sorted
 - Fixed: Handling of incoming reliable commands (udp) which were skipped in some cases, if not received in order
 - Fixed: Network simulation issue which caused lost incoming commands
-- Fixed: Demo Realtime. protocol is now again Udp, fitting the default server address "localhost:5055" (make sure to build the demo with your server's address if Photon is not on the same machine)
+- Fixed: Demo Realtime. protocol is now again Udp, fitting the default server address "localhost:5055" (make sure to build the demo with   server's address if Photon is not on the same machine)
 
 *** Version 3.0.0.7
 - Changed: Udp socket usage for Unity 3d lib. Both threads (send (in game loop) and receive (separate)) now have minimal locks while using the socket
@@ -1382,7 +1382,7 @@ Internal:
 - Fixed: Packaging of SDK now includes all files in demo folders, except a list of ignored file-endings (xaml and jpg files were missing in previous Silverlight and WindowsPhone SDKs)
 
 *** Version 3.0.0.0 RC1
-- Changed: Filenames! Now include a '3' for Photon v3. Update your references! Also, Silverlight libraries now use "Silverlight" in the filename (was: SL)
+- Changed: Filenames! Now include a '3' for Photon v3. Update   references! Also, Silverlight libraries now use "Silverlight" in the filename (was: SL)
 - Changed: Versioning. A dll's version has now 4 digits. The first 2 match Major and Minor number of the Server SDK. The latter 2 are Release and Build respectively
 - Changed: Silverlight DataTypes (like Hashtable) are now in namespace ExitGames.Client.Photon. This is easier to include (as that namespace is in "using" in most cases)
 
@@ -1391,7 +1391,7 @@ Internal:
 - Changed: Most IPhotonPeer names (to match those in server code): EventAction -> OnEvent, OperationResult -> OnOperationResponse, PeerStatusCallback -> OnStatusChanged
 - Added: SupportClass.DictionaryToString(), which converts the content to string (includes support for Hashtables)
 - Moved: Definitions of Lite and Lite Lobby specific codes for Parameters, operations and events are now in LitePeer. Will be available as source and could be replaced
-- Changed: Usage of codes in Lite and Lite Lobby. Now pre-defined codes are starting at 255 and go down. Your events, operations and operation-parameters can now start at 0 and go up without clashing with pre-defined ones
+- Changed: Usage of codes in Lite and Lite Lobby. Now pre-defined codes are starting at 255 and go down.   events, operations and operation-parameters can now start at 0 and go up without clashing with pre-defined ones
 - Changed: Constants that are non-exclusive (like event codes and OpKeys, which can be extended) are no longer "defined" as enums but as class of const byte values. Less casting but also less convenient "name" representation in debug output
 - Added: LiteEventKey.CustomContent as key to access the content you sent via OpRaiseEvent ("Data" seems a bit misleading but is also available)
 - Changed: Namespace of LitePeer to ExitGames.Client.Photon.Lite (the Lite-specific class is still compiled into the library for convenience but can be ignored quite easily this way)
@@ -1405,13 +1405,13 @@ Internal:
 - Added: Support to de/serialize Dictionary<T1,T2>. If the types are more specific than object, the serialization writes the type-code only once (lean byte usage in protocol)
 - Added: Support to de/serialize null. Enables you to send a null value, e.g. in a Hashtable
 - Added: ReceiverGroup enum to select a range of players that get an event via Operation Raise Event
-- Added: Event Caching. Any event sent via RaiseEvent can now be buffered on the server side and is "repeated" when a new player is joining a room. This is similar to Properties but lets you categorize your info better and works just like regular events, too.
+- Added: Event Caching. Any event sent via RaiseEvent can now be buffered on the server side and is "repeated" when a new player is joining a room. This is similar to Properties but lets you categorize   info better and works just like regular events, too.
 - Added: EventCaching enum to select if an event is to be cached and how it's cached: either "not at all" (default), replacing anything cached so far (fast) or "merge" (which will add new and replace old keys with new values). Optionally, a event can be raise with option "remove".
 - Added: new overload of OpRaiseEvent() with the two new parameters noted above
 - Added: Support for custom de/serializer methods. By writing 2 methods to convert a object into a byte-array (and back from that), Photon now supports any custom object type (standard datatypes are still supported out of the box)
 - Added: PhotonPeer.RegisterType() to register serializer and deserialize methods for a certain type. Per object, a length and one byte 'type code' are added to the serialized data
 - Added: Support for non-strict object[]. Unlike strictly-typed array, here each element will carry its own type.
-- Note: If you want to use the new Custom Types or the object[], you have to update your server! Older Servers don't support the new features. As long as you don't use these features, the library is compatible with previous servers.
+- Note: If you want to use the new Custom Types or the object[], you have to update   server! Older Servers don't support the new features. As long as you don't use these features, the library is compatible with previous servers.
 - Added: ByteCountCurrentDispatch and ByteCountLastOperation properties to PhotonPeer (the ancestor of LiteGame, etc). A game can now access the size of operation-results and events as well as operation-call size.
 - Added: Traffic statistic set: PhotonPeer.TrafficStatsGameLevel as "high level" game-related traffic statistic. Counts bytes used by operations, their results and events. This includes overhead for these types of messages, but excludes connection-related overhead
 - Added: Traffic statistic set: PhotonPeer.TrafficStatsIncoming and PhotonPeer.TrafficStatsOutgoing as low level statistics of the traffic
@@ -1500,7 +1500,7 @@ Siverlight:
 - Internal: made const: ENET_PEER_PACKET_LOSS_SCALE, ENET_PEER_DEFAULT_ROUND_TRIP_TIME and ENET_PEER_PACKET_THROTTLE_INTERVAL
 - Internal: PeerBase "PeerStateValue peerState" is now: "ConnectionStateValue peerConnectionState" (holding the low level connection state, nothing more)
 - Internal: added PeerBase.ApplicationIsInitialized, which stores if the init command was answered by Photon (reset on connect/disconnect)
-- Removed: PhotonDemoServerUrlPort and PhotonDemoServerIpPort of PhotonPeer. All demos now use "localhost:5055" and you should run your own server.
+- Removed: PhotonDemoServerUrlPort and PhotonDemoServerIpPort of PhotonPeer. All demos now use "localhost:5055" and you should run   own server.
 - Added: enum ConnectionProtocol to get rid of the "useTcp" parameter in the PhotonPeer constructor (which was less clear than the explicit enum now in use)
 - Added: overload of PhotonPeer constructor, which is still compatible with the "useTcp" bool parameter (to avoid a breaking change for the time being)
 - Added: PhotonPeer.UsedProtocol property to find out this peer's protcol
@@ -1556,8 +1556,8 @@ Siverlight:
 *** Version 5.7.6
 - Fixed: a debug output line for TCP connections which did not heed the debug-level.
 - Changed: PhotonPeer uses less locking internally and will handle incoming data in the game thread (inside DispatchIncomingCommands() or Service()).
-- Changed: Internally, all commands are put into a (locked) queue which is processed within DispatchIncomingCommands(). Your dispatch interval affects local lag but not the PhotonPeer.RoundTripTime value.
-- Note: Don't use a peer from multiple threads! It's not thread safe. All callbacks to IPhotonPeerListener methods are happening in your game thread (again: inside DispatchIncomingCommands()).
+- Changed: Internally, all commands are put into a (locked) queue which is processed within DispatchIncomingCommands().   dispatch interval affects local lag but not the PhotonPeer.RoundTripTime value.
+- Note: Don't use a peer from multiple threads! It's not thread safe. All callbacks to IPhotonPeerListener methods are happening in   game thread (again: inside DispatchIncomingCommands()).
 - Changed: removed locks inside the callbacks (according to above change).
 - Changed: DNS resolution is now done in Connect() unless you provide a valid IP address (if IPAddress.Parse(address) is successful, the IP is used directly).
 - Fixed: PhotonPeer.Connect() should fail if the IP is unknown or unavailable. Exception: using a localhost might succeed but fail when we try to receive anything.
@@ -1754,7 +1754,7 @@ Siverlight:
 - Change: libs default URL set to EU/Test. use setServerURL() with Neutron.URL_NEUTRON_* for other Neutron instances
 - Internal: lib now uses async UDP communication now with "regular" framework
 - Added: properties serverTimeInMilliSeconds, serverTimeAsTimeSpan and serverTimeAsDateTime for getting the current server time
-- Removed: serverTimeOffset is now internal only and removed from the API (was only needed to calculate the servertime by yourself, before neutron could do this for you)
+- Removed: serverTimeOffset is now internal only and removed from the API (was only needed to calculate the servertime by  self, before neutron could do this for you)
 - Change: debug out for realtime classes is now layered
 - Change: debug level NPeer.DebugOut is now a NPeer.DebugLevel enum and will include all lower levels in output, default: DebugLevel.ERROR
 - Fixed: size of realtime demo board

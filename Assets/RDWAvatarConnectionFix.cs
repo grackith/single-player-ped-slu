@@ -1,10 +1,10 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 public class RDWAvatarConnectionFix : MonoBehaviour
 {
     [Header("Avatar References")]
-    public GameObject originalAvatar; // Assign your scene avatar here
+    public GameObject originalAvatar; // Assign   scene avatar here
     public Material[] avatarMaterials; // Assign proper materials
 
     private GlobalConfiguration globalConfig;

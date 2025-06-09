@@ -7,7 +7,8 @@ namespace TurnTheGameOn.SimpleTrafficSystem
     {
         public static AssetReferences AssetReferences
         {
-            get {
+            get
+            {
                 if (m_AssetReferences == null)
                 {
                     var guids = AssetDatabase.FindAssets("t:TurnTheGameOn.SimpleTrafficSystem.AssetReferences");

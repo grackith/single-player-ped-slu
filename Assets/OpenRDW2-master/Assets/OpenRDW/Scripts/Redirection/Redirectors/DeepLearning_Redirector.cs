@@ -6,10 +6,9 @@
 
 // A steering algorithm for redirected walking using reinforcement learning
 // https://ieeexplore.ieee.org/abstract/document/8998570/
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 using Unity.Barracuda;
+using UnityEngine;
 
 public class DeepLearning_Redirector : Redirector
 {

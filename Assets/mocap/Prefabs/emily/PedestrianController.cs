@@ -167,7 +167,7 @@ public class PedestrianController : MonoBehaviour
 
         float speed = agent.velocity.magnitude / agent.speed;
 
-        // Adjust based on your animator setup
+
         if (animator.parameters.Length > 0)
         {
             // Check which parameter exists and use it

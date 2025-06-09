@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
 public class BusSpawnerSimple : MonoBehaviour
 {
@@ -222,7 +222,7 @@ public class BusSpawnerSimple : MonoBehaviour
         busCar.vehicleType = busType;
         busCar.waypointRoute = initialRoute;
 
-        // Add this to the SpawnBus method before registering the car
+
         AITrafficController.Instance.EnsureCapacityForNewCar();
 
         try
@@ -296,24 +296,13 @@ public class BusSpawnerSimple : MonoBehaviour
         return true;
     }
 
-    // Add this coroutine to retry spawning after a delay
+
     private IEnumerator RetrySpawnAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
         SpawnBus(); // Try again
     }
-    private IEnumerator DelayedStatusCheckAndCollisionSetup()
-    {
-        yield return new WaitForSeconds(1.0f);
-        CheckBusStatus();
 
-        // Apply collision settings again after physics has stabilized
-        EnsureBusCollisionAndAvoidance();
-
-        // And one more time after 5 seconds to be sure
-        yield return new WaitForSeconds(4.0f);
-        EnsureBusCollisionAndAvoidance();
-    }
     public void EnsureBusCollisionAndAvoidance()
     {
         if (spawnedBus == null)
@@ -348,7 +337,7 @@ public class BusSpawnerSimple : MonoBehaviour
             AITrafficController.Instance.RebuildTransformArrays();
         }
     }
-    // Add this method to your BusSpawnerSimple.cs script
+
     public void CheckAndFixBusMovement()
     {
         if (spawnedBus == null)

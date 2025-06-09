@@ -1,15 +1,13 @@
+using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Rendering;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 using UnityEngine.UIElements.Experimental;
-using System.Text.RegularExpressions;
-using System.Text;
-using System;
-using System.Collections;
-using System.Reflection;
-using UnityEngine.Rendering;
 
 [InitializeOnLoad]
 [CustomEditor(typeof(SamplesShowcase))]

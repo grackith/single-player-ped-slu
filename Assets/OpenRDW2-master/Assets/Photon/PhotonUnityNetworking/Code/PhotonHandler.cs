@@ -12,14 +12,13 @@
 
 namespace Photon.Pun
 {
+    using ExitGames.Client.Photon;
+    using Photon.Realtime;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using ExitGames.Client.Photon;
-    using Photon.Realtime;
     using UnityEngine;
     using UnityEngine.Profiling;
-
     using Debug = UnityEngine.Debug;
 
     /// <summary>
@@ -35,11 +34,11 @@ namespace Photon.Pun
             {
                 if (instance == null)
                 {
-                    #if UNITY_6000_0_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
                     instance = FindFirstObjectByType<PhotonHandler>();
-                    #else
+#else
                     instance = FindObjectOfType<PhotonHandler>();
-                    #endif
+#endif
                     if (instance == null)
                     {
                         GameObject obj = new GameObject();
@@ -146,32 +145,32 @@ namespace Photon.Pun
         /// <summary>Called in intervals by UnityEngine. Affected by Time.timeScale.</summary>
         protected void FixedUpdate()
         {
-            #if PUN_DISPATCH_IN_FIXEDUPDATE
+#if PUN_DISPATCH_IN_FIXEDUPDATE
             this.Dispatch();
-            #elif PUN_DISPATCH_IN_LATEUPDATE
+#elif PUN_DISPATCH_IN_LATEUPDATE
             // do not dispatch here
-            #else
+#else
             if (Time.timeScale > PhotonNetwork.MinimalTimeScaleToDispatchInFixedUpdate)
             {
                 this.Dispatch();
             }
-            #endif
+#endif
         }
 
         /// <summary>Called in intervals by UnityEngine, after running the normal game code and physics.</summary>
         protected void LateUpdate()
         {
-            #if PUN_DISPATCH_IN_LATEUPDATE
+#if PUN_DISPATCH_IN_LATEUPDATE
             this.Dispatch();
-            #elif PUN_DISPATCH_IN_FIXEDUPDATE
+#elif PUN_DISPATCH_IN_FIXEDUPDATE
             // do not dispatch here
-            #else
+#else
             // see MinimalTimeScaleToDispatchInFixedUpdate and FixedUpdate for explanation:
             if (Time.timeScale <= PhotonNetwork.MinimalTimeScaleToDispatchInFixedUpdate)
             {
                 this.Dispatch();
             }
-            #endif
+#endif
 
             if (PhotonNetwork.IsMessageQueueRunning && this.swViewUpdate.ElapsedMilliseconds >= this.UpdateIntervalOnSerialize - SerializeRateFrameCorrection)
             {
@@ -180,7 +179,7 @@ namespace Photon.Pun
                 SendAsap = true; // immediately send when synchronization code was running
             }
 
-            
+
             if (SendAsap || this.swSendOutgoing.ElapsedMilliseconds >= this.UpdateInterval)
             {
                 SendAsap = false;
@@ -274,7 +273,7 @@ namespace Photon.Pun
             {
                 if (view.IsRoomView)
                 {
-                    view.OwnerActorNr= newMasterClient.ActorNumber;
+                    view.OwnerActorNr = newMasterClient.ActorNumber;
                     view.ControllerActorNr = newMasterClient.ActorNumber;
                 }
             }
@@ -311,7 +310,7 @@ namespace Photon.Pun
                 int viewCreatorId = view.CreatorActorNr;
 
                 // on join / rejoin, assign control to either the Master Client (for room objects) or the owner (for anything else)
-                    view.RebuildControllerCache();
+                view.RebuildControllerCache();
 
                 // Rejoining master should enforce its world view, and override any changes that happened while it was soft disconnected
                 if (amRejoiningMaster)

@@ -1,6 +1,6 @@
-using UnityEngine;
-using TurnTheGameOn.SimpleTrafficSystem;
 using System.Collections;
+using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
 // Ultra-simple version that should work with any version of Simple Traffic System
 public class BasicVehicleFixer : MonoBehaviour

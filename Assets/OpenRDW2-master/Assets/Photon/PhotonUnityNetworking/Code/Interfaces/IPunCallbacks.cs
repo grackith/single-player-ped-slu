@@ -1,8 +1,8 @@
 ﻿
 namespace Photon.Pun
 {
-    using UnityEngine;
     using Photon.Realtime;
+    using UnityEngine;
 
 
     /// <summary>Defines the OnPhotonSerializeView method to make it easy to implement correctly for observable scripts.</summary>
@@ -10,7 +10,7 @@ namespace Photon.Pun
     public interface IPunObservable
     {
         /// <summary>
-        /// Called by PUN several times per second, so that your script can write and read synchronization data for the PhotonView.
+        /// Called by PUN several times per second, so that   script can write and read synchronization data for the PhotonView.
         /// </summary>
         /// <remarks>
         /// This method will be called in scripts that are assigned as Observed component of a PhotonView.<br/>
@@ -18,7 +18,7 @@ namespace Photon.Pun
         /// PhotonNetwork.SendRate affects how often packages are sent by this client.<br/>
         ///
         /// Implementing this method, you can customize which data a PhotonView regularly synchronizes.
-        /// Your code defines what is being sent (content) and how your data is used by receiving clients.
+        ///   code defines what is being sent (content) and how   data is used by receiving clients.
         ///
         /// Unlike other callbacks, <i>OnPhotonSerializeView only gets called when it is assigned
         /// to a PhotonView</i> as PhotonView.observed script.
@@ -76,7 +76,7 @@ namespace Photon.Pun
         /// <param name="targetView">PhotonView for which ownership changed.</param>
         /// <param name="previousOwner">Player who was the previous owner (or null, if none).</param>
         void OnOwnershipTransfered(PhotonView targetView, Player previousOwner);
-        
+
         /// <summary>
         /// Called when an Ownership Request fails for objects with "takeover" setting.
         /// </summary>
@@ -99,7 +99,7 @@ namespace Photon.Pun
     /// Defines an interface for object pooling, used in PhotonNetwork.Instantiate and PhotonNetwork.Destroy.
     /// </summary>
     /// <remarks>
-    /// To apply your custom IPunPrefabPool, set PhotonNetwork.PrefabPool.
+    /// To apply   custom IPunPrefabPool, set PhotonNetwork.PrefabPool.
     ///
     /// The pool has to return a valid, disabled GameObject when PUN calls Instantiate.
     /// Also, the position and rotation must be applied.

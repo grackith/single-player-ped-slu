@@ -1,9 +1,9 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
+    using System.Collections.Generic;
     using UnityEditor;
     using UnityEditor.SceneManagement;
-    using System.Collections.Generic;
+    using UnityEngine;
 
     [CanEditMultipleObjects]
     [CustomEditor(typeof(AITrafficWaypointRoute))]
@@ -101,7 +101,7 @@
 
             if (GUILayout.Button(new GUIContent("Setup Random Spawn Points", "First removes all spawn points, then randomly adds new spawn points.")))
             {
-                
+
                 if (circuit.waypointDataList.Count > 4)
                 {
                     Undo.RegisterFullObjectHierarchyUndo(circuit.gameObject, "Remove All Spawn Points");
@@ -239,7 +239,7 @@
             }
         }
 
-        [MenuItem("CONTEXT/AITrafficWaypointRoute/ClickToSpawnNextWaypoint" )]
+        [MenuItem("CONTEXT/AITrafficWaypointRoute/ClickToSpawnNextWaypoint")]
         public static void ClickToSpawnNextWaypoint()
         {
             Debug.Log("!!");

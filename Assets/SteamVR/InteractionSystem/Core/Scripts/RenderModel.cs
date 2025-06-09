@@ -1,8 +1,7 @@
 ﻿//======= Copyright (c) Valve Corporation, All rights reserved. ===============
 
-using UnityEngine;
-using System.Collections;
 using System;
+using UnityEngine;
 
 namespace Valve.VR.InteractionSystem
 {
@@ -64,8 +63,8 @@ namespace Valve.VR.InteractionSystem
 
                 if (handSkeleton.skeletonAction.activeBinding == false && handSkeleton.fallbackPoser == null)
                 {
-                    Debug.LogWarning("Skeleton action: " + handSkeleton.skeletonAction.GetPath() + " is not bound. Your controller may not support SteamVR Skeleton Input. " +
-                        "Please add a fallback skeleton poser to your skeleton if you want hands to be visible");
+                    Debug.LogWarning("Skeleton action: " + handSkeleton.skeletonAction.GetPath() + " is not bound.   controller may not support SteamVR Skeleton Input. " +
+                        "Please add a fallback skeleton poser to   skeleton if you want hands to be visible");
                     DestroyHand();
                 }
             }

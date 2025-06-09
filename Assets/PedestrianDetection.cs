@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TurnTheGameOn.SimpleTrafficSystem;
@@ -70,7 +69,7 @@ public class PedestrianDetection : MonoBehaviour
 
     // Cached list of NPCs
     private List<Transform> cachedNPCs = new List<Transform>();
-    // Add this with your other private variables
+
     private Dictionary<AITrafficCar, float> originalCarSpeeds = new Dictionary<AITrafficCar, float>();
 
     // Timer for NPC scanning
@@ -594,7 +593,7 @@ public class PedestrianDetection : MonoBehaviour
         }
 
         // Method 3: Cast rays to find nearby roads
-        // In DetermineCrosswalkDirection method, replace the raycast section:
+        // In DetermineCrosswalkDirection method
         RaycastHit hit; // Declare the hit variable first
 
         if (Physics.Raycast(crosswalkPos + Vector3.up, Vector3.right, out hit, 10f,

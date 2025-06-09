@@ -1,7 +1,7 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
     using System.Collections;
+    using UnityEngine;
 
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficwaypointrouteinfo")]
     public class AITrafficWaypointRouteInfo : MonoBehaviour

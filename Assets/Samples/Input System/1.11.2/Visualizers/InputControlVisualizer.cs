@@ -174,83 +174,83 @@ namespace UnityEngine.InputSystem.Samples
             switch (m_Visualization)
             {
                 case Mode.Value:
-                {
-                    var valueType = m_Control.valueType;
-                    if (valueType == typeof(Vector2))
-                        m_Visualizer = new VisualizationHelpers.Vector2Visualizer(m_HistorySamples);
-                    else if (valueType == typeof(float))
-                        m_Visualizer = new VisualizationHelpers.ScalarVisualizer<float>(m_HistorySamples)
-                        {
-                            ////TODO: pass actual min/max limits of control
-                            limitMax = 1,
-                            limitMin = 0
-                        };
-                    else if (valueType == typeof(int))
-                        m_Visualizer = new VisualizationHelpers.ScalarVisualizer<int>(m_HistorySamples)
-                        {
-                            ////TODO: pass actual min/max limits of control
-                            limitMax = 1,
-                            limitMin = 0
-                        };
-                    else
                     {
-                        ////TODO: generic visualizer
+                        var valueType = m_Control.valueType;
+                        if (valueType == typeof(Vector2))
+                            m_Visualizer = new VisualizationHelpers.Vector2Visualizer(m_HistorySamples);
+                        else if (valueType == typeof(float))
+                            m_Visualizer = new VisualizationHelpers.ScalarVisualizer<float>(m_HistorySamples)
+                            {
+                                ////TODO: pass actual min/max limits of control
+                                limitMax = 1,
+                                limitMin = 0
+                            };
+                        else if (valueType == typeof(int))
+                            m_Visualizer = new VisualizationHelpers.ScalarVisualizer<int>(m_HistorySamples)
+                            {
+                                ////TODO: pass actual min/max limits of control
+                                limitMax = 1,
+                                limitMin = 0
+                            };
+                        else
+                        {
+                            ////TODO: generic visualizer
+                        }
+                        break;
                     }
-                    break;
-                }
 
                 case Mode.Events:
-                {
-                    var visualizer = new VisualizationHelpers.TimelineVisualizer(m_HistorySamples)
                     {
-                        timeUnit = VisualizationHelpers.TimelineVisualizer.TimeUnit.Frames,
-                        historyDepth = m_HistorySamples,
-                        showLimits = true,
-                        limitsY = new Vector2(0, 5) // Will expand upward automatically
-                    };
-                    m_Visualizer = visualizer;
-                    visualizer.AddTimeline("Events", Color.green,
-                        VisualizationHelpers.TimelineVisualizer.PlotType.BarChart);
-                    break;
-                }
+                        var visualizer = new VisualizationHelpers.TimelineVisualizer(m_HistorySamples)
+                        {
+                            timeUnit = VisualizationHelpers.TimelineVisualizer.TimeUnit.Frames,
+                            historyDepth = m_HistorySamples,
+                            showLimits = true,
+                            limitsY = new Vector2(0, 5) // Will expand upward automatically
+                        };
+                        m_Visualizer = visualizer;
+                        visualizer.AddTimeline("Events", Color.green,
+                            VisualizationHelpers.TimelineVisualizer.PlotType.BarChart);
+                        break;
+                    }
 
                 case Mode.MaximumLag:
-                {
-                    var visualizer = new VisualizationHelpers.TimelineVisualizer(m_HistorySamples)
                     {
-                        timeUnit = VisualizationHelpers.TimelineVisualizer.TimeUnit.Frames,
-                        historyDepth = m_HistorySamples,
-                        valueUnit = new GUIContent("ms"),
-                        showLimits = true,
-                        limitsY = new Vector2(0, 6)
-                    };
-                    m_Visualizer = visualizer;
-                    visualizer.AddTimeline("MaxLag", Color.red,
-                        VisualizationHelpers.TimelineVisualizer.PlotType.BarChart);
-                    break;
-                }
+                        var visualizer = new VisualizationHelpers.TimelineVisualizer(m_HistorySamples)
+                        {
+                            timeUnit = VisualizationHelpers.TimelineVisualizer.TimeUnit.Frames,
+                            historyDepth = m_HistorySamples,
+                            valueUnit = new GUIContent("ms"),
+                            showLimits = true,
+                            limitsY = new Vector2(0, 6)
+                        };
+                        m_Visualizer = visualizer;
+                        visualizer.AddTimeline("MaxLag", Color.red,
+                            VisualizationHelpers.TimelineVisualizer.PlotType.BarChart);
+                        break;
+                    }
 
                 case Mode.Bytes:
-                {
-                    var visualizer = new VisualizationHelpers.TimelineVisualizer(m_HistorySamples)
                     {
-                        timeUnit = VisualizationHelpers.TimelineVisualizer.TimeUnit.Frames,
-                        valueUnit = new GUIContent("bytes"),
-                        historyDepth = m_HistorySamples,
-                        showLimits = true,
-                        limitsY = new Vector2(0, 64)
-                    };
-                    m_Visualizer = visualizer;
-                    visualizer.AddTimeline("Bytes", Color.red,
-                        VisualizationHelpers.TimelineVisualizer.PlotType.BarChart);
-                    break;
-                }
+                        var visualizer = new VisualizationHelpers.TimelineVisualizer(m_HistorySamples)
+                        {
+                            timeUnit = VisualizationHelpers.TimelineVisualizer.TimeUnit.Frames,
+                            valueUnit = new GUIContent("bytes"),
+                            historyDepth = m_HistorySamples,
+                            showLimits = true,
+                            limitsY = new Vector2(0, 64)
+                        };
+                        m_Visualizer = visualizer;
+                        visualizer.AddTimeline("Bytes", Color.red,
+                            VisualizationHelpers.TimelineVisualizer.PlotType.BarChart);
+                        break;
+                    }
 
                 case Mode.DeviceCurrent:
-                {
-                    m_Visualizer = new VisualizationHelpers.CurrentDeviceVisualizer();
-                    break;
-                }
+                    {
+                        m_Visualizer = new VisualizationHelpers.CurrentDeviceVisualizer();
+                        break;
+                    }
 
                 default:
                     throw new NotImplementedException();
@@ -302,60 +302,60 @@ namespace UnityEngine.InputSystem.Samples
             switch (m_Visualization)
             {
                 case Mode.Value:
-                {
-                    var statePtr = m_Control.GetStatePtrFromStateEvent(eventPtr);
-                    if (statePtr == null)
-                        return; // No value for control in event.
-                    var value = m_Control.ReadValueFromStateAsObject(statePtr);
-                    m_Visualizer.AddSample(value, eventPtr.time);
-                    break;
-                }
+                    {
+                        var statePtr = m_Control.GetStatePtrFromStateEvent(eventPtr);
+                        if (statePtr == null)
+                            return; // No value for control in event.
+                        var value = m_Control.ReadValueFromStateAsObject(statePtr);
+                        m_Visualizer.AddSample(value, eventPtr.time);
+                        break;
+                    }
 
                 case Mode.Events:
-                {
-                    var visualizer = (VisualizationHelpers.TimelineVisualizer)m_Visualizer;
-                    var frame = (int)InputState.updateCount;
-                    ref var valueRef = ref visualizer.GetOrCreateSample(0, frame);
-                    var value = valueRef.ToInt32() + 1;
-                    valueRef = value;
-                    visualizer.limitsY =
-                        new Vector2(0, Mathf.Max(value, visualizer.limitsY.y));
-                    break;
-                }
+                    {
+                        var visualizer = (VisualizationHelpers.TimelineVisualizer)m_Visualizer;
+                        var frame = (int)InputState.updateCount;
+                        ref var valueRef = ref visualizer.GetOrCreateSample(0, frame);
+                        var value = valueRef.ToInt32() + 1;
+                        valueRef = value;
+                        visualizer.limitsY =
+                            new Vector2(0, Mathf.Max(value, visualizer.limitsY.y));
+                        break;
+                    }
 
                 case Mode.MaximumLag:
-                {
-                    var visualizer = (VisualizationHelpers.TimelineVisualizer)m_Visualizer;
-                    var lag = (Time.realtimeSinceStartup - eventPtr.time) * 1000; // In milliseconds.
-                    var frame = (int)InputState.updateCount;
-                    ref var valueRef = ref visualizer.GetOrCreateSample(0, frame);
-
-                    if (lag > valueRef.ToDouble())
                     {
-                        valueRef = lag;
-                        if (lag > visualizer.limitsY.y)
-                            visualizer.limitsY = new Vector2(0, Mathf.Ceil((float)lag));
+                        var visualizer = (VisualizationHelpers.TimelineVisualizer)m_Visualizer;
+                        var lag = (Time.realtimeSinceStartup - eventPtr.time) * 1000; // In milliseconds.
+                        var frame = (int)InputState.updateCount;
+                        ref var valueRef = ref visualizer.GetOrCreateSample(0, frame);
+
+                        if (lag > valueRef.ToDouble())
+                        {
+                            valueRef = lag;
+                            if (lag > visualizer.limitsY.y)
+                                visualizer.limitsY = new Vector2(0, Mathf.Ceil((float)lag));
+                        }
+                        break;
                     }
-                    break;
-                }
 
                 case Mode.Bytes:
-                {
-                    var visualizer = (VisualizationHelpers.TimelineVisualizer)m_Visualizer;
-                    var frame = (int)InputState.updateCount;
-                    ref var valueRef = ref visualizer.GetOrCreateSample(0, frame);
-                    var value = valueRef.ToInt32() + eventPtr.sizeInBytes;
-                    valueRef = value;
-                    visualizer.limitsY =
-                        new Vector2(0, Mathf.Max(value, visualizer.limitsY.y));
-                    break;
-                }
+                    {
+                        var visualizer = (VisualizationHelpers.TimelineVisualizer)m_Visualizer;
+                        var frame = (int)InputState.updateCount;
+                        ref var valueRef = ref visualizer.GetOrCreateSample(0, frame);
+                        var value = valueRef.ToInt32() + eventPtr.sizeInBytes;
+                        valueRef = value;
+                        visualizer.limitsY =
+                            new Vector2(0, Mathf.Max(value, visualizer.limitsY.y));
+                        break;
+                    }
 
                 case Mode.DeviceCurrent:
-                {
-                    m_Visualizer.AddSample(device, eventPtr.time);
-                    break;
-                }
+                    {
+                        m_Visualizer.AddSample(device, eventPtr.time);
+                        break;
+                    }
             }
         }
 

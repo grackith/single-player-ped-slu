@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 [DefaultExecutionOrder(-200)] // Run very early
 public class RDWPositionManager : MonoBehaviour

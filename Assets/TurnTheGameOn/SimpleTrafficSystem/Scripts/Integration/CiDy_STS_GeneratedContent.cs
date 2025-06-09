@@ -556,7 +556,7 @@
                         }
                     }
                     if (sequence.sequenceList.Count != 0)
-                    intersection.sequenceList.Add(sequence);
+                        intersection.sequenceList.Add(sequence);
                 }
             }
             for (int i = 0; i < intersectionData.intersectionList.Count; i++) // set intersection type

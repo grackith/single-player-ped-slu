@@ -1,9 +1,8 @@
 ﻿// Towards physically interactive virtual environments:reactive alignment with redirected walking
 // https://www.jeraldthomas.com/static/publications/thomas2020towards.pdf
 
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 
 public class PassiveHapticAPF_Redirector : APF_Redirector

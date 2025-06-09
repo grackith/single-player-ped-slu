@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public class DebrisController : MonoBehaviour 
+public class DebrisController : MonoBehaviour
 {
     public GameObject explosionParticles;
 
@@ -9,7 +9,7 @@ public class DebrisController : MonoBehaviour
 
     private Rigidbody2D[] fragments;
 
-	void Start() 
+    void Start()
     {
         if (GameManager.effectsEnabled)
         {

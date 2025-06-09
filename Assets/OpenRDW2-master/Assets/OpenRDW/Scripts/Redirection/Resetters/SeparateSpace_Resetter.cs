@@ -1,6 +1,4 @@
 using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
 
 public class SeparateSpace_Resetter : Resetter
 {
@@ -12,7 +10,8 @@ public class SeparateSpace_Resetter : Resetter
     public Vector2 resetDir;
     public bool useResetDir;
 
-    private void Awake(){
+    private void Awake()
+    {
         useResetDir = false;
     }
 

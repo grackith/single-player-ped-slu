@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using UnityEngine;
-using UnityEngine.XR.ARSubsystems;
+﻿using UnityEngine;
 using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
 
 public class SimulatedWalker : MonoBehaviour

@@ -1,7 +1,7 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
     using UnityEditor;
+    using UnityEngine;
 
     [CustomEditor(typeof(AITrafficWaypoint)), CanEditMultipleObjects]
     public class Editor_AITrafficWaypoint : Editor

@@ -1,16 +1,11 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿//clipperLib
+using ClipperLib;
+using StraightSkeletonNet.Primitives;
 using System.Collections.Generic;
 using System.Linq;
-//clipperLib
-using ClipperLib;
+using UnityEngine;
 using Path = System.Collections.Generic.List<ClipperLib.IntPoint>;
 using Paths = System.Collections.Generic.List<System.Collections.Generic.List<ClipperLib.IntPoint>>;
-using StraightSkeletonNet;
-using StraightSkeletonNet.Primitives;
-using System.Runtime.InteropServices;
-using System.Runtime.Serialization.Formatters;
-using System.Reflection;
 #if VEGETATION_STUDIO_PRO || VEGETATION_STUDIO
 using AwesomeTechnologies.Utility;
 #endif
@@ -363,20 +358,22 @@ namespace CiDy
                 //Current Id?
                 int activeId = route[j].routeId;
                 //Debug.Log(proposedRouteId+"_Testing Intersection Against: " + activeId);
-                if (proposedRouteId == maxRouteId || proposedRouteId == activeId) {
+                if (proposedRouteId == maxRouteId || proposedRouteId == activeId)
+                {
                     //Debug.Log("Skip Route: " + proposedRouteId);
                     //Skip as this is the Same id, and we do not care if they intersect. Or its the Last Lane, Which means all lanes are lower and dont care if we cross.
                     continue;
                 }
                 //Special Case of maxRouteId = 2
-                if (maxRouteId == 2 && proposedRouteId > activeId) {
+                if (maxRouteId == 2 && proposedRouteId > activeId)
+                {
                     //Degen event for 3 lane Middle route heading into two lane
                     continue;
                 }
-                for (int i = 0; i < route[j].waypoints.Count-1; i++)
+                for (int i = 0; i < route[j].waypoints.Count - 1; i++)
                 {
                     Vector3 n0 = route[j].waypoints[i];
-                    Vector3 n1 = route[j].waypoints[i+1];
+                    Vector3 n1 = route[j].waypoints[i + 1];
                     //CiDyUtils.MarkPoint(n0,0+i);
                     //CiDyUtils.MarkPoint(n1,1+i);
                     //Now that we have our line lets test against the p0-p1 line.
@@ -1103,7 +1100,8 @@ namespace CiDy
         }
 
         //This does not work on a Looped Spline, unless the last point is the first point.
-        public static Vector3[] CreateTrafficWaypoints(Vector3[] path, float waypointDist, bool skipFirstPoint = false, bool skipLastPoint = true) {
+        public static Vector3[] CreateTrafficWaypoints(Vector3[] path, float waypointDist, bool skipFirstPoint = false, bool skipLastPoint = true)
+        {
             if (path == null || path.Length == 0)
             {
                 Debug.LogWarning("CreateTrafficWaypoints---Path is Empty?");

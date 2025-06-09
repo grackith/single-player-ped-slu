@@ -4,9 +4,9 @@
 //
 //=============================================================================
 
-using UnityEngine;
-using UnityEditor;
 using System.IO;
+using UnityEditor;
+using UnityEngine;
 using Valve.VR;
 
 [CustomEditor(typeof(SteamVR_Camera)), CanEditMultipleObjects]

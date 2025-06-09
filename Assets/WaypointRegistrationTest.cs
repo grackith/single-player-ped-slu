@@ -1,6 +1,6 @@
-using UnityEngine;
-using TurnTheGameOn.SimpleTrafficSystem;
 using System.Collections;
+using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
 public class WaypointRegistrationTest : MonoBehaviour
 {

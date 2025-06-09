@@ -8,13 +8,9 @@
 
 using UnityEngine;
 using UnityEditor;
-using System.IO;
-using System.Collections.Generic;
 using System.Linq;
 using System;
 using System.Reflection;
-
-using Valve.VR.InteractionSystem;
 using UnityEditor.Callbacks;
 
 #if OPENVR_XR_API
@@ -300,7 +296,7 @@ namespace Valve.VR
         protected const string valveEnabledLoaderKeyTemplate = "valve.enabledxrloader.{0}";
         protected const string valveOpenVRLoaderType = "Unity.XR.OpenVR.OpenVRLoader";
 
-        private static void StartXRInstaller() 
+        private static void StartXRInstaller()
         {
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             for (int assemblyIndex = 0; assemblyIndex < assemblies.Length; assemblyIndex++)

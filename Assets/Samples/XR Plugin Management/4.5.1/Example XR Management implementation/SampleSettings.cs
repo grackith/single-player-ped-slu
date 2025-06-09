@@ -3,18 +3,18 @@ using UnityEngine;
 namespace Samples
 {
     /// <summary>
-    /// Simple sample settings showing how to create custom configuration data for your package.
+    /// Simple sample settings showing how to create custom configuration data for   package.
     /// </summary>
     // Uncomment below line to have the settings appear in unified settings.
     //[XRConfigurationData("Sample Settings", SampleConstants.k_SettingsKey)]
     [System.Serializable]
     public class SampleSettings : ScriptableObject
     {
-        #if !UNITY_EDITOR
+#if !UNITY_EDITOR
         /// <summary>Static instance that will hold the runtime asset instance we created in our build process.</summary>
         /// <see cref="SampleBuildProcessor"/>
         public static SampleSettings s_RuntimeInstance = null;
-        #endif
+#endif
 
         /// <summary>Requirement settings enumeration</summary>
         public enum Requirement
@@ -49,9 +49,9 @@ namespace Samples
 
         void Awake()
         {
-            #if !UNITY_EDITOR
+#if !UNITY_EDITOR
             s_RuntimeInstance = this;
-            #endif
+#endif
         }
     }
 }

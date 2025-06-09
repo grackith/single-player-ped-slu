@@ -1,14 +1,14 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ScoreCounter : MonoBehaviour {
+public class ScoreCounter : MonoBehaviour
+{
     public static ScoreCounter instance;
     int currentScore = 0;
     int targetScore = 0;
-    Text[]  numbers;
-    
+    Text[] numbers;
+
     void OnEnable()
     {
         if (instance == null)
@@ -18,23 +18,25 @@ public class ScoreCounter : MonoBehaviour {
     }
 
     // Use this for initialization
-    void Start () {
+    void Start()
+    {
         numbers = transform.GetComponentsInChildren<Text>();
-	}
-    
+    }
+
     Coroutine iterator;
 
     public void StartCounting(int score)
     {
         targetScore = score;
-         
+
         if (iterator != null)
             StopCoroutine(iterator);
         iterator = StartCoroutine(IterateScore());
     }
 
-	public IEnumerator IterateScore () {
-        while(currentScore < targetScore * 0.9f)
+    public IEnumerator IterateScore()
+    {
+        while (currentScore < targetScore * 0.9f)
         {
             currentScore = (int)Mathf.Lerp(currentScore, targetScore, Time.deltaTime * 10.0f);
             SetScore(currentScore);
@@ -49,7 +51,7 @@ public class ScoreCounter : MonoBehaviour {
         char[] charScore = score.ToString().ToCharArray();
         int scoreLength = charScore.Length;
         int k = 0;
-        for(int i = 0; i < numbers.Length; i++)
+        for (int i = 0; i < numbers.Length; i++)
         {
             if (i < numbers.Length - scoreLength)
                 numbers[i].text = "0";

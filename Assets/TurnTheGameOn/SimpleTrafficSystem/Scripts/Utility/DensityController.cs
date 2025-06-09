@@ -1,7 +1,7 @@
-﻿using TurnTheGameOn.SimpleTrafficSystem;
+﻿using System.Collections;
+using TurnTheGameOn.SimpleTrafficSystem;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
 
 public class DensityController : MonoBehaviour
 {
@@ -21,7 +21,7 @@ public class DensityController : MonoBehaviour
 
     public void SetDensity()
     {
-        AITrafficController.Instance.density = (int) densitySlider.value;
+        AITrafficController.Instance.density = (int)densitySlider.value;
         densityText.text = "Target Density: " + densitySlider.value.ToString();
     }
 
@@ -30,7 +30,7 @@ public class DensityController : MonoBehaviour
         while (true)
         {
             yield return new WaitForSeconds(1);
-            activeText.text = "Cars Active: " +  AITrafficController.Instance.currentDensity.ToString();
+            activeText.text = "Cars Active: " + AITrafficController.Instance.currentDensity.ToString();
         }
     }
 }

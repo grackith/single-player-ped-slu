@@ -1,7 +1,3 @@
-using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-
 // This type of reset injects a 180 rotation. It will actually stop the virtual movement when user is turning. 
 public class FreezeTurnResetter : Resetter
 {

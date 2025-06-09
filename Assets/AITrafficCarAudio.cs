@@ -1,6 +1,6 @@
+using System.Collections;
 using TurnTheGameOn.SimpleTrafficSystem;
 using UnityEngine;
-using System.Collections;
 using UnityEngine.Audio; // Add this line to access AudioMixer classes
 
 
@@ -11,7 +11,7 @@ public class AITrafficCarAudio : MonoBehaviour
 
     public float minPitch = 0.5f;
     public float maxPitch = 1.5f;
-    public float maxSpeed = 100f; // Set this to match your car's max speed
+    public float maxSpeed = 100f;
 
     // Optional: Add sound variations
     public AudioClip idleSound;
@@ -48,7 +48,7 @@ public class AITrafficCarAudio : MonoBehaviour
             }
         }
 
-        // Rest of your initialization code...
+
     }
     void Update()
     {
@@ -127,8 +127,7 @@ public class AITrafficCarAudio : MonoBehaviour
         }
     }
 
-    // You might want to sync with the AITrafficCar's lifecycle
-    // You might want to sync with the AITrafficCar's lifecycle
+
     void OnEnable()
     {
         // Start audio when car becomes active in the scene

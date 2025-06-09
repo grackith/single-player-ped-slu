@@ -68,7 +68,7 @@ public class SpaceshipController : MonoBehaviour
                 weaponInstance.transform.up = transform.up;
                 weaponInstance.transform.parent = transform;
                 break;
-             default:
+            default:
                 Debug.LogError("Invalid weapon state.");
                 break;
         }
@@ -77,7 +77,7 @@ public class SpaceshipController : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D collision)
     {
         // Preventing multiple collision triggers on the same frame
-        if (isColliding) 
+        if (isColliding)
             return;
 
         AsteroidController asteroidController = collision.gameObject.GetComponent<AsteroidController>();
@@ -85,7 +85,7 @@ public class SpaceshipController : MonoBehaviour
         if (asteroidController)
         {
             asteroidController.Split();
-            if(GameManager.instance != null)
+            if (GameManager.instance != null)
                 GameManager.instance.RespawnShip();
             Instantiate(spaceshipDebris, transform.position, transform.GetChild(0).rotation);
             Destroy(gameObject);
@@ -129,7 +129,7 @@ public class SpaceshipController : MonoBehaviour
     }
 
     public void UpdateWeapon(int score)
-    {     
+    {
         Weapon weapon = Weapon.Basic;
 
         if (score >= 8000)

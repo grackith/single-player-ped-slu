@@ -1,10 +1,9 @@
-﻿using UnityEngine;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using System.Xml;
+using UnityEngine;
 public class StatisticsLogger : MonoBehaviour
 {
     [Tooltip("Reset exceeds this value will make data invalid")]

@@ -1,20 +1,14 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using TMPro;
 using UnityEngine;
-using UnityEngine.XR.ARSubsystems;
-using UnityEngine.Serialization;
-using Photon.Realtime;
 
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 //using static Cinemachine.Editor.CinemachineScreenComposerGuides;
-using static GlobalConfiguration;
-using static RedirectionManager;
 using AvatarInfo = ExperimentSetup.AvatarInfo;
 using PathSeed = VirtualPathGenerator.PathSeed;
 
@@ -184,7 +178,7 @@ public class GlobalConfiguration : MonoBehaviour
     [Tooltip("Which avatar prefab will be used for visualization")]
     public int avatarPrefabId;
 
-    [Tooltip("Candidate Avatar Prefabs(models), you can drag your custom avatar here")]
+    [Tooltip("Candidate Avatar Prefabs(models), you can drag   custom avatar here")]
     public GameObject[] avatarPrefabs;
 
 
@@ -250,7 +244,7 @@ public class GlobalConfiguration : MonoBehaviour
     [Tooltip("Side length if trackingSpace == Square")]
     public float squareWidth;
 
-    private GameObject[] preservedAvatarPrefabs; // Add this field
+    private GameObject[] preservedAvatarPrefabs;
 
 
     public Color virtualObstacleColor;
@@ -370,7 +364,6 @@ public class GlobalConfiguration : MonoBehaviour
 
     // redirection & reset phase for separatespace redirector
 
-    // Add this method to GlobalConfiguration to verify waypoint alignment
     [ContextMenu("Debug First Waypoint Alignment")]
     public void DebugFirstWaypointAlignment()
     {
@@ -395,7 +388,7 @@ public class GlobalConfiguration : MonoBehaviour
             Debug.Log($"Physical Init Pos: {mm.physicalInitPose.initialPosition}");
         }
 
-        // Virtual initial position (should be your waypoint position)
+        // Virtual initial position 
         if (mm.virtualInitPose != null)
         {
             Debug.Log($"Virtual Init Pos: {mm.virtualInitPose.initialPosition}");
@@ -936,7 +929,7 @@ public class GlobalConfiguration : MonoBehaviour
             return redirectedAvatars[y].GetComponent<RedirectionManager>().priority.CompareTo(redirectedAvatars[x].GetComponent<RedirectionManager>().priority);
         });
     }
-    // Add this method to your GlobalConfiguration class
+
     public void MakeOneStepRedirection()
     {
         bool touchWaypoint = false;
@@ -1317,7 +1310,7 @@ public class GlobalConfiguration : MonoBehaviour
     }
 
     //make one step redirection
-    
+
     private void GenerateExperimentSetupsByCommandFiles()
     {
         experimentSetupsList = new List<List<ExperimentSetup>>();
@@ -1863,7 +1856,7 @@ public class GlobalConfiguration : MonoBehaviour
 
         return newAvatar;
     }
-    // Add this method to GlobalConfiguration to align tracking space with waypoints
+
     public void AlignTrackingSpaceToWaypoints()
     {
         if (redirectedAvatars.Count == 0) return;
@@ -1978,7 +1971,7 @@ public class GlobalConfiguration : MonoBehaviour
                 virtualSpaceObject = transform.Find("VirtualPlane");
             }
         }
-        
+
 
         Initialize();
 
@@ -2661,5 +2654,4 @@ public class GlobalConfiguration : MonoBehaviour
 
 }
 
-// Add this extension to make private methods accessible for testing
 

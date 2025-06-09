@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using UnityEditor;
+﻿using UnityEditor;
+using UnityEngine;
 
 public class CiDyTexturePostProcessor : AssetPostprocessor
 {
@@ -17,7 +17,7 @@ public class CiDyTexturePostProcessor : AssetPostprocessor
             importer.npotScale = TextureImporterNPOTScale.None;
 
             Object asset = AssetDatabase.LoadAssetAtPath(importer.assetPath, typeof(Texture2D));
-            if(asset)
+            if (asset)
                 EditorUtility.SetDirty(asset);
         }
 

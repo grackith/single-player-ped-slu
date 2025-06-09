@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 [DefaultExecutionOrder(-100)]
 public class SimpleRDWSetup : MonoBehaviour
@@ -9,7 +9,7 @@ public class SimpleRDWSetup : MonoBehaviour
     public VEPath vePath;
 
     [Header("Position Settings")]
-    [Tooltip("Where to place the RDW system in your world")]
+    [Tooltip("Where to place the RDW system in   world")]
     public Vector3 rdwWorldPosition = Vector3.zero;
 
     [Tooltip("Optional: Set a specific location for RDW")]
@@ -25,7 +25,7 @@ public class SimpleRDWSetup : MonoBehaviour
         if (globalConfig == null)
             globalConfig = GetComponent<GlobalConfiguration>();
 
-        // Position the RDW system in your scene
+        // Position the RDW system in   scene
         if (sceneStartLocation != null)
         {
             transform.position = sceneStartLocation.position;

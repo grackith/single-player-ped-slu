@@ -23,10 +23,10 @@ namespace Photon.Pun
     using Debug = UnityEngine.Debug;
     using Hashtable = ExitGames.Client.Photon.Hashtable;
 
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     using UnityEditor;
     using System.IO;
-    #endif
+#endif
 
 
     public struct InstantiateParameters
@@ -63,15 +63,15 @@ namespace Photon.Pun
     /// \ingroup publicApi
     public static partial class PhotonNetwork
     {
-        /// <summary>Version number of PUN. Used in the AppVersion, which separates your playerbase in matchmaking.</summary>
+        /// <summary>Version number of PUN. Used in the AppVersion, which separates   playerbase in matchmaking.</summary>
         public const string PunVersion = "2.50";
 
-        /// <summary>Version number of your game. Setting this updates the AppVersion, which separates your playerbase in matchmaking.</summary>
+        /// <summary>Version number of   game. Setting this updates the AppVersion, which separates   playerbase in matchmaking.</summary>
         /// <remarks>
         /// In PUN, the GameVersion is only one component of the LoadBalancingClient.AppVersion.
         /// Setting the GameVersion will also set the LoadBalancingClient.AppVersion to: value+'_'+ PhotonNetwork.PunVersion.
         ///
-        /// The AppVersion is used to split your playerbase as needed.
+        /// The AppVersion is used to split   playerbase as needed.
         /// One AppId may have various AppVersions and each is a separate set of users for matchmaking.
         ///
         /// The AppVersion gets sent in the "Authenticate" step.
@@ -130,7 +130,7 @@ namespace Photon.Pun
         public static string ServerAddress { get { return (NetworkingClient != null) ? NetworkingClient.CurrentServerAddress : "<not connected>"; } }
 
         /// <summary>Currently used Cloud Region (if any). As long as the client is not on a Master Server or Game Server, the region is not yet defined.</summary>
-        public static string CloudRegion { get { return (NetworkingClient != null && IsConnected && Server!=ServerConnection.NameServer) ? NetworkingClient.CloudRegion : null; } }
+        public static string CloudRegion { get { return (NetworkingClient != null && IsConnected && Server != ServerConnection.NameServer) ? NetworkingClient.CloudRegion : null; } }
 
         /// <summary>The cluster name provided by the Name Server.</summary>
         /// <remarks>
@@ -140,7 +140,7 @@ namespace Photon.Pun
         ///
         /// Note that the Name Server may assign another cluster, if the requested one is not configured or available.
         /// </remarks>
-        public static string CurrentCluster { get { return (NetworkingClient != null ) ? NetworkingClient.CurrentCluster : null; } }
+        public static string CurrentCluster { get { return (NetworkingClient != null) ? NetworkingClient.CurrentCluster : null; } }
 
         /// <summary>Key to save the "Best Region Summary" in the Player Preferences.</summary>
         private const string PlayerPrefsKey = "PUNCloudBestRegion";
@@ -194,7 +194,7 @@ namespace Photon.Pun
         }
 
         /// <summary>
-        /// A refined version of connected which is true only if your connection to the server is ready to accept operations like join, leave, etc.
+        /// A refined version of connected which is true only if   connection to the server is ready to accept operations like join, leave, etc.
         /// </summary>
         public static bool IsConnectedAndReady
         {
@@ -273,7 +273,7 @@ namespace Photon.Pun
         /// Set these before calling Connect if you want custom authentication.
         /// These values set the userId, if and how that userId gets verified (server-side), etc..
         ///
-        /// If authentication fails for any values, PUN will call your implementation of OnCustomAuthenticationFailed(string debugMessage).
+        /// If authentication fails for any values, PUN will call   implementation of OnCustomAuthenticationFailed(string debugMessage).
         /// See <see cref="Photon.Realtime.IConnectionCallbacks.OnCustomAuthenticationFailed"/>.
         /// </remarks>
         public static AuthenticationValues AuthValues
@@ -429,7 +429,7 @@ namespace Photon.Pun
 
 
         /// <summary>
-        /// Offline mode can be set to re-use your multiplayer code in singleplayer game modes.
+        /// Offline mode can be set to re-use   multiplayer code in singleplayer game modes.
         /// When this is on PhotonNetwork will not create any connections and there is near to
         /// no overhead. Mostly usefull for reusing RPC's and PhotonNetwork.Instantiate
         /// </summary>
@@ -532,7 +532,7 @@ namespace Photon.Pun
         ///
         /// Implement OptionalInfoCallbacks.OnLobbyStatisticsUpdate, to get the list of used lobbies.
         ///
-        /// The lobby statistics can be useful if your title dynamically uses lobbies, depending (e.g.)
+        /// The lobby statistics can be useful if   title dynamically uses lobbies, depending (e.g.)
         /// on current player activity or such.
         /// In this case, getting a list of available lobbies, their room-count and player-count can
         /// be useful info.
@@ -587,7 +587,7 @@ namespace Photon.Pun
         /// Sending less often will aggregate messages in datagrams, which avoids overhead on the network.
         /// It is also important to not push too many datagrams per frame. Three to five seem to be the sweet spot.
         ///
-        /// Keep your target platform in mind: mobile networks are usually slower.
+        /// Keep   target platform in mind: mobile networks are usually slower.
         /// WiFi is slower with more variance and bursts of loss.
         ///
         /// A low framerate (as in Update calls) will affect sending of messages.
@@ -657,7 +657,7 @@ namespace Photon.Pun
         /// a client. Also, incoming messages will be queued until you re-activate the message queue.
         ///
         /// This can be useful if you first want to load a level, then go on receiving data of PhotonViews and RPCs.
-        /// The client will go on receiving and sending acknowledgements for incoming packages and your RPCs/Events.
+        /// The client will go on receiving and sending acknowledgements for incoming packages and   RPCs/Events.
         /// This adds "lag" and can cause issues when the pause is longer, as all incoming messages are just queued.
         /// </remarks>
         public static bool IsMessageQueueRunning
@@ -701,7 +701,7 @@ namespace Photon.Pun
 
                 uint u = (uint)ServerTimestamp;
                 double t = u;
-                frametime =  t / 1000.0d;
+                frametime = t / 1000.0d;
                 frame = UnityEngine.Time.frameCount;
                 return frametime;
             }
@@ -752,7 +752,7 @@ namespace Photon.Pun
         /// We think a reasonable background timeout is 60 seconds.
         ///
         /// To handle the timeout, implement: OnDisconnected(), as usual.
-        /// Your application will "notice" the background disconnect when it becomes active again (running the Update() loop).
+        ///   application will "notice" the background disconnect when it becomes active again (running the Update() loop).
         ///
         /// If you need to separate this case from others, you need to track if the app was in the background
         /// (there is no special callback by PUN).
@@ -882,7 +882,7 @@ namespace Photon.Pun
         }
 
         /// <summary>
-        /// Count of users currently playing your app in some room (sent every 5sec by Master Server).
+        /// Count of users currently playing   app in some room (sent every 5sec by Master Server).
         /// Use PhotonNetwork.PlayerList.Length or PhotonNetwork.CurrentRoom.PlayerCount to get the count of players in the room you're in!
         /// </summary>
         public static int CountOfPlayersInRooms
@@ -1010,7 +1010,7 @@ namespace Photon.Pun
         /// <see cref="LoadBalancingClient.ServerPortOverrides"/>
         public static PhotonPortDefinition ServerPortOverrides
         {
-            get { return (NetworkingClient == null) ? new PhotonPortDefinition() :  NetworkingClient.ServerPortOverrides; }
+            get { return (NetworkingClient == null) ? new PhotonPortDefinition() : NetworkingClient.ServerPortOverrides; }
             set { if (NetworkingClient != null) NetworkingClient.ServerPortOverrides = value; }
         }
 
@@ -1024,33 +1024,33 @@ namespace Photon.Pun
         /// </summary>
         static PhotonNetwork()
         {
-            #if !UNITY_EDITOR
+#if !UNITY_EDITOR
             StaticReset();  // in builds, we just reset/init the client once
-            #else
+#else
 
-                #if UNITY_2019_4_OR_NEWER
-                if (NetworkingClient == null)
-                {
-                    NetworkingClient = new LoadBalancingClient();
-                }
-                #else
+#if UNITY_2019_4_OR_NEWER
+            if (NetworkingClient == null)
+            {
+                NetworkingClient = new LoadBalancingClient();
+            }
+#else
                 StaticReset();  // in OLDER unity editor versions there is no RuntimeInitializeOnLoadMethod, so call reset
-                #endif
+#endif
 
-            #endif
+#endif
         }
 
-        #if UNITY_EDITOR && UNITY_2019_4_OR_NEWER
+#if UNITY_EDITOR && UNITY_2019_4_OR_NEWER
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
-        #endif
+#endif
         private static void StaticReset()
         {
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 return;
             }
-            #endif
+#endif
 
             // This clear is for when Domain Reloading is disabled. Typically will already be empty.
             monoRPCMethodsCache.Clear();
@@ -1093,14 +1093,14 @@ namespace Photon.Pun
 
         /// <summary>Connect to Photon as configured in the PhotonServerSettings file.</summary>
         /// <remarks>
-        /// Implement IConnectionCallbacks, to make your game logic aware of state changes.
+        /// Implement IConnectionCallbacks, to make   game logic aware of state changes.
         /// Especially, IConnectionCallbacks.ConnectedToMasterServer is useful to react when
         /// the client can do matchmaking.
         ///
         /// This method will disable OfflineMode (which won't destroy any instantiated GOs) and it
         /// will set IsMessageQueueRunning to true.
         ///
-        /// Your Photon configuration is created by the PUN Wizard and contains the AppId,
+        ///   Photon configuration is created by the PUN Wizard and contains the AppId,
         /// region for Photon Cloud games, the server address among other things.
         ///
         /// To ignore the settings file, set the relevant values and connect by calling
@@ -1224,9 +1224,9 @@ namespace Photon.Pun
         ///
         /// In general check out the <see cref="DisconnectCause"/> from the <see cref="IConnectionCallbacks.OnDisconnected"/> callback.
         /// </remarks>
-        /// <param name="masterServerAddress">The server's address (either your own or Photon Cloud address).</param>
+        /// <param name="masterServerAddress">The server's address (either   own or Photon Cloud address).</param>
         /// <param name="port">The server's port to connect to.</param>
-        /// <param name="appID">Your application ID (Photon Cloud provides you with a GUID for your game).</param>
+        /// <param name="appID">  application ID (Photon Cloud provides you with a GUID for   game).</param>
         public static bool ConnectToMaster(string masterServerAddress, int port, string appID)
         {
             // TODO: refactor NetworkingClient.LoadBalancingPeer.PeerState to not use the peer but LBC.connected or so
@@ -1272,7 +1272,7 @@ namespace Photon.Pun
         /// The ping result can be overridden via PhotonNetwork.OverrideBestCloudServer(..)
         /// This call can take up to 2 seconds if it is the first time you are using this, all cloud servers will be pinged to check for the best region.
         ///
-        /// The PUN Setup Wizard stores your appID in a settings file and applies a server address/port.
+        /// The PUN Setup Wizard stores   appID in a settings file and applies a server address/port.
         /// To connect to the Photon Cloud, a valid AppId must be in the settings file (shown in the Photon Cloud Dashboard).
         /// https://dashboard.photonengine.com
         ///
@@ -1477,7 +1477,7 @@ namespace Photon.Pun
         /// Can be used to immediately send the RPCs and Instantiates just called, so they are on their way to the other players.
         /// </summary>
         /// <remarks>
-        /// This could be useful if you do a RPC to load a level and then load it yourself.
+        /// This could be useful if you do a RPC to load a level and then load it  self.
         /// While loading, no RPCs are sent to others, so this would delay the "load" RPC.
         /// You can send the RPC to "others", use this method, disable the message queue
         /// (by IsMessageQueueRunning) and then load.
@@ -1528,7 +1528,7 @@ namespace Photon.Pun
 
 
         /// <summary>
-        /// Asks the server to assign another player as Master Client of your current room.
+        /// Asks the server to assign another player as Master Client of   current room.
         /// </summary>
         /// <remarks>
         /// RPCs and RaiseEvent have the option to send messages only to the Master Client of a room.
@@ -1659,7 +1659,7 @@ namespace Photon.Pun
             }
             if (NetworkingClient.Server != ServerConnection.MasterServer || !IsConnectedAndReady)
             {
-                Debug.LogError("JoinRandomRoom failed. Client is on "+ NetworkingClient.Server+ " (must be Master Server for matchmaking)" + (IsConnectedAndReady ? " and ready" : " but not ready for operations (State: "+ NetworkingClient.State + ")") + ". Wait for callback: OnJoinedLobby or OnConnectedToMaster.");
+                Debug.LogError("JoinRandomRoom failed. Client is on " + NetworkingClient.Server + " (must be Master Server for matchmaking)" + (IsConnectedAndReady ? " and ready" : " but not ready for operations (State: " + NetworkingClient.State + ")") + ". Wait for callback: OnJoinedLobby or OnConnectedToMaster.");
                 return false;
             }
 
@@ -1715,7 +1715,7 @@ namespace Photon.Pun
             }
             if (NetworkingClient.Server != ServerConnection.MasterServer || !IsConnectedAndReady)
             {
-                Debug.LogError("JoinRandomOrCreateRoom failed. Client is on "+ NetworkingClient.Server+ " (must be Master Server for matchmaking)" + (IsConnectedAndReady ? " and ready" : " but not ready for operations (State: "+ NetworkingClient.State + ")") + ". Wait for callback: OnJoinedLobby or OnConnectedToMaster.");
+                Debug.LogError("JoinRandomOrCreateRoom failed. Client is on " + NetworkingClient.Server + " (must be Master Server for matchmaking)" + (IsConnectedAndReady ? " and ready" : " but not ready for operations (State: " + NetworkingClient.State + ")") + ". Wait for callback: OnJoinedLobby or OnConnectedToMaster.");
                 return false;
             }
 
@@ -2075,11 +2075,11 @@ namespace Photon.Pun
         /// Per room you should check if it's full or not before joining. Photon also lists rooms that are
         /// full, unless you close and hide them (room.open = false and room.visible = false).
         ///
-        /// In best case, you make your clients join random games, as described here:
+        /// In best case, you make   clients join random games, as described here:
         /// https://doc.photonengine.com/en-us/pun/v2/lobby-and-matchmaking/matchmaking-and-lobby
         ///
         ///
-        /// You can show your current players and room count without joining a lobby (but you must
+        /// You can show   current players and room count without joining a lobby (but you must
         /// be on the master server). Use: CountOfPlayers, CountOfPlayersOnMaster, CountOfPlayersInRooms and
         /// CountOfRooms.
         ///
@@ -2109,14 +2109,14 @@ namespace Photon.Pun
         /// suited for skillbased-games. However, you will also need to follow the conventions for naming
         /// filterable properties in sql-lobbies! Both is explained in the matchmaking doc linked below.
         ///
-        /// In best case, you make your clients join random games, as described here:
+        /// In best case, you make   clients join random games, as described here:
         /// https://doc.photonengine.com/en-us/realtime/current/reference/matchmaking-and-lobby
         ///
         ///
         /// Per room you should check if it's full or not before joining. Photon does list rooms that are
         /// full, unless you close and hide them (room.open = false and room.visible = false).
         ///
-        /// You can show your games current players and room count without joining a lobby (but you must
+        /// You can show   games current players and room count without joining a lobby (but you must
         /// be on the master server). Use: CountOfPlayers, CountOfPlayersOnMaster, CountOfPlayersInRooms and
         /// CountOfRooms.
         ///
@@ -2212,8 +2212,8 @@ namespace Photon.Pun
         /// Sets this (local) player's properties and synchronizes them to the other players (don't modify them directly).
         /// </summary>
         /// <remarks>
-        /// While in a room, your properties are synced with the other players.
-        /// CreateRoom, JoinRoom and JoinRandomRoom will all apply your player's custom properties when you enter the room.
+        /// While in a room,   properties are synced with the other players.
+        /// CreateRoom, JoinRoom and JoinRandomRoom will all apply   player's custom properties when you enter the room.
         /// The whole Hashtable will get sent. Minimize the traffic by setting only updated key/values.
         ///
         /// If the Hashtable is null, the custom properties will be cleared.
@@ -2248,7 +2248,7 @@ namespace Photon.Pun
         /// </summary>
         /// <remarks>
         /// Use this method with care. It can create inconsistencies of state between players!
-        /// This only changes the player.customProperties locally. This can be useful to clear your
+        /// This only changes the player.customProperties locally. This can be useful to clear  
         /// Custom Properties between games (let's say they store which turn you made, kills, etc).
         ///
         /// SetPlayerCustomProperties() syncs and can be used to set values to null while in a room.
@@ -2321,7 +2321,7 @@ namespace Photon.Pun
 
             if (!InRoom || eventCode >= 200)
             {
-                Debug.LogWarning("RaiseEvent(" + eventCode + ") failed. Your event is not being sent! Check if your are in a Room and the eventCode must be less than 200 (0..199).");
+                Debug.LogWarning("RaiseEvent(" + eventCode + ") failed.   event is not being sent! Check if   are in a Room and the eventCode must be less than 200 (0..199).");
                 return false;
             }
 
@@ -2343,7 +2343,7 @@ namespace Photon.Pun
 
             if (!InRoom)
             {
-                Debug.LogWarning("RaiseEvent(" + eventCode + ") failed. Your event is not being sent! Check if your are in a Room");
+                Debug.LogWarning("RaiseEvent(" + eventCode + ") failed.   event is not being sent! Check if   are in a Room");
                 return false;
             }
 
@@ -2473,7 +2473,7 @@ namespace Photon.Pun
         {
             if (CurrentRoom == null)
             {
-                Debug.LogError("Can not Instantiate before the client joined/created a room. State: "+PhotonNetwork.NetworkClientState);
+                Debug.LogError("Can not Instantiate before the client joined/created a room. State: " + PhotonNetwork.NetworkClientState);
                 return null;
             }
 
@@ -2841,7 +2841,7 @@ namespace Photon.Pun
         /// </summary>
         /// <remarks>
         /// Can only be called by Master Client (for anyone).
-        /// Unlike the Destroy methods, this will remove anything from the server's room buffer. If your game
+        /// Unlike the Destroy methods, this will remove anything from the server's room buffer. If   game
         /// buffers anything beyond Instantiate and RPC calls, that will be cleaned as well from server.
         ///
         /// Destroying all includes:
@@ -3065,7 +3065,7 @@ namespace Photon.Pun
 
             PhotonNetwork.IsMessageQueueRunning = false;
             loadingLevelAndPausedNetwork = true;
-            _AsyncLevelLoadingOperation = SceneManager.LoadSceneAsync(levelNumber,LoadSceneMode.Single);
+            _AsyncLevelLoadingOperation = SceneManager.LoadSceneAsync(levelNumber, LoadSceneMode.Single);
         }
 
         /// <summary>This method wraps loading a level asynchronously and pausing network messages during the process.</summary>
@@ -3111,17 +3111,17 @@ namespace Photon.Pun
         }
 
         /// <summary>
-        /// This operation makes Photon call your custom web-service by name (path) with the given parameters.
+        /// This operation makes Photon call   custom web-service by name (path) with the given parameters.
         /// </summary>
         /// <remarks>
         /// This is a server-side feature which must be setup in the Photon Cloud Dashboard prior to use.
         /// <see href="https://doc.photonengine.com/en-us/pun/v2/gameplay/web-extensions/webrpc"/>
-        /// The Parameters will be converted into JSon format, so make sure your parameters are compatible.
+        /// The Parameters will be converted into JSon format, so make sure   parameters are compatible.
         ///
         /// See <see cref="Photon.Realtime.IWebRpcCallback.OnWebRpcResponse"/> on how to get a response.
         ///
         /// It's important to understand that the OperationResponse only tells if the WebRPC could be called.
-        /// The content of the response contains any values your web-service sent and the error/success code.
+        /// The content of the response contains any values   web-service sent and the error/success code.
         /// In case the web-service failed, an error code and a debug message are usually inside the
         /// OperationResponse.
         ///
@@ -3199,7 +3199,7 @@ namespace Photon.Pun
             }
 
 
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             // in the editor, store the settings file as it could not be loaded
             // unless Unity still imports assets
             if (UnityEditor.EditorApplication.isUpdating)
@@ -3226,11 +3226,11 @@ namespace Photon.Pun
 
             // if the project does not have PhotonServerSettings yet, enable "Development Build" to use the Dev Region.
             EditorUserBuildSettings.development = true;
-            #endif
+#endif
         }
 
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
 
         /// <summary>
         /// Finds the asset path base on its name or search query: https://docs.unity3d.com/ScriptReference/AssetDatabase.FindAssets.html
@@ -3239,13 +3239,14 @@ namespace Photon.Pun
         /// <param name="asset">Asset.</param>
         public static string FindAssetPath(string asset)
         {
-            string[] guids = AssetDatabase.FindAssets (asset, null);
+            string[] guids = AssetDatabase.FindAssets(asset, null);
             if (guids.Length != 1)
             {
                 return string.Empty;
-            } else
+            }
+            else
             {
-                return AssetDatabase.GUIDToAssetPath (guids [0]);
+                return AssetDatabase.GUIDToAssetPath(guids[0]);
             }
         }
 
@@ -3256,18 +3257,18 @@ namespace Photon.Pun
         /// <returns>The pun asset folder.</returns>
         public static string FindPunAssetFolder()
         {
-            string _thisPath =	FindAssetPath("PunClasses");
+            string _thisPath = FindAssetPath("PunClasses");
             string _PunFolderPath = string.Empty;
 
             //Debug.Log("FindPunAssetFolder "+_thisPath);
-            string[] subdirectoryEntries = _thisPath.Split ('/');
+            string[] subdirectoryEntries = _thisPath.Split('/');
             foreach (string dir in subdirectoryEntries)
             {
-                if (!string.IsNullOrEmpty (dir))
+                if (!string.IsNullOrEmpty(dir))
                 {
-                    _PunFolderPath += dir +"/";
+                    _PunFolderPath += dir + "/";
 
-                    if (string.Equals (dir, "PhotonUnityNetworking"))
+                    if (string.Equals(dir, "PhotonUnityNetworking"))
                     {
                         //	Debug.Log("_PunFolderPath "+_PunFolderPath);
                         return _PunFolderPath;
@@ -3305,7 +3306,7 @@ namespace Photon.Pun
         //    }
         //}
 
-        #endif
+#endif
 
     }
 }

@@ -1,7 +1,7 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
     using System.Linq;
+    using UnityEngine;
 
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficlightmanager")]
     public class AITrafficLightManager : MonoBehaviour

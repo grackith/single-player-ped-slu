@@ -1,7 +1,7 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
     using System.Collections.Generic;
+    using UnityEngine;
 
     [HelpURL("https://simpletrafficsystem.turnthegameon.com/documentation/api/aitrafficstop")]
     public class AITrafficStop : MonoBehaviour

@@ -7,11 +7,10 @@
 
 namespace Photon.Chat
 {
-    using System.Collections.Generic;
     using ExitGames.Client.Photon;
 
     /// <summary>
-    /// Callback interface for Chat client side. Contains callback methods to notify your app about updates.
+    /// Callback interface for Chat client side. Contains callback methods to notify   app about updates.
     /// Must be provided to new ChatClient in constructor
     /// </summary>
     public interface IChatClientListener
@@ -56,7 +55,7 @@ namespace Photon.Chat
         /// </summary>
         /// <param name="sender">user who sent this message</param>
         /// <param name="message">message it self</param>
-        /// <param name="channelName">channelName for private messages (messages you sent yourself get added to a channel per target username)</param>
+        /// <param name="channelName">channelName for private messages (messages you sent  self get added to a channel per target username)</param>
         void OnPrivateMessage(string sender, object message, string channelName);
 
         /// <summary>
@@ -79,7 +78,7 @@ namespace Photon.Chat
         void OnUnsubscribed(string[] channels);
 
         /// <summary>
-        /// New status of another user (you get updates for users set in your friends list).
+        /// New status of another user (you get updates for users set in   friends list).
         /// </summary>
         /// <param name="user">Name of the user.</param>
         /// <param name="status">New status of that user.</param>
@@ -102,7 +101,7 @@ namespace Photon.Chat
         void OnUserUnsubscribed(string channel, string user);
 
 
-        #if CHAT_EXTENDED
+#if CHAT_EXTENDED
         
         /// <summary>
         /// Properties of a public channel has been changed
@@ -132,17 +131,17 @@ namespace Photon.Chat
         /// <param name="data">Optional error data</param>
         void OnErrorInfo(string channel, string error, object data);
         
-        #endif
+#endif
 
 
-        #if SDK_V4
+#if SDK_V4
         /// <summary>
         /// Received a broadcast message
         /// </summary>
         /// <param name="channel">Name of the chat channel</param>
         /// <param name="message">Message data</param>
         void OnReceiveBroadcastMessage(string channel, byte[] message);
-        #endif
+#endif
 
     }
 }

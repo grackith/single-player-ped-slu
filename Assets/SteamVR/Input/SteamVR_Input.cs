@@ -1,14 +1,12 @@
 ﻿//======= Copyright (c) Valve Corporation, All rights reserved. ===============
 
-using UnityEngine;
-using Valve.VR;
-using System.IO;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
-using System.Linq;
-using Valve.Newtonsoft.Json;
 using System.Text;
+using UnityEngine;
+using Valve.Newtonsoft.Json;
 
 namespace Valve.VR
 {
@@ -107,7 +105,7 @@ namespace Valve.VR
         static SteamVR_Input()
         {
 #if !UNITY_EDITOR
-            //If you want a single frame of performance increase on application start and have already generated your actions uncomment the following two lines
+            //If you want a single frame of performance increase on application start and have already generated   actions uncomment the following two lines
             //SteamVR_Actions.Preinitialize();
             //return;
 #endif

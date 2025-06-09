@@ -4,10 +4,9 @@
 //
 //=============================================================================
 
-using UnityEngine;
 using System.Collections;
-using Valve.VR;
 using System.IO;
+using UnityEngine;
 
 namespace Valve.VR
 {

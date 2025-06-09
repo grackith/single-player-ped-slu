@@ -1,7 +1,6 @@
 // OPTION 1: CONSOLIDATED SOLUTION
 // I recommend using this consolidated script that combines the best of both approaches
 
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TurnTheGameOn.SimpleTrafficSystem;

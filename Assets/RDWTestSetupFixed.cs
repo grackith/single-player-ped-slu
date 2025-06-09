@@ -1,7 +1,6 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
-using System.Collections.Generic;
 
 [RequireComponent(typeof(GlobalConfiguration))]
 public class RDWTestSetupFixed : MonoBehaviour

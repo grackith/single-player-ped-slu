@@ -1,7 +1,5 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
-using System.Collections.Generic;
 
 public abstract class Resetter : MonoBehaviour
 {
@@ -31,7 +29,7 @@ public abstract class Resetter : MonoBehaviour
     [HideInInspector]
     public Vector2 targetDir; // the target direction we want user to face when the reset ends
 
-    // Also update the Awake method in your Resetter.cs base class:
+    // Also update the Awake method in   Resetter.cs base class:
 
     void Awake()
     {
@@ -71,7 +69,7 @@ public abstract class Resetter : MonoBehaviour
 
         if (resetPanel == null)
         {
-            // YOUR IMPLEMENTATION: Try to find the reset panel in the VR setup first
+            //   IMPLEMENTATION: Try to find the reset panel in the VR setup first
             Transform xrCamera = FindXRCamera();
             if (xrCamera != null)
             {
@@ -164,7 +162,7 @@ public abstract class Resetter : MonoBehaviour
             }
         }
 
-        // YOUR IMPLEMENTATION: Update the panel's parent if needed (but only if not in reset mode)
+        //   IMPLEMENTATION: Update the panel's parent if needed (but only if not in reset mode)
         if (resetPanel != null && redirectionManager?.headTransform != null && !redirectionManager.inReset)
         {
             Transform currentParent = resetPanel.transform.parent;
@@ -209,7 +207,7 @@ public abstract class Resetter : MonoBehaviour
         }
         else if (resetPanel != null)
         {
-            // YOUR IMPLEMENTATION: When not in reset mode, position normally
+            //   IMPLEMENTATION: When not in reset mode, position normally
             resetPanel.transform.localPosition = new Vector3(0, 0, 2f); // 2 meters in front
             resetPanel.transform.localRotation = Quaternion.identity;
 
@@ -221,7 +219,6 @@ public abstract class Resetter : MonoBehaviour
         }
     }
 
-    // Add this helper method to find the XR camera:
     private Transform FindXRCamera()
     {
         // Try to find the XR camera

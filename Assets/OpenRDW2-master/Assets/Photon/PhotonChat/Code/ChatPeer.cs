@@ -10,15 +10,12 @@
 
 namespace Photon.Chat
 {
-    using System;
-    using System.Diagnostics;
-    using System.Collections.Generic;
     using ExitGames.Client.Photon;
+    using System;
+    using System.Collections.Generic;
 
-    #if SUPPORTED_UNITY || NETFX_CORE
-    using Hashtable = ExitGames.Client.Photon.Hashtable;
-    using SupportClass = ExitGames.Client.Photon.SupportClass;
-    #endif
+#if SUPPORTED_UNITY || NETFX_CORE
+#endif
 
 
     /// <summary>
@@ -52,7 +49,7 @@ namespace Photon.Chat
         private void ConfigUnitySockets()
         {
             Type websocketType = null;
-            #if (UNITY_XBOXONE || UNITY_GAMECORE) && !UNITY_EDITOR
+#if (UNITY_XBOXONE || UNITY_GAMECORE) && !UNITY_EDITOR
             websocketType = Type.GetType("ExitGames.Client.Photon.SocketNativeSource, Assembly-CSharp", false);
             if (websocketType == null)
             {
@@ -66,7 +63,7 @@ namespace Photon.Chat
             {
                 this.SocketImplementationConfig[ConnectionProtocol.Udp] = websocketType;    // on Xbox, the native socket plugin supports UDP as well
             }
-            #else
+#else
             // to support WebGL export in Unity, we find and assign the SocketWebTcp class (if it's in the project).
             // alternatively class SocketWebTcp might be in the Photon3Unity3D.dll
             websocketType = Type.GetType("ExitGames.Client.Photon.SocketWebTcp, PhotonWebSocket", false);
@@ -78,7 +75,7 @@ namespace Photon.Chat
             {
                 websocketType = Type.GetType("ExitGames.Client.Photon.SocketWebTcp, Assembly-CSharp", false);
             }
-            #endif
+#endif
 
             if (websocketType != null)
             {
@@ -86,10 +83,10 @@ namespace Photon.Chat
                 this.SocketImplementationConfig[ConnectionProtocol.WebSocketSecure] = websocketType;
             }
 
-            #if NET_4_6 && (UNITY_EDITOR || !ENABLE_IL2CPP) && !NETFX_CORE
+#if NET_4_6 && (UNITY_EDITOR || !ENABLE_IL2CPP) && !NETFX_CORE
             this.SocketImplementationConfig[ConnectionProtocol.Udp] = typeof(SocketUdpAsync);
             this.SocketImplementationConfig[ConnectionProtocol.Tcp] = typeof(SocketTcpAsync);
-            #endif
+#endif
         }
 
         /// <summary>If not zero, this is used for the name server port on connect. Independent of protocol (so this better matches). Set by ChatClient.ConnectUsingSettings.</summary>
@@ -150,7 +147,7 @@ namespace Photon.Chat
 
                 if (authValues.AuthType != CustomAuthenticationType.None)
                 {
-                    opParameters[ParameterCode.ClientAuthenticationType] = (byte) authValues.AuthType;
+                    opParameters[ParameterCode.ClientAuthenticationType] = (byte)authValues.AuthType;
                     if (authValues.Token != null)
                     {
                         opParameters[ParameterCode.Secret] = authValues.Token;
@@ -245,7 +242,7 @@ namespace Photon.Chat
         private CustomAuthenticationType authType = CustomAuthenticationType.None;
 
         /// <summary>The type of authentication provider that should be used. Defaults to None (no auth whatsoever).</summary>
-        /// <remarks>Several auth providers are available and CustomAuthenticationType.Custom can be used if you build your own service.</remarks>
+        /// <remarks>Several auth providers are available and CustomAuthenticationType.Custom can be used if you build   own service.</remarks>
         public CustomAuthenticationType AuthType
         {
             get { return authType; }
@@ -346,11 +343,11 @@ namespace Photon.Chat
     /// <summary>Class for constants. Codes for parameters of Operations and Events.</summary>
     public class ParameterCode
     {
-        /// <summary>(224) Your application's ID: a name on your own Photon or a GUID on the Photon Cloud</summary>
+        /// <summary>(224)   application's ID: a name on   own Photon or a GUID on the Photon Cloud</summary>
         public const byte ApplicationId = 224;
         /// <summary>(221) Internally used to establish encryption</summary>
         public const byte Secret = 221;
-        /// <summary>(220) Version of your application</summary>
+        /// <summary>(220) Version of   application</summary>
         public const byte AppVersion = 220;
         /// <summary>(217) This key's (byte) value defines the target custom authentication type/service the client connects with. Used in OpAuthenticate</summary>
         public const byte ClientAuthenticationType = 217;
@@ -400,7 +397,7 @@ namespace Photon.Chat
         /// <summary>(32766) GameId (name) already in use (can't create another). Change name.</summary>
         public const int GameIdAlreadyExists = 0x7FFF - 1;
 
-        /// <summary>(32765) Game is full. This rarely happens when some player joined the room before your join completed.</summary>
+        /// <summary>(32765) Game is full. This rarely happens when some player joined the room before   join completed.</summary>
         public const int GameFull = 0x7FFF - 2;
 
         /// <summary>(32764) Game is closed and can't be joined. Join another game.</summary>
@@ -434,7 +431,7 @@ namespace Photon.Chat
         /// <summary>(32756) Authorization on the Photon Cloud failed because the app's subscription does not allow to use a particular region's server.</summary>
         /// <remarks>
         /// Some subscription plans for the Photon Cloud are region-bound. Servers of other regions can't be used then.
-        /// Check your master server address and compare it with your Photon Cloud Dashboard's info.
+        /// Check   master server address and compare it with   Photon Cloud Dashboard's info.
         /// https://cloud.photonengine.com/dashboard
         ///
         /// OpAuthorize is part of connection workflow but only on the Photon Cloud, this error can happen.

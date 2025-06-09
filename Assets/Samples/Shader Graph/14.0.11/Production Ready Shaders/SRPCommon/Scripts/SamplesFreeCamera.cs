@@ -3,7 +3,6 @@ using UnityEngine.InputSystem;
 #endif
 
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace UnityEngine.Rendering
 {
@@ -79,7 +78,7 @@ namespace UnityEngine.Rendering
                 .With("Left", "<Keyboard>/a")
                 //.With("Left", "<Keyboard>/leftArrow") //Used to switch Samples in the SamplesShowcase script
                 .With("Right", "<Keyboard>/d");
-                //.With("Right", "<Keyboard>/rightArrow"); //Used to switch Samples in the SamplesShowcase script
+            //.With("Right", "<Keyboard>/rightArrow"); //Used to switch Samples in the SamplesShowcase script
             speedAction.AddCompositeBinding("Dpad")
                 .With("Up", "<Keyboard>/home")
                 .With("Down", "<Keyboard>/end");

@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.IO;
+using UnityEngine;
 
 [DefaultExecutionOrder(-2000)]
 public class OpenRDWPathFixer : MonoBehaviour

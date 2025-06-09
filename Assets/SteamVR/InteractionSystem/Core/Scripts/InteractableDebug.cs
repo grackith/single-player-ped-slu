@@ -4,16 +4,14 @@
 //
 //=============================================================================
 
-using UnityEngine;
-using UnityEngine.Events;
-using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Valve.VR.InteractionSystem
 {
-	//-------------------------------------------------------------------------
-	public class InteractableDebug : MonoBehaviour
-	{
+    //-------------------------------------------------------------------------
+    public class InteractableDebug : MonoBehaviour
+    {
         [System.NonSerialized]
         public Hand attachedToHand;
 
@@ -42,8 +40,8 @@ namespace Valve.VR.InteractionSystem
             colliders = this.GetComponentsInChildren<Collider>();
         }
 
-        private void OnAttachedToHand( Hand hand )
-		{
+        private void OnAttachedToHand(Hand hand)
+        {
             attachedToHand = hand;
 
             CreateMarker(Color.green);
@@ -80,8 +78,8 @@ namespace Valve.VR.InteractionSystem
         }
 
 
-        private void OnDetachedFromHand( Hand hand )
-		{
+        private void OnDetachedFromHand(Hand hand)
+        {
             if (isThrowable)
             {
                 Vector3 velocity;
@@ -118,7 +116,7 @@ namespace Valve.VR.InteractionSystem
                     }
                 }
             }
-		}
+        }
 
         public Collider[] GetColliders()
         {

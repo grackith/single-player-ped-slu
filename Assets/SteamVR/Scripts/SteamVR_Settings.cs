@@ -1,9 +1,6 @@
 ﻿//======= Copyright (c) Valve Corporation, All rights reserved. ===============
 
 using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine.Serialization;
 
 namespace Valve.VR
@@ -52,10 +49,10 @@ namespace Valve.VR
 
         public bool activateFirstActionSetOnStart = true;
 
-        [Tooltip("This is the app key the unity editor will use to identify your application. (can be \"steam.app.[appid]\" to persist bindings between editor steam)")]
+        [Tooltip("This is the app key the unity editor will use to identify   application. (can be \"steam.app.[appid]\" to persist bindings between editor steam)")]
         public string editorAppKey;
 
-        [Tooltip("The SteamVR Plugin can automatically make sure VR is enabled in your player settings and if not, enable it.")]
+        [Tooltip("The SteamVR Plugin can automatically make sure VR is enabled in   player settings and if not, enable it.")]
         public bool autoEnableVR = true;
 
         [Space()]
@@ -191,7 +188,7 @@ SetDefaultsIfNeeded();
                 return defaultAsset;
             }
             //else //todo: this will generally fail on the first try but will try again before its an issue.
-                //Debug.LogError("[SteamVR] Could not load default hand preview prefab: " + assetName);
+            //Debug.LogError("[SteamVR] Could not load default hand preview prefab: " + assetName);
 #endif
 
             return null;

@@ -18,18 +18,13 @@
 
 namespace Photon.Realtime
 {
-    using System;
-    using System.Collections;
     using System.Collections.Generic;
-    using ExitGames.Client.Photon;
 
-    #if SUPPORTED_UNITY
-    using UnityEngine;
-    #endif
-    #if SUPPORTED_UNITY || NETFX_CORE
+#if SUPPORTED_UNITY
+#endif
+#if SUPPORTED_UNITY || NETFX_CORE
     using Hashtable = ExitGames.Client.Photon.Hashtable;
-    using SupportClass = ExitGames.Client.Photon.SupportClass;
-    #endif
+#endif
 
 
     /// <summary>
@@ -251,7 +246,7 @@ namespace Photon.Realtime
             {
                 return;
             }
-            
+
             // only remote player instances update their NickName from the properties
             if (!this.IsLocal && properties.ContainsKey(ActorProperties.PlayerName))
             {
@@ -278,7 +273,7 @@ namespace Photon.Realtime
         /// </summary>
         public override string ToString()
         {
-            return string.Format("#{0:00} '{1}'",this.ActorNumber, this.NickName);
+            return string.Format("#{0:00} '{1}'", this.ActorNumber, this.NickName);
         }
 
         /// <summary>
@@ -366,7 +361,7 @@ namespace Photon.Realtime
         /// </remarks>
         /// <param name="propertiesToSet">Hashtable of Custom Properties to be set. </param>
         /// <param name="expectedValues">If non-null, these are the property-values the server will check as condition for this update.</param>
-        /// <param name="webFlags">Defines if this SetCustomProperties-operation gets forwarded to your WebHooks. Client must be in room.</param>
+        /// <param name="webFlags">Defines if this SetCustomProperties-operation gets forwarded to   WebHooks. Client must be in room.</param>
         /// <returns>
         /// False if propertiesToSet is null or empty or have zero string keys.
         /// True in offline mode even if expectedProperties or webFlags are used.

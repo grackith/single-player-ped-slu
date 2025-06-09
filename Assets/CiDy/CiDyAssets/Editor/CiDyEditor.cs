@@ -1,13 +1,13 @@
-using UnityEngine;
-using UnityEditor;
-using System.Linq;
+using Swing.Editor;
 using System.Collections;
 using System.Collections.Generic;
-using Swing.Editor;
-using System.Threading;
-using UnityEditor.SceneManagement;
-using UnityEngine.SceneManagement;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 #if VEGETATION_STUDIO || VEGETATION_STUDIO_PRO
     using AwesomeTechnologies.VegetationSystem.Biomes;
@@ -111,16 +111,19 @@ namespace CiDy
         {
             //Debug.Log("Mode State Changed: " + state);
             //Re-Graph CiDy Cell Graph
-            if (graph == null) {
+            if (graph == null)
+            {
                 InitializeGraph();
             }
 
             //Entering Edit Mode?
-            if ((state == PlayModeStateChange.ExitingPlayMode || state == PlayModeStateChange.EnteredEditMode) && !enterEditMode) {
+            if ((state == PlayModeStateChange.ExitingPlayMode || state == PlayModeStateChange.EnteredEditMode) && !enterEditMode)
+            {
                 enterEditMode = true;
                 //Enter Edit Mode
                 ResetColliders();
-            } else if ((state == PlayModeStateChange.ExitingEditMode || state == PlayModeStateChange.EnteredPlayMode) && enterEditMode)
+            }
+            else if ((state == PlayModeStateChange.ExitingEditMode || state == PlayModeStateChange.EnteredPlayMode) && enterEditMode)
             {
                 enterEditMode = false;
                 //Enter Play Mode
@@ -130,7 +133,8 @@ namespace CiDy
                 //Debug.Log("Saved States, Nodes: " + savedShowNodes + " Cells: " + savedShowCells);
                 //Turn off Cells and Node Colliders for Convienence
                 //Turn off Node Colliders
-                if (graph == null) {
+                if (graph == null)
+                {
                     InitializeGraph();
                 }
 
@@ -428,10 +432,12 @@ namespace CiDy
             Repaint();
         }
 
-        void InitializeGraph(bool createIt = false) {
+        void InitializeGraph(bool createIt = false)
+        {
             //Is there a Graph in the Scene?
             graph = FindObjectOfType<CiDyGraph>();//Grab the Graph
-            if (graph != null) {
+            if (graph != null)
+            {
                 //Serialize Graph object
                 graphSO = new SerializedObject(graph);
             }
@@ -482,7 +488,7 @@ namespace CiDy
             scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
             //Integrete Builtin Undo System for Variable changes
             Undo.RecordObject(this, "Changed Settings");
-            GUILayout.Label("CiDy 2, Ver. "+version, EditorStyles.boldLabel);
+            GUILayout.Label("CiDy 2, Ver. " + version, EditorStyles.boldLabel);
             EditorGUILayout.Space();
             GUILayout.Label("---Instructions---", EditorStyles.boldLabel);
             //Help Button
@@ -532,7 +538,8 @@ namespace CiDy
             GUILayout.Label("--Active Terrains (Not Editable, Use Grab All Btn)--", EditorStyles.boldLabel);
             //Update Serialized Graph if its different on display count
             SerializedProperty terrains = graphSO.FindProperty("sceneTerrains");
-            if (graph.sceneTerrains.Length != terrains.arraySize) {
+            if (graph.sceneTerrains.Length != terrains.arraySize)
+            {
                 //Update
                 graphSO = new SerializedObject(graph);
                 terrains = graphSO.FindProperty("sceneTerrains");
@@ -548,13 +555,16 @@ namespace CiDy
             {
                 clearGraph = true;
             }
-            if (GUILayout.Button(new GUIContent("Grab Terrain Heights", "Update Graph's Stored Height Data. Data is used when Laying Roads & Blending or Reseting Terrain"))) {
+            if (GUILayout.Button(new GUIContent("Grab Terrain Heights", "Update Graph's Stored Height Data. Data is used when Laying Roads & Blending or Reseting Terrain")))
+            {
                 grabHeights = true;
             }
-            if (GUILayout.Button(new GUIContent("Grab Terrain Vegetation", "Update Graph's Stored Vegetation Data. Data is used when Blending or Reseting Terrain"))) {
+            if (GUILayout.Button(new GUIContent("Grab Terrain Vegetation", "Update Graph's Stored Vegetation Data. Data is used when Blending or Reseting Terrain")))
+            {
                 grabVegitation = true;
             }
-            if (GUILayout.Button(new GUIContent("Reset Terrain to Saved Data", "Return Terrain Heights & Vegetation to Graph's Stored Values"))) {
+            if (GUILayout.Button(new GUIContent("Reset Terrain to Saved Data", "Return Terrain Heights & Vegetation to Graph's Stored Values")))
+            {
                 resetHeights = true;
             }
             if (GUILayout.Button(new GUIContent("Blend City to Terrain", "Performs a Blending of Terrain/s to All City Elements in Scene.")))
@@ -589,7 +599,8 @@ namespace CiDy
             {
                 grabAllTerrains = false;
                 graph.GrabOriginalHeights(true);//Grab New Terrains
-            } else
+            }
+            else
             {
                 grabAllTerrains = false;
             }
@@ -645,7 +656,7 @@ namespace CiDy
                 //Ask if they want to Save a BackUp Scene First?
                 if (!skipBackup)
                 {
-                    if (EditorUtility.DisplayDialog("Create Backup Scene?", "Do you want to Create a Backup of your Scenes & Terrains?, Will Overwrite Previous Backup", "Save Backup", "Do Not Create Backup"))
+                    if (EditorUtility.DisplayDialog("Create Backup Scene?", "Do you want to Create a Backup of   Scenes & Terrains?, Will Overwrite Previous Backup", "Save Backup", "Do Not Create Backup"))
                     {
                         //Before We Backup the Scene, We Should Check for Cross Scene Reference Issues.
                         VerifyCrossSceneReference();
@@ -662,7 +673,8 @@ namespace CiDy
                         EditorCoroutine.Start(BlendTerrain());
                     }
                 }
-                else {
+                else
+                {
                     //Skip Backup Question
                     //No Backup, But Begin Blending Terrain
                     blendTerrain = false;
@@ -687,7 +699,7 @@ namespace CiDy
             //Draw Population Module
             /*generateSideWalkPedestrians = EditorGUILayout.Toggle("Generate Pedestrians", generateSideWalkPedestrians);
 
-            if (generateSideWalkPedestrians && EditorUtility.DisplayDialog("Generate Population for your CiDy's Cells?", "Are you sure you want to Generate all Population?", "Yes", "No"))
+            if (generateSideWalkPedestrians && EditorUtility.DisplayDialog("Generate Population for   CiDy's Cells?", "Are you sure you want to Generate all Population?", "Yes", "No"))
             {
                 generateSideWalkPedestrians = false;
 
@@ -1241,8 +1253,8 @@ namespace CiDy
         {
             //Grab Current Event.
             Event e = Event.current;
-            // Do your drawing here using Handles.
-            // Do your drawing here using GUI.
+            // Do   drawing here using Handles.
+            // Do   drawing here using GUI.
             if (e.type == EventType.Repaint)
             {
                 Handles.color = Color.yellow;
@@ -2016,11 +2028,13 @@ namespace CiDy
             DirtyScene();
         }
 
-        void ResetColliders() {
+        void ResetColliders()
+        {
             //Debug.Log("Reset Colliders");
             //Turn off Cells and Node Colliders for Convienence
             //Turn off Node Colliders
-            if (graph == null) {
+            if (graph == null)
+            {
                 InitializeGraph();
             }
             if (graph)

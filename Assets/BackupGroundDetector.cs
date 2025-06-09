@@ -1,4 +1,4 @@
-// Add this class to supplement wheel collider ground detection
+
 using UnityEngine;
 
 public class BackupGroundDetector : MonoBehaviour

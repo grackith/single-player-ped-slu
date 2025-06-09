@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 // This script ensures VEPath configuration happens after RDW is initialized
 public class RDWInitializationHelper : MonoBehaviour

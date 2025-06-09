@@ -455,7 +455,7 @@ namespace CiDy
             return linePnt + lineDir * d;
         }
 
-#endregion
+        #endregion
         //This function will Destroy an Array of GameObject's
         public static void DestroySpawned(GameObject[] objectArray)
         {

@@ -34,13 +34,13 @@ Clean PUN Import (no demos)
 
 
 Server
-    Exit Games Photon can be run on your servers or you can subscribe to the Photon Cloud for managed servers.
+    Exit Games Photon can be run on   servers or you can subscribe to the Photon Cloud for managed servers.
 
     The window "Photon Unity Networking" will help you setup a Photon Cloud account.
     This service is geared towards room-based games and the server cannot be modified.
     Read more about it: https://www.photonengine.com
 
-    Alternatively, download the Server SDK and run your own Photon Server.
+    Alternatively, download the Server SDK and run   own Photon Server.
     The SDK has the binaries to run immediately but also includes the source code and projects
     for the game logic. You can use that as basis to modify and extend it.
     A 100 concurrent user license for the server is provided for free.
@@ -52,14 +52,14 @@ PUN+ Subscriptions
         • Sign in and open the Dashboard.                       https://dashboard.photonengine.com
           Use an existing Photon Cloud Account or register.
         • Select the Application/Subscription to upgrade and click "Add Coupon / PUN+".
-        • Enter your Unity Invoice Number.
+        • Enter   Unity Invoice Number.
 
         • Find the App ID on: https://dashboard.photonengine.com
-        • Find your Unity Invoice Number in the Unity AssetStore:
+        • Find   Unity Invoice Number in the Unity AssetStore:
             https://www.assetstore.unity3d.com/en/#!/account/transactions
-            Or while logged in to the Asset Store, click on your name on the top right.
-            From the drop-down select the payment method you used in your purchase.
-            Navigate to your purchase and copy the number following the "#" symbol (excluding the "#" and spaces).
+            Or while logged in to the Asset Store, click on   name on the top right.
+            From the drop-down select the payment method you used in   purchase.
+            Navigate to   purchase and copy the number following the "#" symbol (excluding the "#" and spaces).
 
 
 Important Files
@@ -72,5 +72,5 @@ Important Files
         Photon\PhotonUnityNetworking\Resources\PhotonServerSettings.asset
 
     Demos
-        All demos are in separate folders in Photon\PhotonUnityNetworking\Demos\. Delete this folder in your projects.
+        All demos are in separate folders in Photon\PhotonUnityNetworking\Demos\. Delete this folder in   projects.
         Each has a Demo<name>-Scene.

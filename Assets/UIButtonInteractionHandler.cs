@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
-using System.Collections;
 // using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 /// <summary>

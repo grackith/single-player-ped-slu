@@ -9,12 +9,8 @@
 //     * Action Source: This is a collection of cached data retrieved by calls to the underlying SteamVR Input system.
 //          Each Action Source has an inputSource that it is associated with.
 
-using UnityEngine;
-using System.Collections;
 using System;
-using Valve.VR;
-using System.Runtime.InteropServices;
-using System.Collections.Generic;
+using UnityEngine;
 
 namespace Valve.VR
 {
@@ -556,7 +552,7 @@ namespace Valve.VR
 
         public void HideOrigins()
         {
-            OpenVR.Input.ShowActionOrigins(0,0);
+            OpenVR.Input.ShowActionOrigins(0, 0);
         }
     }
 

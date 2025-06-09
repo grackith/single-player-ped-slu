@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class VECollisionController : MonoBehaviour
 {
@@ -66,7 +64,7 @@ public class VECollisionController : MonoBehaviour
                 normal = collision.contacts[0].normal;
                 verticalDis = Vector3.Dot(redirectionManager.deltaPos, normal);
 
-                // COMMENT OUT THIS LINE - it's moving your entire virtual world!
+                // COMMENT OUT THIS LINE - it's moving   entire virtual world!
                 // globalConfiguration.virtualWorld.transform.position = globalConfiguration.virtualWorld.transform.position + normal * verticalDis;
 
                 isInside = true;

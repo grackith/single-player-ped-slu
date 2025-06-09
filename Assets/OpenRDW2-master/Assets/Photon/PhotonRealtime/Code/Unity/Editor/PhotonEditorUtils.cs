@@ -28,12 +28,11 @@ namespace Photon.Realtime
     using UnityEngine;
 
     using System.IO;
-    using System.Text;
     using UnityEngine.Networking;
 
-    #if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER
     using UnityEditor.Build;
-    #endif
+#endif
 
     [InitializeOnLoad]
     public static class PhotonEditorUtils
@@ -41,13 +40,13 @@ namespace Photon.Realtime
         /// <summary>Stores a flag which tells Editor scripts if the PhotonEditor.OnProjectChanged got called since initialization.</summary>
         /// <remarks>If not, the AssetDatabase is likely not usable yet and instances of ScriptableObject can't be loaded.</remarks>
         [Obsolete("Directly check EditorApplication.isUpdating to figure out if assets are being imported at the given time.")]
-        public static bool ProjectChangedWasCalled 
+        public static bool ProjectChangedWasCalled
         {
             get
             {
                 return UnityEditor.EditorApplication.isUpdating;
             }
-        } 
+        }
 
 
         /// <summary>True if the ChatClient of the Photon Chat API is available. If so, the editor may (e.g.) show additional options in settings.</summary>
@@ -70,9 +69,9 @@ namespace Photon.Realtime
             HasVoice = Type.GetType("Photon.Voice.VoiceClient, Assembly-CSharp") != null || Type.GetType("Photon.Voice.VoiceClient, Assembly-CSharp-firstpass") != null || Type.GetType("Photon.Voice.VoiceClient, PhotonVoice.API") != null;
             HasChat = Type.GetType("Photon.Chat.ChatClient, Assembly-CSharp") != null || Type.GetType("Photon.Chat.ChatClient, Assembly-CSharp-firstpass") != null || Type.GetType("Photon.Chat.ChatClient, PhotonChat") != null;
             HasPun = Type.GetType("Photon.Pun.PhotonNetwork, Assembly-CSharp") != null || Type.GetType("Photon.Pun.PhotonNetwork, Assembly-CSharp-firstpass") != null || Type.GetType("Photon.Pun.PhotonNetwork, PhotonUnityNetworking") != null;
-            #if FUSION_WEAVER
+#if FUSION_WEAVER
             HasFusion = true;
-            #endif
+#endif
             PhotonEditorUtils.HasCheckedProducts = true;
 
             if (EditorPrefs.HasKey("DisablePun") && EditorPrefs.GetBool("DisablePun"))
@@ -83,21 +82,21 @@ namespace Photon.Realtime
             if (HasPun)
             {
                 // MOUNTING SYMBOLS
-                #if !PHOTON_UNITY_NETWORKING
+#if !PHOTON_UNITY_NETWORKING
                 AddScriptingDefineSymbolToAllBuildTargetGroups("PHOTON_UNITY_NETWORKING");
-                #endif
+#endif
 
-                #if !PUN_2_0_OR_NEWER
+#if !PUN_2_0_OR_NEWER
                 AddScriptingDefineSymbolToAllBuildTargetGroups("PUN_2_0_OR_NEWER");
-                #endif
+#endif
 
-                #if !PUN_2_OR_NEWER
+#if !PUN_2_OR_NEWER
                 AddScriptingDefineSymbolToAllBuildTargetGroups("PUN_2_OR_NEWER");
-                #endif
+#endif
 
-                #if !PUN_2_19_OR_NEWER
+#if !PUN_2_19_OR_NEWER
                 AddScriptingDefineSymbolToAllBuildTargetGroups("PUN_2_19_OR_NEWER");
-                #endif
+#endif
             }
         }
 
@@ -141,24 +140,24 @@ namespace Photon.Realtime
 
         private static string GetScriptingDefines(BuildTargetGroup group)
         {
-            #if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER
             var namedBuildTarget = NamedBuildTarget.FromBuildTargetGroup(group);
             var defineSymbolsString = PlayerSettings.GetScriptingDefineSymbols(namedBuildTarget);
-            #else
+#else
             var defineSymbolsString = PlayerSettings.GetScriptingDefineSymbolsForGroup(group);
-            #endif
+#endif
 
             return defineSymbolsString;
         }
 
         private static void SetScriptingDefines(BuildTargetGroup group, string defines)
         {
-            #if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER
             var namedBuildTarget = NamedBuildTarget.FromBuildTargetGroup(group);
             PlayerSettings.SetScriptingDefineSymbols(namedBuildTarget, defines);
-            #else
+#else
             PlayerSettings.SetScriptingDefineSymbolsForGroup(group, defines);
-            #endif
+#endif
         }
 
         /// <summary>
@@ -230,21 +229,21 @@ namespace Photon.Realtime
             return GetParent(dir.Parent.FullName, parentName);
         }
 
-		/// <summary>
-		/// Check if a GameObject is a prefab asset or part of a prefab asset, as opposed to an instance in the scene hierarchy
-		/// </summary>
-		/// <returns><c>true</c>, if a prefab asset or part of it, <c>false</c> otherwise.</returns>
-		/// <param name="go">The GameObject to check</param>
-		public static bool IsPrefab(GameObject go)
-		{
-            #if UNITY_2021_2_OR_NEWER
+        /// <summary>
+        /// Check if a GameObject is a prefab asset or part of a prefab asset, as opposed to an instance in the scene hierarchy
+        /// </summary>
+        /// <returns><c>true</c>, if a prefab asset or part of it, <c>false</c> otherwise.</returns>
+        /// <param name="go">The GameObject to check</param>
+        public static bool IsPrefab(GameObject go)
+        {
+#if UNITY_2021_2_OR_NEWER
             return UnityEditor.SceneManagement.PrefabStageUtility.GetPrefabStage(go) != null || EditorUtility.IsPersistent(go);
-            #elif UNITY_2018_3_OR_NEWER
+#elif UNITY_2018_3_OR_NEWER
             return UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetPrefabStage(go) != null || EditorUtility.IsPersistent(go);
-            #else
+#else
             return EditorUtility.IsPersistent(go);
-			#endif
-		}
+#endif
+        }
 
         //https://forum.unity.com/threads/using-unitywebrequest-in-editor-tools.397466/#post-4485181
         public static void StartCoroutine(System.Collections.IEnumerator update)
@@ -287,20 +286,20 @@ namespace Photon.Realtime
                     }
                 }
 
-                #if UNITY_2017_2_OR_NEWER
+#if UNITY_2017_2_OR_NEWER
                 yield return w.SendWebRequest();
-                #else
+#else
                 yield return w.Send();
-                #endif
+#endif
 
                 while (w.isDone == false)
                     yield return null;
 
-                #if UNITY_2020_2_OR_NEWER
+#if UNITY_2020_2_OR_NEWER
                 if (w.result == UnityWebRequest.Result.ProtocolError || w.result == UnityWebRequest.Result.ConnectionError || w.result == UnityWebRequest.Result.DataProcessingError)
-                #elif UNITY_2017_1_OR_NEWER
+#elif UNITY_2017_1_OR_NEWER
                 if (w.isNetworkError || w.isHttpError)
-                #endif
+#endif
                 {
                     if (errorCallback != null)
                     {

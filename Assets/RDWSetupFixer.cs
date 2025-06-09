@@ -1,12 +1,12 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 [RequireComponent(typeof(GlobalConfiguration))]
 public class RDWSetupFixer : MonoBehaviour
 {
     [Header("Scene References")]
-    public GameObject existingRedirectedAvatar; // Drag your Redirected Avatar here
-    public GameObject existingTrackingSpace;   // Drag your TrackingSpace0 here
+    public GameObject existingRedirectedAvatar; // Drag   Redirected Avatar here
+    public GameObject existingTrackingSpace;   // Drag   TrackingSpace0 here
 
     private GlobalConfiguration globalConfig;
 

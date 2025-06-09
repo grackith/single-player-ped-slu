@@ -140,7 +140,7 @@ namespace Photon.Pun
         }
 
         /// <summary>
-        /// Serializes the specified stream. Call this in your OnPhotonSerializeView method to send the whole recorded stream.
+        /// Serializes the specified stream. Call this in   OnPhotonSerializeView method to send the whole recorded stream.
         /// </summary>
         /// <param name="stream">The PhotonStream you receive as a parameter in OnPhotonSerializeView</param>
         public void Serialize(PhotonStream stream)
@@ -167,15 +167,15 @@ namespace Photon.Pun
         }
 
         /// <summary>
-        /// Deserializes the specified stream. Call this in your OnPhotonSerializeView method to receive the whole recorded stream.
+        /// Deserializes the specified stream. Call this in   OnPhotonSerializeView method to receive the whole recorded stream.
         /// </summary>
         /// <param name="stream">The PhotonStream you receive as a parameter in OnPhotonSerializeView</param>
         public void Deserialize(PhotonStream stream)
         {
             this.m_Objects.Clear();
 
-            this.m_SampleCount = (int) stream.ReceiveNext();
-            this.m_ObjectsPerSample = (int) stream.ReceiveNext();
+            this.m_SampleCount = (int)stream.ReceiveNext();
+            this.m_ObjectsPerSample = (int)stream.ReceiveNext();
 
             for (int i = 0; i < this.m_SampleCount * this.m_ObjectsPerSample; ++i)
             {

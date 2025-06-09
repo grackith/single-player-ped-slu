@@ -1,7 +1,6 @@
-﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 #if VEGETATION_STUDIO_PRO
 using AwesomeTechnologies;
@@ -19,7 +18,7 @@ namespace CiDy
         //Materials for Detailed Road Mesh
         public Material roadMaterial;//The Material we want to be applied to this road when its created or updated.(This doesn't Effect Road Markings)
         public Material dividerLaneMaterial;//The Material for the Divider Lane if we want.
-        public Material shoulderMaterial;//The Shoulder Material, This can also double as part of your SideWalk Material.
+        public Material shoulderMaterial;
         public bool uvsRoadSet = true;
         public bool flipStopSign = false;//If true, we spawn stop signs on opposite ends.(Left End)
         public bool crossWalksAtIntersections = true;//If true we will generate CrossWalks at intersections, If false we will not generate them.
@@ -227,13 +226,14 @@ namespace CiDy
             blendingTerrains = newBlendingTerrains.ToArray();
         }
 
-        void CheckIntegration() {
+        void CheckIntegration()
+        {
             //Simple Traffic System
-            #if SimpleTrafficSystem
-                        stsActive = true;
-            #elif !SimpleTrafficSystem
+#if SimpleTrafficSystem
+            stsActive = true;
+#elif !SimpleTrafficSystem
                 stsActive = false;
-            #endif
+#endif
         }
 
         void CreateRenderer()
@@ -268,7 +268,8 @@ namespace CiDy
             GrabTrafficLightPrefab();
         }
 
-        void GrabTrafficLightPrefab() {
+        void GrabTrafficLightPrefab()
+        {
             //Debug.Log("Grab Traffic Light Prefab");
             //Set LightType
             curLightType = lightType;
@@ -1186,7 +1187,7 @@ namespace CiDy
                             //Calculate forward
                             fwd = (roadMesh.vertices[2] - roadMesh.vertices[0]).normalized;
                             fwd.y = 0;
-                            sign.transform.position = (roadMesh.vertices[1] + (-rightDir)) + (Vector3.up * 0.1618f)+(fwd*1.618f);
+                            sign.transform.position = (roadMesh.vertices[1] + (-rightDir)) + (Vector3.up * 0.1618f) + (fwd * 1.618f);
                             sign.transform.parent = transform;
                             nxt = (roadMesh.vertices[1] + (fwd * 2)) + (-rightDir) + (Vector3.up * 0.1618f);
                             sign.transform.LookAt(nxt, Vector3.up);
@@ -1211,7 +1212,7 @@ namespace CiDy
                             //Calculate Forward
                             fwd = (roadMesh.vertices[2] - roadMesh.vertices[0]).normalized;
                             fwd.y = 0;
-                            sign.transform.position = (roadMesh.vertices[0] + rightDir + (Vector3.up * 0.1618f))+(fwd * 1.618f);
+                            sign.transform.position = (roadMesh.vertices[0] + rightDir + (Vector3.up * 0.1618f)) + (fwd * 1.618f);
                             sign.transform.parent = transform;
                             nxt = (roadMesh.vertices[0] + (fwd * 2)) + (rightDir + (Vector3.up * 0.1618f));
                             sign.transform.LookAt(nxt, Vector3.up);
@@ -1285,12 +1286,14 @@ namespace CiDy
         }
 
         //Clear Traffic Routes
-        public void ClearRoutes() {
+        public void ClearRoutes()
+        {
             leftRoutes = new CiDyRouteData();
             rightRoutes = new CiDyRouteData();
         }
 
-        public void ClearNewRoutes() {
+        public void ClearNewRoutes()
+        {
             //Clear Prevoius Connections that were generated as they may no longer be valid.
             for (int j = 0; j < leftRoutes.routes.Count; j++)
             {
@@ -1303,7 +1306,8 @@ namespace CiDy
         }
 
         //Generates Traffic Lines for 
-        public void GenerateTrafficLanes() {
+        public void GenerateTrafficLanes()
+        {
             //Traffic Waypoint Spacing
             //Debug.Log("Generating Traffic Lanes: ");
             //initialize Routes Data
@@ -1320,7 +1324,8 @@ namespace CiDy
             bool intersectionAtB = false;//Initialize
             bool continuedAtA = false;
             bool continuedAtB = false;
-            if (nodeA.type == CiDyNode.IntersectionType.tConnect) {
+            if (nodeA.type == CiDyNode.IntersectionType.tConnect)
+            {
                 intersectionAtA = true;
             }
             if (nodeA.type == CiDyNode.IntersectionType.continuedSection)
@@ -1362,12 +1367,14 @@ namespace CiDy
                         //Now push second to last to 2 meter spacing
                         newRoute.waypoints[newRoute.waypoints.Count - 2] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * lastPointStopSpacing;
                     }
-                    else if (continuedAtA) {
+                    else if (continuedAtA)
+                    {
                         //Push the Last point 3.6576f back(That is size of CrossWalk
                         newRoute.waypoints[newRoute.waypoints.Count - 1] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * 1.6f;
                     }
                 }
-                else if (graph.globalLeftHandTraffic) {
+                else if (graph.globalLeftHandTraffic)
+                {
                     if (intersectionAtB)
                     {
                         //Push the Last point 3.6576f back(That is size of CrossWalk
@@ -1416,7 +1423,8 @@ namespace CiDy
                                 //Now push second to last to 1 meter spacing
                                 newRoute.waypoints[newRoute.waypoints.Count - 2] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * lastPointStopSpacing;
                             }
-                            else if (continuedAtB) {
+                            else if (continuedAtB)
+                            {
                                 //Push the Last point 3.6576f back(That is size of CrossWalk
                                 newRoute.waypoints[newRoute.waypoints.Count - 1] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * 1.6f;
                             }
@@ -1430,7 +1438,8 @@ namespace CiDy
                                 //Now push second to last to 1 meter spacing
                                 newRoute.waypoints[newRoute.waypoints.Count - 2] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * lastPointStopSpacing;
                             }
-                            else if (continuedAtA) {
+                            else if (continuedAtA)
+                            {
                                 //Push the Last point 3.6576f back(That is size of CrossWalk
                                 newRoute.waypoints[newRoute.waypoints.Count - 1] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * 1.6f;
                             }
@@ -1461,7 +1470,8 @@ namespace CiDy
                                 //Now push second to last to 1 meter spacing
                                 newRoute.waypoints[newRoute.waypoints.Count - 2] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * lastPointStopSpacing;
                             }
-                            else if (continuedAtB) {
+                            else if (continuedAtB)
+                            {
                                 //Push the Last point 3.6576f back(That is size of CrossWalk
                                 newRoute.waypoints[newRoute.waypoints.Count - 1] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * 1.6f;
                             }
@@ -1475,7 +1485,8 @@ namespace CiDy
                                 //Now push second to last to 1 meter spacing
                                 newRoute.waypoints[newRoute.waypoints.Count - 2] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * lastPointStopSpacing;
                             }
-                            else if (continuedAtA) {
+                            else if (continuedAtA)
+                            {
                                 //Push the Last point 3.6576f back(That is size of CrossWalk
                                 newRoute.waypoints[newRoute.waypoints.Count - 1] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * 1.6f;
                             }
@@ -1500,7 +1511,8 @@ namespace CiDy
                     //Now push second to last to 1 meter spacing
                     newRoute.waypoints[newRoute.waypoints.Count - 2] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * lastPointStopSpacing;
                 }
-                else if (continuedAtB) {
+                else if (continuedAtB)
+                {
                     //Push the Last point 3.6576f back(That is size of CrossWalk)
                     Vector3 reverseDir = (newRoute.waypoints[newRoute.waypoints.Count - 2] - newRoute.waypoints[newRoute.waypoints.Count - 1]).normalized;
                     newRoute.waypoints[newRoute.waypoints.Count - 1] = newRoute.waypoints[newRoute.waypoints.Count - 1] + reverseDir * 1.6f;
@@ -1677,14 +1689,15 @@ namespace CiDy
             intersectionRoutes = new List<CiDyIntersectionRoute>(0);
         }
 
-        public void Clear() {
+        public void Clear()
+        {
             routes = new List<CiDyRoute>(0);
             intersectionRoutes = new List<CiDyIntersectionRoute>(0);
         }
 
         public void ClearNewRoutes()
         {
-            for(int i = 0; i < routes.Count; i++)
+            for (int i = 0; i < routes.Count; i++)
             {
                 routes[i].ClearNewRoutes();
             }
@@ -1722,7 +1735,8 @@ namespace CiDy
             newRoutePoints = new List<Vector3>(0);
         }
 
-        public void Clear() {
+        public void Clear()
+        {
             waypoints = new List<Vector3>(0);
             newRoutePoints = new List<Vector3>(0);
         }
@@ -1743,7 +1757,8 @@ namespace CiDy
         public Transform light; // light that will control this route
         public int sequenceIndex; // determines which routes are active in a AITrafficLightManager sequence together
 
-        public CiDyIntersectionRoute(int sequenceId,int routeId, Vector3[] routeList, Vector3 finalPoint, Transform trafficLightHolder) {
+        public CiDyIntersectionRoute(int sequenceId, int routeId, Vector3[] routeList, Vector3 finalPoint, Transform trafficLightHolder)
+        {
             sequenceIndex = sequenceId;
             route = new CiDyRoute(routeId);
             route.waypoints = routeList.ToList();

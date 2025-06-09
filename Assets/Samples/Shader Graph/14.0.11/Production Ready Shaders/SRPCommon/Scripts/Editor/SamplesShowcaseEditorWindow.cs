@@ -1,17 +1,14 @@
-using System.Collections.Generic;
 using UnityEditor;
-using UnityEngine;
-using UnityEngine.UIElements;
+using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
 using UnityEngine.SceneManagement;
-using UnityEditor.SceneManagement;
-using System.Reflection;
+using UnityEngine.UIElements;
 
 
 public class PRSSamplesWindow : EditorWindow
 {
-     [InitializeOnLoadMethod]
-    static void Init() 
+    [InitializeOnLoadMethod]
+    static void Init()
     {
         EditorSceneManager.sceneOpened += SceneOpened;
     }
@@ -29,11 +26,11 @@ public class PRSSamplesWindow : EditorWindow
         return window;
     }
 
-    void CreateGUI () 
+    void CreateGUI()
     {
-         UpdateSamplesWindow();
+        UpdateSamplesWindow();
     }
-  
+
     private void UpdateSamplesWindow()
     {
         VisualElement root = rootVisualElement;
@@ -50,23 +47,23 @@ public class PRSSamplesWindow : EditorWindow
         }
     }
 
-void HideOpenWindowButton()
-{
-    VisualElement root = rootVisualElement;
-    if(root !=null)
+    void HideOpenWindowButton()
     {
-        var OpenInWindowButton =  root.Q<Button>(name = "OpenInWindowButton");
-        if(OpenInWindowButton !=null)
-       { 
-            OpenInWindowButton.style.display = DisplayStyle.None;
-       }
+        VisualElement root = rootVisualElement;
+        if (root != null)
+        {
+            var OpenInWindowButton = root.Q<Button>(name = "OpenInWindowButton");
+            if (OpenInWindowButton != null)
+            {
+                OpenInWindowButton.style.display = DisplayStyle.None;
+            }
+        }
     }
-}
 
-void OnGUI()
-{
-    HideOpenWindowButton();
-}
+    void OnGUI()
+    {
+        HideOpenWindowButton();
+    }
 
 
 }

@@ -4,7 +4,7 @@ using UnityEditor;
 
 /// <summary>
 /// Adds the given define symbols to PlayerSettings define symbols.
-/// Just add your own define symbols to the Symbols property at the below.
+/// Just add   own define symbols to the Symbols property at the below.
 /// </summary>
 [InitializeOnLoad]
 public class Editor_STSScriptingDefine : Editor

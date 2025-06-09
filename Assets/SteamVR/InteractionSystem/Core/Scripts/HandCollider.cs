@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Valve.VR.InteractionSystem
 {
@@ -269,7 +267,7 @@ namespace Valve.VR.InteractionSystem
 
             float energy = collision.relativeVelocity.magnitude;
 
-            if(energy > minCollisionEnergy && Time.time - lastCollisionHapticsTime > minCollisionHapticsTime)
+            if (energy > minCollisionEnergy && Time.time - lastCollisionHapticsTime > minCollisionHapticsTime)
             {
                 lastCollisionHapticsTime = Time.time;
 

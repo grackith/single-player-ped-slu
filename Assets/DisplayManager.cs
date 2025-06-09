@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 public class DisplayManager : MonoBehaviour
 {
@@ -55,7 +54,7 @@ public class DisplayManager : MonoBehaviour
         Canvas.ForceUpdateCanvases();
     }
 
-    // Add this to ensure settings persist during updates
+
     void OnEnable()
     {
         if (canvas && uiCamera)
@@ -65,6 +64,6 @@ public class DisplayManager : MonoBehaviour
         }
     }
 
-    // Add this to log when we enter play mode
-    
+
+
 }

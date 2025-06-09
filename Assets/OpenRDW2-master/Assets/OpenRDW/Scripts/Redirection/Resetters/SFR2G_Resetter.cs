@@ -1,6 +1,5 @@
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 // Proposed by: A general reactive algorithm for redirected walking using artificial potential functions
 // https://www.jeraldthomas.com/static/publications/thomas2019general.pdf

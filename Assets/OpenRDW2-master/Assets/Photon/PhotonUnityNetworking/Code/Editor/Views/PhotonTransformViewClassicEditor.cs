@@ -35,7 +35,7 @@ namespace Photon.Pun
             "Choose between synchronizing the value directly (by disabling interpolation) or smoothly move it towards the newest update.";
 
         private const string INTERPOLATE_HELP =
-            "You can use interpolation to smoothly move your GameObject towards a new position that is received via the network. "
+            "You can use interpolation to smoothly move   GameObject towards a new position that is received via the network. "
             + "This helps to reduce the stuttering movement that results because the network updates only arrive 10 times per second.\n"
             + "As a side effect, the GameObject is always lagging behind the actual position a little bit. This can be addressed with extrapolation.";
 
@@ -132,9 +132,9 @@ namespace Photon.Pun
                 case PhotonTransformViewPositionModel.InterpolateOptions.Lerp:
                     containerHeight += EDITOR_LINE_HEIGHT;
                     break;
-                /*case PhotonTransformViewPositionModel.InterpolateOptions.MoveTowardsComplex:
-                    containerHeight += EDITOR_LINE_HEIGHT*3;
-                    break;*/
+                    /*case PhotonTransformViewPositionModel.InterpolateOptions.MoveTowardsComplex:
+                        containerHeight += EDITOR_LINE_HEIGHT*3;
+                        break;*/
             }
 
             if (extrapolateOption != PhotonTransformViewPositionModel.ExtrapolateOptions.Disabled)
@@ -274,25 +274,25 @@ namespace Photon.Pun
                     propertyRect.y += EDITOR_LINE_HEIGHT;
                     break;
 
-                /*case PhotonTransformViewPositionModel.InterpolateOptions.MoveTowardsComplex:
-                    Rect curveRect = new Rect(propertyRect.xMin, propertyRect.yMin, propertyRect.width - 100, propertyRect.height);
-                    EditorGUI.PropertyField(curveRect, serializedObject.FindProperty("m_PositionModel.InterpolateSpeedCurve"), new GUIContent("MoveTowards Speed Curve"));
-    
-                    Rect labelRect = new Rect(propertyRect.xMax - 95, propertyRect.yMin, 10, propertyRect.height);
-                    GUI.Label(labelRect, "x");
-    
-                    Rect multiplierRect = new Rect(propertyRect.xMax - 80, propertyRect.yMin, 80, propertyRect.height);
-                    EditorGUI.PropertyField(multiplierRect, serializedObject.FindProperty("m_PositionModel.InterpolateMoveTowardsSpeed"), GUIContent.none);
-                    propertyRect.y += EDITOR_LINE_HEIGHT;
-    
-                    EditorGUI.PropertyField(propertyRect, serializedObject.FindProperty("m_PositionModel.InterpolateMoveTowardsAcceleration"),
-                        new GUIContent("Acceleration"));
-                    propertyRect.y += EDITOR_LINE_HEIGHT;
-    
-                    EditorGUI.PropertyField(propertyRect, serializedObject.FindProperty("m_PositionModel.InterpolateMoveTowardsDeceleration"),
-                        new GUIContent("Deceleration"));
-                    propertyRect.y += EDITOR_LINE_HEIGHT;
-                    break;*/
+                    /*case PhotonTransformViewPositionModel.InterpolateOptions.MoveTowardsComplex:
+                        Rect curveRect = new Rect(propertyRect.xMin, propertyRect.yMin, propertyRect.width - 100, propertyRect.height);
+                        EditorGUI.PropertyField(curveRect, serializedObject.FindProperty("m_PositionModel.InterpolateSpeedCurve"), new GUIContent("MoveTowards Speed Curve"));
+
+                        Rect labelRect = new Rect(propertyRect.xMax - 95, propertyRect.yMin, 10, propertyRect.height);
+                        GUI.Label(labelRect, "x");
+
+                        Rect multiplierRect = new Rect(propertyRect.xMax - 80, propertyRect.yMin, 80, propertyRect.height);
+                        EditorGUI.PropertyField(multiplierRect, serializedObject.FindProperty("m_PositionModel.InterpolateMoveTowardsSpeed"), GUIContent.none);
+                        propertyRect.y += EDITOR_LINE_HEIGHT;
+
+                        EditorGUI.PropertyField(propertyRect, serializedObject.FindProperty("m_PositionModel.InterpolateMoveTowardsAcceleration"),
+                            new GUIContent("Acceleration"));
+                        propertyRect.y += EDITOR_LINE_HEIGHT;
+
+                        EditorGUI.PropertyField(propertyRect, serializedObject.FindProperty("m_PositionModel.InterpolateMoveTowardsDeceleration"),
+                            new GUIContent("Deceleration"));
+                        propertyRect.y += EDITOR_LINE_HEIGHT;
+                        break;*/
             }
         }
 

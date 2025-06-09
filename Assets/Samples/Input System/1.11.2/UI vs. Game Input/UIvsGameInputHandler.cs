@@ -113,42 +113,42 @@ public class UIvsGameInputHandler : MonoBehaviour
         switch (m_State)
         {
             case State.InGame:
-            {
-                if (m_OpenMenuActionTriggered)
                 {
-                    m_State = State.InMenu;
+                    if (m_OpenMenuActionTriggered)
+                    {
+                        m_State = State.InMenu;
 
-                    // Bring up main menu.
-                    inGameUI.SetActive(false);
-                    mainMenuUI.SetActive(true);
+                        // Bring up main menu.
+                        inGameUI.SetActive(false);
+                        mainMenuUI.SetActive(true);
 
-                    // Disable gameplay inputs.
-                    playerInput.DeactivateInput();
+                        // Disable gameplay inputs.
+                        playerInput.DeactivateInput();
 
-                    // Select topmost button.
-                    EventSystem.current.SetSelectedGameObject(firstButtonInMainMenu);
-                }
+                        // Select topmost button.
+                        EventSystem.current.SetSelectedGameObject(firstButtonInMainMenu);
+                    }
 
-                var pointerIsOverUI = IsPointerOverUI();
-                if (pointerIsOverUI)
+                    var pointerIsOverUI = IsPointerOverUI();
+                    if (pointerIsOverUI)
+                        break;
+
+                    if (m_ResetCameraActionTriggered)
+                        transform.rotation = default;
+
+                    // When using a pointer-based control scheme, we engage camera look explicitly.
+                    if (m_ControlStyle != ControlStyle.GamepadJoystick && m_LookEngageAction.WasPressedThisFrame() && IsPointerInsideScreen())
+                        EngageCameraControl();
+
+                    // With gamepad/joystick, we can freely rotate the camera at any time.
+                    if (m_ControlStyle == ControlStyle.GamepadJoystick)
+                        ProcessCameraLook();
+
+                    if (m_FireActionTriggered)
+                        Fire();
+
                     break;
-
-                if (m_ResetCameraActionTriggered)
-                    transform.rotation = default;
-
-                // When using a pointer-based control scheme, we engage camera look explicitly.
-                if (m_ControlStyle != ControlStyle.GamepadJoystick && m_LookEngageAction.WasPressedThisFrame() && IsPointerInsideScreen())
-                    EngageCameraControl();
-
-                // With gamepad/joystick, we can freely rotate the camera at any time.
-                if (m_ControlStyle == ControlStyle.GamepadJoystick)
-                    ProcessCameraLook();
-
-                if (m_FireActionTriggered)
-                    Fire();
-
-                break;
-            }
+                }
 
             case State.InGameControllingCamera:
 
@@ -270,11 +270,11 @@ public class UIvsGameInputHandler : MonoBehaviour
 
     public void OnExitClicked()
     {
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         EditorApplication.ExitPlaymode();
-        #else
+#else
         Application.Quit();
-        #endif
+#endif
     }
 
     public void OnMenu(InputAction.CallbackContext context)
@@ -347,7 +347,7 @@ public class UIvsGameInputHandler : MonoBehaviour
     // callbacks above and just sets some state to leave action responses to Update().
     // The second OnFire() puts the response logic directly inside the callback.
 
-    #if false
+#if false
 
     public void OnFire(InputAction.CallbackContext context)
     {
@@ -355,7 +355,7 @@ public class UIvsGameInputHandler : MonoBehaviour
             m_FireActionTriggered = true;
     }
 
-    #else
+#else
 
     public void OnFire(InputAction.CallbackContext context)
     {
@@ -392,7 +392,7 @@ public class UIvsGameInputHandler : MonoBehaviour
     private PointerEventData m_PointerData;
     private List<RaycastResult> m_RaycastResults = new List<RaycastResult>();
 
-    #endif
+#endif
 
     private bool IsPointerOverUI()
     {
@@ -437,9 +437,9 @@ public class UIvsGameInputHandler : MonoBehaviour
         // We thus manually force a refresh. There's more elegant ways to do this but the easiest by
         // far is to just globally force a repaint of the entire editor window.
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         InternalEditorUtility.RepaintAllViews();
-        #endif
+#endif
     }
 }
 

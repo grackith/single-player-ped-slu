@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // Create this script and set its execution order to -32000 (FIRST)
-// Add it to any GameObject in your base scene
+// Add it to any GameObject in   base scene
 public class EarlyVRPhysicsSetup : MonoBehaviour
 {
     private static bool hasConfigured = false;

@@ -14,7 +14,7 @@ public class EnhancedNavAgentController : MonoBehaviour
     // NavMesh Agent references
     private NavMeshAgent agent;
     public float defaultSpeed;
-    // Add this near the top of the EnhancedNavAgentController class
+
     public float DefaultSpeed { get { return defaultSpeed; } }
     private float stuckTimer = 0f;
     private const float STUCK_TIMEOUT = 3.0f;
@@ -223,8 +223,7 @@ public class EnhancedNavAgentController : MonoBehaviour
         NavMeshHit hit;
         if (agent.SamplePathPosition(-1, 0.1f, out hit))
         {
-            // Check if we're not on the main walkable area
-            // Change "Walkable" to whatever your main area is named
+
             bool onLinkNow = hit.mask != 1 << NavMesh.GetAreaFromName("Walkable");
 
             if (onLinkNow && !isOnLink)

@@ -1,8 +1,8 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
-    using UnityEditor;
     using System.Collections.Generic;
+    using UnityEditor;
+    using UnityEngine;
 
     [CustomEditor(typeof(SplineRouteCreator))]
     public class Editor_SplineRouteCreator : Editor
@@ -51,7 +51,7 @@
                         DestroyImmediate(oldCPs[i].gameObject);
                     }
                 }
-                
+
                 EditorGUILayout.HelpBox("Shift + Left Click    in scene view on a Collider to add new points to the route", MessageType.None);
                 EditorGUILayout.HelpBox("Shift + Ctrl + Left Click    in scene view on a Collider to add new points to the route", MessageType.None);
 

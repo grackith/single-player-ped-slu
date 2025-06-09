@@ -87,7 +87,7 @@ public class RDWPositionFixer : MonoBehaviour
             var virtualWorld = GameObject.Find("CiDyGraph") ?? GameObject.Find("VirtualWorld");
             if (virtualWorld != null && transform.position == Vector3.zero)
             {
-                Debug.Log("Tip: Position your RDW GameObject near your virtual world for better visualization");
+                Debug.Log("Tip: Position   RDW GameObject near   virtual world for better visualization");
             }
         }
     }

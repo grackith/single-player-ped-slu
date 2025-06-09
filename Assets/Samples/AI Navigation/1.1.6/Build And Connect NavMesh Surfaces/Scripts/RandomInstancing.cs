@@ -1,6 +1,5 @@
-using System.Collections;
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.AI;
 
 namespace Unity.AI.Navigation.Samples

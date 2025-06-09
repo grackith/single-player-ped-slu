@@ -1,11 +1,8 @@
 ﻿//======= Copyright (c) Valve Corporation, All rights reserved. ===============
 
-using UnityEngine;
-using System.Collections;
 using System;
-using Valve.VR;
 using System.Runtime.InteropServices;
-using System.Collections.Generic;
+using UnityEngine;
 
 namespace Valve.VR
 {
@@ -295,8 +292,8 @@ namespace Valve.VR
 
             if (actionData_size == 0)
                 actionData_size = (uint)Marshal.SizeOf(typeof(InputAnalogActionData_t));
-        } 
-        
+        }
+
         /// <summary>
         /// Removes all listeners, useful for dispose pattern
         /// </summary>

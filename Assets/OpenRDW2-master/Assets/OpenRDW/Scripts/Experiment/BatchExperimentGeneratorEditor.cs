@@ -1,7 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
-using System.IO;
 
 [CustomEditor(typeof(BatchExperimentGenerator))]
 public class BatchExperimentGeneratorEditor : Editor

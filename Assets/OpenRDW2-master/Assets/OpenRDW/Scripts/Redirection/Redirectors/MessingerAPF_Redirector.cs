@@ -6,9 +6,8 @@
 // Multi-user redirected walking and resetting using artificial potential fields
 // https://www.cs.purdue.edu/cgvlab/courses/490590VR/notes/VRLocomotion/MultiuserRedirectedWalking/APFRedirectedWalking2019.pdf
 
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class MessingerAPF_Redirector : APF_Redirector
 {

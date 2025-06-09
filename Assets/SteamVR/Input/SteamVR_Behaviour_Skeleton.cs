@@ -3,8 +3,6 @@
 using System;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.Events;
-using Valve.VR;
 
 namespace Valve.VR
 {
@@ -975,7 +973,7 @@ namespace Valve.VR
 
             if (skeletonAction.active == false)
             {
-                Debug.LogError("<b>[SteamVR Input]</b> Please turn on your " + inputSource.ToString() + " controller and ensure SteamVR is open.", this);
+                Debug.LogError("<b>[SteamVR Input]</b> Please turn on   " + inputSource.ToString() + " controller and ensure SteamVR is open.", this);
                 return;
             }
 

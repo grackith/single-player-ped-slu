@@ -1,7 +1,6 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
-// IMPROVED VERSION of your VRWheelManager - replace your existing one
 public class VRWheelManager : MonoBehaviour
 {
     public static VRWheelManager Instance;

@@ -1,5 +1,5 @@
-using UnityEngine;
 using TurnTheGameOn.SimpleTrafficSystem;
+using UnityEngine;
 
 // Modified version that only slows cars when player is on the road
 public class AITrafficVRPlayerDetection : MonoBehaviour

@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.XR.Management;
 using UnityEngine.SceneManagement;
+using UnityEngine.XR.Management;
 
 public class XRInitializer : MonoBehaviour
 {

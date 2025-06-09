@@ -2,7 +2,7 @@
 //
 // Purpose:	CameraFade script adapted to work with SteamVR.
 //
-// Usage:	Add to your top level SteamVR_Camera (the one with ApplyDistoration
+// Usage:	Add to   top level SteamVR_Camera (the one with ApplyDistoration
 //			checked) and drag a reference to this component into SteamVR_Camera
 //			RenderComponents list.  Then call the static helper function
 //			SteamVR_Fade.Start with the desired color and duration.
@@ -20,7 +20,6 @@
 //=============================================================================
 
 using UnityEngine;
-using Valve.VR;
 
 namespace Valve.VR
 {

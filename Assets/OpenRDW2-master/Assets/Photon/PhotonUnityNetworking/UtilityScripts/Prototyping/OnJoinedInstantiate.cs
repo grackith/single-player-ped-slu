@@ -38,7 +38,7 @@ namespace Photon.Pun.UtilityScripts
 
         [HideInInspector] public List<Transform> SpawnPoints = new List<Transform>(1) { null };
 
-        [Tooltip("Add a random variance to a spawn point position. GetRandomOffset() can be overridden with your own method for producing offsets.")]
+        [Tooltip("Add a random variance to a spawn point position. GetRandomOffset() can be overridden with   own method for producing offsets.")]
         [HideInInspector] public bool UseRandomOffset = true;
 
         [Tooltip("Radius of the RandomOffset.")]
@@ -126,30 +126,30 @@ namespace Photon.Pun.UtilityScripts
 
 #if UNITY_2018_3_OR_NEWER
 
-			GameObject validated = null;
+            GameObject validated = null;
 
-			if (unvalidated != null)
-			{
+            if (unvalidated != null)
+            {
 
-				if (PrefabUtility.IsPartOfPrefabAsset(unvalidated))
-					return unvalidated;
+                if (PrefabUtility.IsPartOfPrefabAsset(unvalidated))
+                    return unvalidated;
 
-				var prefabStatus = PrefabUtility.GetPrefabInstanceStatus(unvalidated);
+                var prefabStatus = PrefabUtility.GetPrefabInstanceStatus(unvalidated);
 
-                #if UNITY_6000_0_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
                 var isValidPrefab = prefabStatus != PrefabInstanceStatus.NotAPrefab;
-                #else
-				var isValidPrefab = prefabStatus == PrefabInstanceStatus.Connected || prefabStatus == PrefabInstanceStatus.Disconnected;
-                #endif
+#else
+                var isValidPrefab = prefabStatus == PrefabInstanceStatus.Connected || prefabStatus == PrefabInstanceStatus.Disconnected;
+#endif
 
-				if (isValidPrefab)
-					validated = PrefabUtility.GetCorrespondingObjectFromSource(unvalidated) as GameObject;
-				else
-					return null;
+                if (isValidPrefab)
+                    validated = PrefabUtility.GetCorrespondingObjectFromSource(unvalidated) as GameObject;
+                else
+                    return null;
 
-				if (!PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(validated).Contains("/Resources"))
-					Debug.LogWarning("Player Prefab needs to be a Prefab in a Resource folder.");
-			}
+                if (!PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(validated).Contains("/Resources"))
+                    Debug.LogWarning("Player Prefab needs to be a Prefab in a Resource folder.");
+            }
 #else
             GameObject validated = unvalidated;
 
@@ -253,14 +253,14 @@ namespace Photon.Pun.UtilityScripts
                 spawnPos = new Vector3(0, 0, 0);
                 spawnRot = new Quaternion(0, 0, 0, 1);
             }
-            
+
             if (UseRandomOffset)
             {
                 Random.InitState((int)(Time.time * 10000));
                 spawnPos += GetRandomOffset();
             }
         }
-        
+
 
         /// <summary>
         /// Get the transform of the next SpawnPoint from the list, selected using the SpawnSequence setting. 
@@ -307,7 +307,7 @@ namespace Photon.Pun.UtilityScripts
         }
 
         /// <summary>
-        /// When UseRandomeOffset is enabled, this method is called to produce a Vector3 offset. The default implementation clamps the Y value to zero. You may override this with your own implementation.
+        /// When UseRandomeOffset is enabled, this method is called to produce a Vector3 offset. The default implementation clamps the Y value to zero. You may override this with   own implementation.
         /// </summary>
         protected virtual Vector3 GetRandomOffset()
         {
@@ -430,12 +430,12 @@ namespace Photon.Pun.UtilityScripts
                 }
 
                 EditorGUILayout.GetControlRect(false, 4);
-                
+
                 if (GUI.Button(EditorGUILayout.GetControlRect(), "Add", (GUIStyle)"minibutton"))
                     Add(list, count);
 
             }
-               
+
 
             EditorGUILayout.EndVertical();
         }
@@ -449,7 +449,7 @@ namespace Photon.Pun.UtilityScripts
             }
         }
     }
-   
+
 
 #endif
 }

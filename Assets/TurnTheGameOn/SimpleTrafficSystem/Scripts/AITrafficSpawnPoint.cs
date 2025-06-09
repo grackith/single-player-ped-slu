@@ -1,7 +1,7 @@
 ﻿namespace TurnTheGameOn.SimpleTrafficSystem
 {
-    using UnityEngine;
     using System.Collections;
+    using UnityEngine;
 
     public class AITrafficSpawnPoint : MonoBehaviour
     {
@@ -100,33 +100,33 @@
             if (IsSceneCameraCheck())
                 return;
 
-            // Your visibility logic here  
+            //   visibility logic here  
             isVisible = true;
         }
 
-//        void OnBecameInvisible()
-//        {
-//#if UNITY_EDITOR
-//            if (Camera.current != null)
-//            {
-//                if (Camera.current.name == "SceneCamera")
-//                    return;
-//            }
-//#endif
-//            isVisible = false;
-//        }
+        //        void OnBecameInvisible()
+        //        {
+        //#if UNITY_EDITOR
+        //            if (Camera.current != null)
+        //            {
+        //                if (Camera.current.name == "SceneCamera")
+        //                    return;
+        //            }
+        //#endif
+        //            isVisible = false;
+        //        }
 
-//        void OnBecameVisible()
-//        {
-//#if UNITY_EDITOR
-//            if (Camera.current != null)
-//            {
-//                if (Camera.current.name == "SceneCamera")
-//                    return;
-//            }
-//#endif
-//            isVisible = true;
-//        }
+        //        void OnBecameVisible()
+        //        {
+        //#if UNITY_EDITOR
+        //            if (Camera.current != null)
+        //            {
+        //                if (Camera.current.name == "SceneCamera")
+        //                    return;
+        //            }
+        //#endif
+        //            isVisible = true;
+        //        }
 
         private void OnTriggerEnter(Collider other)
         {

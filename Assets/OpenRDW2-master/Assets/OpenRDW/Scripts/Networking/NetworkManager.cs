@@ -1,10 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using Photon.Pun;
+﻿using Photon.Pun;
 using Photon.Realtime;
-using UnityEngine.UI;
-using UnityEngine.XR;
+using UnityEngine;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -73,8 +69,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     }
     // Start is called before the first frame update
     void Start()
-    {        
-        ConnectToServer();        
+    {
+        ConnectToServer();
     }
 
     // Update is called once per frame
@@ -84,8 +80,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             return;
         if (!globalConfiguration.readyToStart)
             return;
-        if (playerHead != null) {
-            if (thisAvatarNetworkingTransform != null) {
+        if (playerHead != null)
+        {
+            if (thisAvatarNetworkingTransform != null)
+            {
                 var spAngle = playerHead.eulerAngles;
                 var spPos = playerHead.position;
                 virtualTransform.eulerAngles = new Vector3(0, spAngle.y, 0);
@@ -97,7 +95,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
             var redirectedAvatars = globalConfiguration.redirectedAvatars;
 
-        }        
+        }
     }
 
     private void ConnectToServer()
@@ -124,18 +122,18 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     }
     public override void OnJoinedRoom()
     {
-        Debug.Log("Joined the room");        
+        Debug.Log("Joined the room");
         thisAvatarNetworkingTransform = PhotonNetwork.Instantiate(avatarNetworkingTransformPrefab.name, Vector3.zero, Quaternion.identity);
         thisAvatarNetworkingTransform.name = avatarNetworkingTransformPrefab.name + avatarId;
         thisAvatarNetworkingTransform.GetComponent<AvatarInfoForNetworking>().avatarId = avatarId;//synchronize avatarId
         Debug.Log("Create avatarNetworkingTransformPrefab");
         realTransform = thisAvatarNetworkingTransform.transform.Find("Real");
-        virtualTransform = thisAvatarNetworkingTransform.transform.Find("Virtual");     
+        virtualTransform = thisAvatarNetworkingTransform.transform.Find("Virtual");
 
         base.OnJoinedRoom();
     }
     public override void OnLeftRoom()
-    {        
+    {
         PhotonNetwork.Destroy(thisAvatarNetworkingTransform);
         Debug.Log("OnLeftRoom");
         base.OnLeftRoom();

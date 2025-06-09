@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Component to ensure tracking space is created properly before RedirectionManager setup
-/// Drag onto the same GameObject as your GlobalConfiguration
+/// Drag onto the same GameObject as   GlobalConfiguration
 /// </summary>
 public class TrackingSpaceHelper : MonoBehaviour
 {
@@ -64,15 +64,15 @@ public class TrackingSpaceHelper : MonoBehaviour
         Invoke("InitializeTrackingSpace", 0.5f);
     }
 
-   
+
 
     public void InitializeTrackingSpace()
     {
         if (verbose) Debug.Log("=== TRACKING SPACE HELPER: INITIALIZATION STARTING ===");
 
         // CRITICAL: Hard-code the exact dimensions needed for the physical space
-        float actualWidth = 5.0f;   // Your exactly specified width
-        float actualLength = 13.5f; // Your exactly specified length
+        float actualWidth = 5.0f;   //   exactly specified width
+        float actualLength = 13.5f; //   exactly specified length
 
         if (convertFromFeetToMeters)
         {

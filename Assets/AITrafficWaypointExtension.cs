@@ -1,4 +1,3 @@
-using UnityEngine;
 using TurnTheGameOn.SimpleTrafficSystem;
 
 // Extension methods for AITrafficWaypoint

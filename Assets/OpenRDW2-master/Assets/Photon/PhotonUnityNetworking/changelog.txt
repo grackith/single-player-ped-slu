@@ -135,14 +135,14 @@ v2.30 (13. April 2021)
 Changed: When the PhotonView.ControllerActorNumber should be set to 0, it now sets the backing field to the Master Client's actorNumber instead. This prevents misunderstandings when updates are sent with the Master Client's actual actorNumber
 Changed: Setting the PhotonView.ControllerActorNumber will now refresh the Controller in all cases. This makes sure that (e.g.) scene objects get a Controller value OnJoinedRoom (they might exist before a room is joined).
 Updated: EventSystemSpawner to log an error and pause the execution, if only the new input system is being used. The PUN demos are not compatible with it unless you set Active Input Handling to "Both".
-Note: Only the PUN demos are incompatible with the new input system. PUN itself is not affected. As the demos are in separate folders, you can easily delete all of them and use the new input system in your project.
+Note: Only the PUN demos are incompatible with the new input system. PUN itself is not affected. As the demos are in separate folders, you can easily delete all of them and use the new input system in   project.
 Updated: Realtime API to 4.1.5.4, preventing several error cases.
 
 v2.29 (15. March 2021)
 Updated: Minimum supported Unity version to 2018.4.x. We develop PUN 2 in Unity 2018.4.22 from now on. Also the language compatibility level '.Net 4.x' or '.Net Standard 2.0' is now expected.
 Updated: Export settings for the dlls in Assets\PhotonLibs. All platforms will use .Net Standard 2.0, except the UWP export with .Net Runtime (which uses Metro with a placeholder being the lib in PhotonLibs\).
 Removed: Setting of protocol 1.6 when connecting directly to a Master Server. This was a workaround for older Photon Server SDKs.
-Note: If you host Photon yourself, you can set the LoadBalancingClient.SerializationProtocol to SerializationProtocol.GpBinaryV16, before you connect.
+Note: If you host Photon  self, you can set the LoadBalancingClient.SerializationProtocol to SerializationProtocol.GpBinaryV16, before you connect.
 Added: IPunOwnershipCallbacks.OnOwnershipTransferFailed. This helps react when an Ownership Transfer request failed (due to earlier changes). This might mean you have to implement OnOwnershipTransferFailed in some scripts.
 Changed: PhotonView OwnerActorNr and ControllerActorNr to make use of the new Room.GetPlayer() option (to get the Master Client instance if the owner/controller is set to 0).
 Fixed: The PhotonView's "Find" button was not saving the observed components in scenes, which meant the script wasn't called at runtime.
@@ -297,7 +297,7 @@ Added: Proxy setup for WebSocket connections. To actually use the proxy settings
 Fixed: WebSocketTcp to call peerBase.OnConnect(), as expected by all IPhotonSockets.
 Changed: Error messages for RPC issues. Not found, parameters and too many components implementing them. Now uses GO as context (click the Editor log entry to highlight the exact target object).
 Changed: OnJoinedInstantiate component to add more features. It now checks Player.HasRejoined to decide if the local player needs to instantiate networked objects or if that was done before.
-Update: The link.xml to also cover the client lib namespace ExitGames.Client.Photon. If Unity fails to run a build with the error that some default constructor is missing, move the link.xml to your project root (or merge with yours). This avoids too much code stripping in IL2CPP builds.
+Update: The link.xml to also cover the client lib namespace ExitGames.Client.Photon. If Unity fails to run a build with the error that some default constructor is missing, move the link.xml to   project root (or merge with  s). This avoids too much code stripping in IL2CPP builds.
 Fixed: AccountService Context description override to go with the authentication token for third party registrations.
 Added: TrafficRecorder with sample. See TrafficRecorderSrc for docs and usage.
 Fixed: NullReferenceException in PhotonTeamsManager when accessed in Awake.
@@ -314,7 +314,7 @@ v2.18.1 (30. April 2020)
 Fixed: String serialization issue in the Photon3Unity3d.dll (v4.1.4.0). Updated to Photon3Unity3d.dll (v4.1.4.1).
 v2.18 (28. April 2020)
 Fixed: Support for Unity 2019.3. As Unity 2020 is still beta, there may be more import / build issues. Please report via mail.
-Note: We noticed upgrading projects may create more than one PhotonServerSettings file. If your AppId seems gone, look up these files and keep the one with settings.
+Note: We noticed upgrading projects may create more than one PhotonServerSettings file. If   AppId seems gone, look up these files and keep the one with settings.
 Fixed: Asteroid Demo bullet instantation uses the position sent via the rpc, instead of the current local position.
 Updated: Nicer format for the countdown utility script to avoid floating points.
 Fixed: NullReferenceExceptions in PhotonTeamsManager.OnPlayerEnteredRoom and PhotonTeamsManager.OnPlayerLeftRoom.
@@ -522,7 +522,7 @@ Fixed: The RoomOption CleanupCacheOnLeave is now correctly set per room (if set 
 Fixed: Regression during PhotoView cleanup leading to loss of viewId in OnDisable and OnDestroy calls. Now OnDisable and OnDestroy can access the viewID. Pooling the game object will set the new viewID before OnEnable is called.
 Fixed: Asteroids Demo. The cached room list now gets cleared correctly when the client joins a room / leaves the lobby.
 Added: The component "PhotonTransformViewClassic", which provides all the options (and implementation) from PUN Classic (1.xy). Use this if you want to use the options that were previously available. This component is deliberately not used by default.
-Changed: The inspector for PhotonTransformView to hint about the PhotonTransformViewClassic and using your own synchronization in general.
+Changed: The inspector for PhotonTransformView to hint about the PhotonTransformViewClassic and using   own synchronization in general.
 Changed: PUN now suppresses the compiler warning "649" on newer versions of Unity for some of our Basics Tutorial scripts. This helps us keep the used code simple and better at "teaching" PUN.
 Changed: The Realtime API no longer sends the actor properties on a rejoin. The values are known to the server and should not be updated. Set new values after rejoining the room, if that's needed.
 Fixed: Support for 2018.3 and newer prefab workflow to not show/deal the viewId field when editing a prefab.

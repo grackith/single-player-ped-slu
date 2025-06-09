@@ -1,19 +1,12 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TurnTheGameOn.SimpleTrafficSystem;
-using Unity.Collections;
-using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
-using UnityEngine.XR;
 using UnityEngine.XR.ARSubsystems;
-using UnityEngine.XR.Interaction.Toolkit;
-using static TurnTheGameOn.SimpleTrafficSystem.CiDy_STS_GeneratedContent;
 
 #if UNITY_XR_MANAGEMENT
 using UnityEngine.XR.Management;
@@ -148,7 +141,7 @@ public class ScenarioManager : MonoBehaviour
     }
 
 
-    // Helper method to get objects in DontDestroyOnLoad scene
+  
 
     private void OptimizeForVR()
     {
@@ -188,51 +181,7 @@ public class ScenarioManager : MonoBehaviour
         }
     }
 
-    private IEnumerator UpdateRDWForScenario(Scenario scenario)
-    {
-        // Find the RDW setup
-        //RDWSceneSetup rdwSetup = FindObjectOfType<RDWSceneSetup>();
-        //if (rdwSetup == null)
-        //{
-        //    Debug.LogWarning("RDWSceneSetup not found, cannot update for scenario");
-        //    yield break;
-        //}
-        //if (rdwGlobalConfiguration == null)
-        //{
-        //    rdwGlobalConfiguration = rdwSetup.globalConfig;
-        //}
 
-        if (rdwGlobalConfiguration == null || rdwGlobalConfiguration.redirectedAvatars.Count == 0)
-        {
-            Debug.LogWarning("No RDW configuration or avatars found");
-            yield break;
-        }
-
-        // Get the main redirected avatar
-        var redirectedAvatar = rdwGlobalConfiguration.redirectedAvatars[0];
-        var redirectionManager = redirectedAvatar.GetComponent<RedirectionManager>();
-        var movementManager = redirectedAvatar.GetComponent<MovementManager>();
-
-        if (redirectionManager == null || movementManager == null)
-        {
-            Debug.LogError("RedirectionManager or MovementManager not found!");
-            yield break;
-        }
-
-        if (scenario.playerStartPosition != null)
-        {
-            PositionPlayerForScenario(scenario);
-            yield return new WaitForEndOfFrame();
-
-            // Update visualization if available
-            var rm = FindObjectOfType<RedirectionManager>();
-            if (rm != null && rm.visualizationManager != null)
-            {
-                rm.visualizationManager.UpdateVisualizations();
-            }
-        }
-    }
-    // Add this helper method to ScenarioManager
     private RedirectionManager FindRedirectionManager()
     {
         if (rdwGlobalConfiguration != null &&
@@ -247,21 +196,7 @@ public class ScenarioManager : MonoBehaviour
     }
 
 
-    private GameObject FindRDWRoot()
-    {
-        GameObject rdwRoot = GameObject.Find("RDW");
-
-        if (rdwRoot != null)
-        {
-            Debug.Log($"Found RDW root: {rdwRoot.name}");
-        }
-        else
-        {
-            Debug.LogError("RDW root not found! Make sure RDWSceneSetup has initialized it.");
-        }
-
-        return rdwRoot;
-    }
+    
 
     private void Start()
     {
@@ -309,7 +244,7 @@ public class ScenarioManager : MonoBehaviour
         }
         else
         {
-            // Set your exact physical dimensions
+            // Set   exact physical dimensions
             persistentRDW.physicalWidth = 8.4f;
             persistentRDW.physicalLength = 14.0f;
             Debug.Log("Set PersistentRDW dimensions to 8.4m × 14.0m");
@@ -343,39 +278,7 @@ public class ScenarioManager : MonoBehaviour
         }
     }
 
-    private IEnumerator DelayedTrackingSpaceInitialization(TrackingSpaceManager manager)
-    {
-        // Wait a short delay to allow other components to initialize
-        yield return new WaitForSeconds(0.5f);
-
-        if (manager != null)
-        {
-            // Calibrate tracking space
-            manager.CalibrateTrackingSpace();
-
-            // Create visual markers
-            manager.CreatePermanentBoundaryMarkers();
-
-            Debug.Log("Initialized tracking space using TrackingSpaceManager");
-        }
-    }
-
-    private IEnumerator DelayedPersistentRDWInitialization(PersistentRDW rdw)
-    {
-        // Wait a short delay to allow other components to initialize
-        yield return new WaitForSeconds(0.5f);
-
-        if (rdw != null)
-        {
-            // Calibrate tracking space
-            rdw.CalibrateTrackingSpace();
-
-            // Create corner markers
-            rdw.CreatePersistentCornerMarkers(8.4f, 14.0f);
-
-            Debug.Log("Initialized tracking space using PersistentRDW");
-        }
-    }
+    
     private void EnsureManagerSceneIsLoaded()
     {
         // Check if the researcher scene (main scene) is already loaded
@@ -398,45 +301,9 @@ public class ScenarioManager : MonoBehaviour
         }
     }
 
-    //private void UpdateRDWReferencesForScene()
-    //{
-    //    if (!isRDWInitialized || rdwGlobalConfiguration == null) return;
+ 
 
-    //    // Update camera references
-    //    if (rdwGlobalConfiguration.redirectedAvatars != null)
-    //    {
-    //        foreach (var avatar in rdwGlobalConfiguration.redirectedAvatars)
-    //        {
-    //            if (avatar == null) continue;
-
-    //            var rm = avatar.GetComponent<RedirectionManager>();
-    //            if (rm != null)
-    //            {
-    //                if (Camera.main != null)
-    //                {
-    //                    rm.headTransform = Camera.main.transform;
-    //                }
-
-    //                var xrOrigin = FindXROrigin();
-    //                if (xrOrigin != null)
-    //                {
-    //                    rm.xrOrigin = xrOrigin.transform;
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-
-
-    // Add this method to handle RDW initialization event
-    private void OnRDWInitialized()
-    {
-        isRDWInitialized = true;
-        Debug.Log("RDW system successfully initialized!");
-
-        // Update references for current scenario
-        //UpdateRDWReferencesForScene();
-    }
+    
 
     private void OnDestroy()
     {
@@ -483,7 +350,7 @@ public class ScenarioManager : MonoBehaviour
         StartCoroutine(TransitionToScenario(targetScenario, scenarioIndex));
     }
 
-    // Add this method to ScenarioManager class
+
     private void PositionVRPlayerAtStart(Vector3 startPosition, Vector3 forwardDirection)
     {
         GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
@@ -521,106 +388,6 @@ public class ScenarioManager : MonoBehaviour
     }
 
 
-    // Add this to your ScenarioManager.cs to run during scenario transition
-    public void RefreshScenarioRouteConnections()
-    {
-        Debug.Log("Refreshing all route connections for new scenario");
-
-        // 1. Get all scene-specific routes and cars
-        var currentSceneRoutes = FindObjectsOfType<AITrafficWaypointRoute>();
-        var currentSceneCars = FindObjectsOfType<AITrafficCar>();
-
-        Debug.Log($"Found {currentSceneRoutes.Length} routes and {currentSceneCars.Length} cars in current scene");
-
-        // 2. First make sure all routes are registered with controller
-        if (AITrafficController.Instance != null)
-        {
-            // Reregister all routes
-            AITrafficController.Instance.RegisterAllRoutesInScene();
-
-            // Re-register all spawn points
-            AITrafficController.Instance.InitializeSpawnPoints();
-        }
-
-        // 3. Disconnect all cars from previous routes
-        foreach (var car in currentSceneCars)
-        {
-            if (car == null) continue;
-
-            // Find nearest compatible route for this car
-            AITrafficWaypointRoute bestRoute = null;
-            float closestDistance = float.MaxValue;
-
-            foreach (var route in currentSceneRoutes)
-            {
-                if (route == null || !route.isRegistered) continue;
-
-                // Check if route is compatible with car's vehicle type
-                bool compatible = false;
-                foreach (var vehicleType in route.vehicleTypes)
-                {
-                    if (vehicleType == car.vehicleType)
-                    {
-                        compatible = true;
-                        break;
-                    }
-                }
-
-                if (compatible)
-                {
-                    // Find closest waypoint on this route
-                    if (route.waypointDataList != null && route.waypointDataList.Count > 0)
-                    {
-                        // Check distance to first waypoint
-                        float distance = Vector3.Distance(
-                            car.transform.position,
-                            route.waypointDataList[0]._transform.position);
-
-                        if (distance < closestDistance)
-                        {
-                            closestDistance = distance;
-                            bestRoute = route;
-                        }
-                    }
-                }
-            }
-
-            // If found a compatible route, re-register the car with it
-            if (bestRoute != null)
-            {
-                Debug.Log($"Re-assigning {car.name} to route {bestRoute.name} in current scene");
-
-                // First stop the car
-                car.StopDriving();
-
-                // Then register with new route and start again
-                car.waypointRoute = bestRoute;
-                car.RegisterCar(bestRoute);
-                car.ReinitializeRouteConnection();
-
-                car.StartDriving();
-
-                // Force controller to update its internal references
-                if (AITrafficController.Instance != null && car.assignedIndex >= 0)
-                {
-                    AITrafficController.Instance.Set_WaypointRoute(car.assignedIndex, bestRoute);
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"Could not find any compatible route for {car.name} in current scene!");
-            }
-        }
-
-        // 4. Rebuild controller data structures to ensure consistency
-        if (AITrafficController.Instance != null)
-        {
-            AITrafficController.Instance.RebuildTransformArrays();
-            AITrafficController.Instance.RebuildInternalDataStructures();
-        }
-
-    }
-
 
     /// <summary>
     /// Launch a scenario by index
@@ -636,159 +403,10 @@ public class ScenarioManager : MonoBehaviour
         LaunchScenario(scenarios[index].scenarioName);
     }
 
-    // Add this to ScenarioManager.cs
-    public void EmergencyStartTraffic()
-    {
-        Debug.Log("EMERGENCY: Attempting direct start of traffic movement");
 
-        // First disable all traffic lights
-        var lightManagers = FindObjectsOfType<AITrafficLightManager>();
-        foreach (var manager in lightManagers)
-        {
-            if (manager != null)
-            {
-                manager.enabled = false;
-            }
-        }
 
-        // Then force all traffic cars to move
-        if (AITrafficController.Instance != null)
-        {
-            AITrafficController.Instance.ForceAllCarsToMove();
-        }
 
-        // Fix any route reference issues
-        FixRouteReferences();
-    }
 
-    private void FixRouteReferences()
-    {
-        // Get all routes in current scene
-        var currentSceneRoutes = FindObjectsOfType<AITrafficWaypointRoute>();
-
-        // Create a dictionary to map route names to actual scene instances
-        Dictionary<string, AITrafficWaypointRoute> routeMap = new Dictionary<string, AITrafficWaypointRoute>();
-        foreach (var route in currentSceneRoutes)
-        {
-            // If duplicate names exist, the last one will be used
-            routeMap[route.name] = route;
-        }
-
-        // Fix all cars to use the correct scene instance of their route
-        var cars = FindObjectsOfType<AITrafficCar>();
-        foreach (var car in cars)
-        {
-            if (car.waypointRoute != null)
-            {
-                string routeName = car.waypointRoute.name;
-                if (routeMap.ContainsKey(routeName))
-                {
-                    // Assign the current scene's version of this route
-                    AITrafficWaypointRoute correctRoute = routeMap[routeName];
-
-                    // Only reassign if it's a different instance
-                    if (car.waypointRoute.GetInstanceID() != correctRoute.GetInstanceID())
-                    {
-                        Debug.Log($"Fixing route reference for {car.name}: Reassigning to current scene's {routeName}");
-                        car.waypointRoute = correctRoute;
-                        car.RegisterCar(correctRoute);
-                    }
-                }
-            }
-        }
-    }
-
-    public void EmergencyResetTrafficSystem()
-    {
-        Debug.Log("EMERGENCY: Resetting traffic system");
-
-        if (BusSpawnerSimple != null)
-        {
-            BusSpawnerSimple.Reset();
-        }
-
-        if (AITrafficController.Instance != null)
-        {
-            AITrafficController.Instance.DisposeAllNativeCollections();
-            AITrafficController.Instance.InitializeNativeLists();
-            AITrafficController.Instance.RegisterAllRoutesInScene();
-            AITrafficController.Instance.InitializeSpawnPoints();
-            AITrafficController.Instance.RebuildTransformArrays();
-            AITrafficController.Instance.RebuildInternalDataStructures();
-            AITrafficController.Instance.DirectlySpawnVehicles(20);
-        }
-
-        var lightManagers = FindObjectsOfType<AITrafficLightManager>();
-        foreach (var manager in lightManagers)
-        {
-            if (manager != null)
-            {
-                manager.ResetLightManager();
-            }
-        }
-    }
-
-    public void ForceSpawnBus()
-    {
-        Debug.Log("EMERGENCY: Force spawning bus");
-
-        if (busPrefab == null)
-        {
-            Debug.LogError("Bus prefab not assigned!");
-            return;
-        }
-
-        // Get any bus route
-        AITrafficWaypointRoute busStopRoute = null;
-        if (this.busStopRoute != null)
-        {
-            busStopRoute = this.busStopRoute;
-        }
-        else
-        {
-            // Find any route with "bus" in the name
-            var routes = FindObjectsOfType<AITrafficWaypointRoute>();
-            foreach (var route in routes)
-            {
-                if (route.name.ToLower().Contains("bus"))
-                {
-                    busStopRoute = route;
-                    break;
-                }
-            }
-        }
-
-        if (busStopRoute == null)
-        {
-            Debug.LogError("No bus route found!");
-            return;
-        }
-
-        // Get first waypoint position
-        if (busStopRoute.waypointDataList.Count == 0)
-        {
-            Debug.LogError("Bus route has no waypoints!");
-            return;
-        }
-
-        // Get spawn position
-        Vector3 spawnPos = busStopRoute.waypointDataList[0]._transform.position;
-        spawnPos.y += 1f; // Raise slightly to avoid ground collision
-
-        // Spawn the bus directly
-        GameObject busObject = Instantiate(busPrefab.gameObject, spawnPos, busStopRoute.waypointDataList[0]._transform.rotation);
-        AITrafficCar busCar = busObject.GetComponent<AITrafficCar>();
-        if (busCar != null)
-        {
-            busCar.RegisterCar(busStopRoute);
-            busCar.StartDriving();
-            Debug.Log($"Bus spawned at {spawnPos} on route {busStopRoute.name}");
-        }
-        else
-        {
-            Debug.LogError("Bus prefab doesn't have AITrafficCar component!");
-        }
-    }
 
 
 
@@ -827,8 +445,8 @@ public class ScenarioManager : MonoBehaviour
 
     // Add to ScenarioManager.cs - Numpad controls
     // Add to ScenarioManager.cs Update method
-    // Modify your ScenarioManager's Update method to handle both numpad and regular keys
-    // Modify your ScenarioManager's Update method with these alternative hotkeys
+    // Modify   ScenarioManager's Update method to handle both numpad and regular keys
+    // Modify   ScenarioManager's Update method with these alternative hotkeys
     private void Update()
     {
         if (isTransitioning) return;
@@ -917,8 +535,6 @@ public class ScenarioManager : MonoBehaviour
             }
         }
 
-
-
         // D key - Diagnostic information
         if (Input.GetKeyDown(KeyCode.D))
         {
@@ -930,12 +546,7 @@ public class ScenarioManager : MonoBehaviour
             }
         }
 
-        // Traffic system controls
-        if (Input.GetKeyDown(KeyCode.Period) || Input.GetKeyDown(KeyCode.KeypadPeriod))
-        {
-            EmergencyResetTrafficSystem();
-        }
-        else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
         {
             DebugTrafficSystem();
         }
@@ -1073,35 +684,7 @@ public class ScenarioManager : MonoBehaviour
         }
     }
 
-    //private void ExportCollectedData()
-    //{
-    //    if (dataExportHelper == null)
-    //    {
-    //        dataExportHelper = FindObjectOfType<DataExportHelper>();
-    //    }
 
-    //    if (dataExportHelper != null)
-    //    {
-    //        dataExportHelper.ExportAllData();
-    //        Debug.Log("DATA DEBUG: Export initiated");
-    //    }
-    //    else
-    //    {
-    //        Debug.Log("DATA DEBUG: No DataExportHelper found - data is already saved in accessible location");
-    //        ShowDataCollectionInfo(); // Show where files are instead
-    //    }
-    //}
-
-    // Also add this documentation method for easy reference:
-    private void LogDataDebugControls()
-    {
-        Debug.Log("=== DATA DEBUG CONTROLS ===");
-        Debug.Log("L key - Toggle recording on/off");
-        Debug.Log("K key - Force save current data");
-        Debug.Log("J key - Show data collection info");
-        Debug.Log("I key - Export data (if DataExportHelper available)");
-        Debug.Log("===========================");
-    }
 
     private void StartRDWExperiment()
     {
@@ -1146,45 +729,7 @@ public class ScenarioManager : MonoBehaviour
 
         Debug.Log("RDW experiment ended - Press 'R' to restart");
     }
-
-    private void CreateTrackingSpaceVisualizations(Transform trackingSpace)
-    {
-        // CHECK MASTER CONTROL AND LOCAL SETTING
-        if (disableScenarioManagerVisualization || !TrackingSpaceVisualizationController.ShouldShowAnyVisualization())
-        {
-            Debug.Log("ScenarioManager: Tracking space visualization disabled");
-            return;
-        }
-
-        Debug.Log("ScenarioManager: Creating tracking space visualizations (master control allows)");
-        // ... rest of existing method (only if you want ScenarioManager to create any)
-        if (trackingSpace == null) return;
-
-        // Create tracking space center indicator
-        GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        centerMarker.name = "TrackingSpaceCenter";
-        centerMarker.transform.position = trackingSpace.position + new Vector3(0, 0.01f, 0);
-        centerMarker.transform.localScale = new Vector3(0.5f, 0.02f, 0.5f);
-        centerMarker.GetComponent<Renderer>().material.color = Color.cyan;
-
-        // Create forward direction indicator
-        GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        forwardMarker.name = "ForwardDirection";
-        forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * 2f + new Vector3(0, 0.05f, 0);
-        forwardMarker.transform.rotation = trackingSpace.rotation;
-        forwardMarker.transform.localScale = new Vector3(0.2f, 0.05f, 4f);
-        forwardMarker.GetComponent<Renderer>().material.color = Color.blue;
-
-        // Create right direction indicator
-        GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightMarker.name = "RightDirection";
-        rightMarker.transform.position = trackingSpace.position + trackingSpace.right * 1f + new Vector3(0, 0.05f, 0);
-        rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
-        rightMarker.transform.localScale = new Vector3(0.2f, 0.05f, 2f);
-        rightMarker.GetComponent<Renderer>().material.color = Color.red;
-
-        Debug.Log("Created temporary tracking space visualizations");
-    }
+    
     private void ClearAllScenarioManagerVisualizations()
     {
         Debug.Log("Clearing all ScenarioManager-created visualizations");
@@ -1316,9 +861,9 @@ public class ScenarioManager : MonoBehaviour
         }
         else
         {
-            // Your original complex visualization logic (keep as fallback)
+            //   original complex visualization logic (keep as fallback)
             Debug.Log("Using ScenarioManager's original visualization system");
-            // Your original visualization code (only if NOT using VisualizationManager)
+            //   original visualization code (only if NOT using VisualizationManager)
             VisualizationManager[] visualManagers = FindObjectsOfType<VisualizationManager>();
 
             if (visualManagers.Length == 0)
@@ -1347,36 +892,14 @@ public class ScenarioManager : MonoBehaviour
         yield return null;
     }
 
-    // Add this to ScenarioManager.cs
 
-    private void ClearExistingMarkers()
-    {
-        // Find all scenario manager markers
-        var existingMarkers = FindObjectsOfType<ScenarioManagerMarker>();
-        foreach (var marker in existingMarkers)
-        {
-            if (marker != null)
-            {
-                Destroy(marker.gameObject);
-            }
-        }
-
-        // Also clear by name pattern
-        for (int i = 0; i < 10; i++)
-        {
-            GameObject marker = GameObject.Find($"ScenarioManager_Corner_{i}");
-            if (marker != null)
-            {
-                Destroy(marker);
-            }
-        }
-    }
+    
     public void ForceTrackingSpaceDimensions()
     {
         PersistentRDW persistentRDW = FindObjectOfType<PersistentRDW>();
         if (persistentRDW != null)
         {
-            // Set fixed dimensions for your physical space
+            // Set fixed dimensions for   physical space
             persistentRDW.physicalWidth = 8.4f;
             persistentRDW.physicalLength = 14.0f;
 
@@ -1412,7 +935,7 @@ public class ScenarioManager : MonoBehaviour
         }
     }
 
-    // Fixed SafeRefreshVisualization method
+
     private IEnumerator SafeRefreshVisualization(VisualizationManager vm)
     {
         try
@@ -1454,90 +977,8 @@ public class ScenarioManager : MonoBehaviour
         Debug.Log("Completed safe visualization refresh");
     }
 
-    // Fixed SafeCreateDirectionIndicators method
-    private IEnumerator SafeCreateDirectionIndicators(VisualizationManager vm)
-    {
-        if (vm.redirectionManager == null || vm.redirectionManager.trackingSpace == null)
-        {
-            Debug.LogWarning("Missing redirection manager or tracking space");
-            yield break;
-        }
 
-        Transform trackingSpace = vm.redirectionManager.trackingSpace;
 
-        // Clear existing indicators
-        GameObject existingForward = GameObject.Find("ForwardDirection");
-        if (existingForward != null)
-        {
-            try
-            {
-                Destroy(existingForward);
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Error destroying existing forward marker: {ex.Message}");
-            }
-        }
-
-        GameObject existingRight = GameObject.Find("RightDirection");
-        if (existingRight != null)
-        {
-            try
-            {
-                Destroy(existingRight);
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Error destroying existing right marker: {ex.Message}");
-            }
-        }
-
-        yield return null; // Wait a frame
-
-        try
-        {
-            // Create forward direction indicator (blue)
-            GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            forwardMarker.name = "ForwardDirection";
-            forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * 4.5f + Vector3.up * 0.05f;
-            forwardMarker.transform.rotation = trackingSpace.rotation;
-            forwardMarker.transform.localScale = new Vector3(0.2f, 0.05f, 6.0f);
-
-            Material blueMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            if (blueMaterial.shader == null)
-                blueMaterial = new Material(Shader.Find("Standard"));
-            blueMaterial.color = Color.blue;
-            forwardMarker.GetComponent<Renderer>().material = blueMaterial;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error creating forward direction indicator: {ex.Message}");
-        }
-
-        yield return null; // Wait a frame
-
-        try
-        {
-            // Create right direction indicator (red)
-            GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            rightMarker.name = "RightDirection";
-            rightMarker.transform.position = trackingSpace.position + trackingSpace.right * 1.5f + Vector3.up * 0.05f;
-            rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
-            rightMarker.transform.localScale = new Vector3(0.2f, 0.05f, 2.5f);
-
-            Material redMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            if (redMaterial.shader == null)
-                redMaterial = new Material(Shader.Find("Standard"));
-            redMaterial.color = Color.red;
-            rightMarker.GetComponent<Renderer>().material = redMaterial;
-
-            Debug.Log("Created direction indicators successfully");
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error creating right direction indicator: {ex.Message}");
-        }
-    }
 
     // Debug method to check traffic system state
     public void DebugTrafficSystem()
@@ -1650,39 +1091,7 @@ public class ScenarioManager : MonoBehaviour
         Application.Quit();
 #endif
     }
-    public void ForceRegisterAllRoutes()
-    {
-        // Find the traffic controller
-        AITrafficController controller = AITrafficController.Instance;
-        if (controller == null)
-        {
-            Debug.LogError("No AITrafficController found!");
-            return;
-        }
 
-        // Clear existing routes
-        controller.ClearRouteRegistrations();
-
-        // Find ALL waypoint routes in the scene
-        AITrafficWaypointRoute[] allRoutes = FindObjectsOfType<AITrafficWaypointRoute>(true);
-        Debug.Log($"Found {allRoutes.Length} routes in scene to register");
-
-        // Register each route
-        foreach (var route in allRoutes)
-        {
-            // Make sure the route is active
-            if (!route.gameObject.activeInHierarchy)
-                route.gameObject.SetActive(true);
-
-            // Force re-registration
-            route.RegisterRoute();
-            Debug.Log($"Registered route: {route.name}");
-        }
-
-        // Rebuild internal arrays
-        controller.RebuildTransformArrays();
-
-    }
 
     /// <summary>
     /// Toggle the visibility of the researcher UI panel
@@ -1699,53 +1108,9 @@ public class ScenarioManager : MonoBehaviour
 
     #region Scene Transition Methods
 
-    public void ExecuteHardResetAllCars()
-    {
-        Debug.Log("EMERGENCY: Performing hard reset of all traffic cars");
 
-        var cars = FindObjectsOfType<AITrafficCar>();
-        int resetCount = 0;
 
-        foreach (var car in cars)
-        {
-            if (car == null || !car.gameObject.activeInHierarchy) continue;
 
-            if (car.HardResetCarToRoute())
-            {
-                resetCount++;
-            }
-        }
-
-        Debug.Log($"Hard reset completed for {resetCount} cars");
-
-        // Force controller to rebuild its arrays
-        if (AITrafficController.Instance != null)
-        {
-            AITrafficController.Instance.RebuildTransformArrays();
-            AITrafficController.Instance.RebuildInternalDataStructures();
-        }
-    }
-
-    private bool DisableTrafficSystem()
-    {
-        try
-        {
-            if (TrafficSystemManager.Instance != null)
-            {
-                // Start coroutine but don't try to return it as a bool
-                StartCoroutine(TrafficSystemManager.Instance.DisableTrafficSystemCoroutine());
-                return true;
-            }
-            return true; // Still success if no TrafficSystemManager
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error disabling traffic system: {ex.Message}");
-            return false;
-        }
-    }
-
-    // Add this to your ScenarioManager class
     private IEnumerator TransitionTimeout(float timeoutSeconds)
     {
         yield return new WaitForSeconds(timeoutSeconds);
@@ -1763,7 +1128,7 @@ public class ScenarioManager : MonoBehaviour
         }
     }
 
-    // Modify your TransitionToScenario method
+    // Modify   TransitionToScenario method
     private IEnumerator TransitionToScenario(Scenario scenario, int index)
     {
         if (isTransitioning)
@@ -1995,271 +1360,7 @@ public class ScenarioManager : MonoBehaviour
     }
 
 
-    private IEnumerator SetupVisualizationManagerForScenario()
-    {
-        var vm = FindObjectOfType<VisualizationManager>();
-        if (vm != null)
-        {
-            // Ensure proper initialization
-            vm.EnsureInitialized();
-            yield return null;
-
-            vm.EnsureTrackingSpaces();
-            yield return null;
-
-            // Configure for below-ground reference lines
-            vm.referenceLineHeight = -0.5f; // 50cm below ground
-            vm.referenceLineWidth = 0.05f;
-            vm.referenceLineColor = new Color(1f, 0f, 0f, 0.8f); // Semi-transparent red
-            vm.showReferenceLines = true;
-            vm.showCornerMarkers = true;
-            vm.cornerMarkerSize = 0.2f;
-
-            // Update the reference lines
-            vm.UpdateReferenceLines();
-
-            Debug.Log("VisualizationManager configured for scenario");
-        }
-        else
-        {
-            Debug.LogError("No VisualizationManager found for scenario setup!");
-        }
-    }
-
-    private IEnumerator PositionPlayerWithRDW(Scenario scenario)
-    {
-        Debug.Log($"Positioning player with RDW to: {scenario.playerStartPosition.position}");
-
-        // Find the RedirectionManager
-        var redirectionManager = FindObjectOfType<RedirectionManager>();
-        if (redirectionManager == null)
-        {
-            Debug.LogError("No RedirectionManager found for scenario positioning!");
-            yield break;
-        }
-
-        // Make sure RDW is initialized
-        if (!redirectionManager.physicalSpaceCalibrated)
-        {
-            Debug.Log("RDW not calibrated - performing calibration first");
-            redirectionManager.CalibratePhysicalSpaceReference();
-            yield return new WaitForSeconds(0.5f);
-        }
-
-        // Use RDW to move player to scenario start position
-        redirectionManager.UpdateVirtualPositionForScenario(
-            scenario.playerStartPosition.position,
-            scenario.playerStartPosition.forward
-        );
-
-        Debug.Log("Player positioned for scenario using RDW");
-    }
-
-
-    // Add this helper method to keep the Simulated User aligned with XR Origin if needed
-    private void UpdateSimulatedUserPosition()
-    {
-        GameObject xrOrigin = FindXROrigin();
-        GameObject simulatedUser = GameObject.Find("Simulated User");
-
-        if (xrOrigin != null && simulatedUser != null)
-        {
-            // Only update XZ position to match XR Origin
-            simulatedUser.transform.position = new Vector3(
-                xrOrigin.transform.position.x,
-                simulatedUser.transform.position.y, // Keep original height
-                xrOrigin.transform.position.z
-            );
-
-            // Make it face the same direction as XR Origin
-            Vector3 forward = xrOrigin.transform.forward;
-            forward.y = 0;
-            if (forward != Vector3.zero)
-            {
-                simulatedUser.transform.forward = forward.normalized;
-            }
-
-            Debug.Log("Updated Simulated User position to match XR Origin");
-        }
-    }
-
-    // Add this helper method to fix hierarchy issues
-    private void FixRedirectedAvatarHierarchy()
-    {
-        GameObject redirectedAvatar = GameObject.Find("Redirected Avatar");
-        if (redirectedAvatar == null) return;
-
-        // Find TrackingSpace and ensure it's a child of Redirected Avatar
-        Transform trackingSpace = GameObject.Find("Tracking Space")?.transform;
-        if (trackingSpace != null && trackingSpace.parent != redirectedAvatar.transform)
-        {
-            Debug.Log("Fixing TrackingSpace parent");
-            trackingSpace.SetParent(redirectedAvatar.transform);
-        }
-
-        // Find Body and ensure it's a child of Redirected Avatar
-        Transform body = GameObject.Find("Body")?.transform;
-        if (body != null && body.parent != redirectedAvatar.transform)
-        {
-            Debug.Log("Fixing Body parent");
-            body.SetParent(redirectedAvatar.transform);
-        }
-
-        // Find Simulated User and ensure it's a child of Redirected Avatar
-        Transform simulatedUser = GameObject.Find("Simulated User")?.transform;
-        if (simulatedUser != null && simulatedUser.parent != redirectedAvatar.transform)
-        {
-            Debug.Log("Fixing Simulated User parent");
-            simulatedUser.SetParent(redirectedAvatar.transform);
-        }
-
-        Debug.Log("Redirected Avatar hierarchy fixed");
-    }
-
-    // NEW: Add this helper method to ensure tracking space remains visible
-    // Add this helper method to ScenarioManager.cs
-    private void ForceTrackingSpaceVisualization()
-    {
-        // Find all redirection managers in scene
-        var redirectionManagers = FindObjectsOfType<RedirectionManager>();
-        foreach (var rm in redirectionManagers)
-        {
-            if (rm != null)
-            {
-                // Toggle visualization on
-                rm.ToggleTrackingSpaceVisualization();
-
-                // Ensure it's on (in case it was already on before toggling)
-                if (rm.visualizationManager != null)
-                {
-                    rm.visualizationManager.ChangeTrackingSpaceVisibility(true);
-
-                    // Update global config setting
-                    if (rm.globalConfiguration != null)
-                    {
-                        rm.globalConfiguration.trackingSpaceVisible = true;
-                    }
-                }
-
-                Debug.Log($"Forced tracking space visualization ON for {rm.name}");
-            }
-        }
-    }
-    private IEnumerator ResetTrackingSpaceAfterTransition(Transform playerStartPosition)
-    {
-        // Wait for a few frames to ensure everything is loaded
-        yield return new WaitForSeconds(0.5f);
-
-        Debug.Log("=== PERFORMING POST-TRANSITION TRACKING SPACE RESET ===");
-
-        // Instead of the complex alignment logic here, just call the centralized method
-        if (playerStartPosition != null && persistentRDW != null)
-        {
-            // Get the road direction from the player's start position
-            Vector3 roadDirection = playerStartPosition.forward;
-            roadDirection.y = 0; // Ensure it's flat
-            roadDirection.Normalize();
-
-            // Use the centralized method
-            persistentRDW.AlignTrackingSpaceWithRoad(playerStartPosition.position, roadDirection, 5.0f, 13.5f);
-            Debug.Log("Used centralized alignment method after transition");
-        }
-        else if (persistentRDW != null)
-        {
-            // No player start position, just calibrate
-            persistentRDW.CalibrateTrackingSpace();
-        }
-
-        // Wait another moment for physics to settle
-        yield return new WaitForSeconds(0.2f);
-
-        // Log final tracking space state
-        if (rdwGlobalConfiguration != null &&
-            rdwGlobalConfiguration.physicalSpaces != null &&
-            rdwGlobalConfiguration.physicalSpaces.Count > 0)
-        {
-            // Keep the dimension verification code
-            var space = rdwGlobalConfiguration.physicalSpaces[0];
-
-            // Calculate actual dimensions
-            float minX = float.MaxValue, maxX = float.MinValue;
-            float minZ = float.MaxValue, maxZ = float.MinValue;
-
-            foreach (var point in space.trackingSpace)
-            {
-                minX = Mathf.Min(minX, point.x);
-                maxX = Mathf.Max(maxX, point.x);
-                minZ = Mathf.Min(minZ, point.y); // y in 2D is z in 3D
-                maxZ = Mathf.Max(maxZ, point.y);
-            }
-
-            float width = maxX - minX;
-            float length = maxZ - minZ;
-
-            Debug.Log($"FINAL tracking space dimensions: {width:F2}m × {length:F2}m");
-        }
-
-        Debug.Log("=== POST-TRANSITION RESET COMPLETE ===");
-    }
-
-    // NEW: Helper method to create visual markers showing tracking space orientation
-    private void CreateTrackingSpaceMarkers(RedirectionManager rm)
-    {
-        // CHECK MASTER CONTROL
-        if (!TrackingSpaceVisualizationController.ShouldShowAnyVisualization())
-        {
-            Debug.Log("ScenarioManager: Tracking space markers disabled by master control");
-            return;
-        }
-
-        Debug.Log("ScenarioManager: Creating tracking space markers (master control allows)");
-        // ... rest of existing method
-        if (rm == null || rm.trackingSpace == null || rdwGlobalConfiguration == null ||
-            rdwGlobalConfiguration.physicalSpaces == null || rdwGlobalConfiguration.physicalSpaces.Count == 0)
-            return;
-
-        var physicalSpace = rdwGlobalConfiguration.physicalSpaces[0];
-        float width = 0, length = 0;
-
-        // Calculate dimensions
-        if (physicalSpace.trackingSpace != null && physicalSpace.trackingSpace.Count >= 4)
-        {
-            float minX = float.MaxValue, maxX = float.MinValue;
-            float minZ = float.MaxValue, maxZ = float.MinValue;
-
-            foreach (var point in physicalSpace.trackingSpace)
-            {
-                minX = Mathf.Min(minX, point.x);
-                maxX = Mathf.Max(maxX, point.x);
-                minZ = Mathf.Min(minZ, point.y); // y in 2D coords is z in 3D
-                maxZ = Mathf.Max(maxZ, point.y);
-            }
-
-            width = maxX - minX;
-            length = maxZ - minZ;
-        }
-
-        // Create directional arrows
-        GameObject forwardArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        forwardArrow.name = "ForwardDirection";
-        forwardArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.forward * (length / 4) + Vector3.up * 0.05f;
-        forwardArrow.transform.rotation = rm.trackingSpace.rotation;
-        forwardArrow.transform.localScale = new Vector3(0.1f, 0.05f, 1.0f);
-        forwardArrow.GetComponent<Renderer>().material.color = Color.blue;
-
-        GameObject rightArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightArrow.name = "RightDirection";
-        rightArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.right * (width / 4) + Vector3.up * 0.05f;
-        rightArrow.transform.rotation = Quaternion.Euler(0, rm.trackingSpace.rotation.eulerAngles.y + 90, 0);
-        rightArrow.transform.localScale = new Vector3(0.1f, 0.05f, 0.5f);
-        rightArrow.GetComponent<Renderer>().material.color = Color.red;
-
-        // Clean up after 1 minute
-        Destroy(forwardArrow, 60f);
-        Destroy(rightArrow, 60f);
-
-        Debug.Log($"Created tracking space direction indicators: Blue arrow = Forward (length: {length}m), Red arrow = Right (width: {width}m)");
-    }
+    
 
     // This nested coroutine contains all the actual transition steps
 
@@ -2285,914 +1386,7 @@ public class ScenarioManager : MonoBehaviour
 
     // Step 2: Unload previous scenario (as coroutine)
     // Step 2: Unload previous scenario (as coroutine)
-    private IEnumerator UnloadPreviousScenarioCoroutine()
-    {
-        if (!currentlyLoadedScenario.IsValid() || currentlyLoadedScenario.name == "s.researcher")
-        {
-            Debug.Log("No previous scenario to unload or attempting to unload researcher scene");
-            yield break;
-        }
-
-        Debug.Log($"Unloading previous scenario: {currentlyLoadedScenario.name}");
-
-        AsyncOperation asyncUnload = SceneManager.UnloadSceneAsync(currentlyLoadedScenario);
-
-        if (asyncUnload == null)
-        {
-            Debug.LogError($"Failed to start unload operation for {currentlyLoadedScenario.name}");
-            yield break;
-        }
-
-        while (!asyncUnload.isDone)
-            yield return null;
-
-        Debug.Log($"Successfully unloaded previous scenario: {currentlyLoadedScenario.name}");
-
-        // Wait for cleanup
-        yield return new WaitForSeconds(0.3f);
-    }
-
-
-    // Step 3: Load new scenario (as coroutine)
-    private IEnumerator LoadNewScenarioCoroutine(Scenario scenario)
-    {
-        // Check if the scene exists
-        bool sceneExists = false;
-        for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
-        {
-            string scenePath = SceneUtility.GetScenePathByBuildIndex(i);
-            string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
-            if (sceneName == scenario.sceneBuildName)
-            {
-                sceneExists = true;
-                break;
-            }
-        }
-
-        if (!sceneExists)
-        {
-            Debug.LogError($"Scene '{scenario.sceneBuildName}' does not exist in build settings!");
-            yield break;
-        }
-
-        Debug.Log($"Loading scenario scene: {scenario.sceneBuildName}");
-
-        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(scenario.sceneBuildName, LoadSceneMode.Additive);
-
-        if (asyncLoad == null)
-        {
-            Debug.LogError($"Failed to start loading scene: {scenario.sceneBuildName}");
-            yield break;
-        }
-
-        asyncLoad.allowSceneActivation = true;
-
-        while (!asyncLoad.isDone)
-            yield return null;
-
-        Debug.Log($"Scene loaded: {scenario.sceneBuildName}");
-    }
-
-    // Replace your SafeLoadSceneAsync with this version
-    private IEnumerator SafeLoadSceneAsync(string sceneName, LoadSceneMode mode)
-    {
-        // Create the async operation outside try-catch
-        AsyncOperation asyncLoad = null;
-
-        try
-        {
-            // Start loading but don't activate yet
-            asyncLoad = SceneManager.LoadSceneAsync(sceneName, mode);
-            asyncLoad.allowSceneActivation = false;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error starting load operation: {ex.Message}");
-            yield break;
-        }
-
-        // Only proceed if we have a valid operation
-        if (asyncLoad == null)
-        {
-            Debug.LogError("Failed to start scene loading operation");
-            yield break;
-        }
-
-        // Wait until it reaches 90% - outside try-catch
-        while (asyncLoad.progress < 0.9f)
-        {
-            yield return null;
-        }
-
-        // Now allow activation
-        asyncLoad.allowSceneActivation = true;
-
-        // Wait until it's truly done
-        while (!asyncLoad.isDone)
-        {
-            yield return null;
-        }
-
-        // Get the loaded scene
-        Scene loadedScene = default(Scene);
-
-        try
-        {
-            loadedScene = SceneManager.GetSceneByName(sceneName);
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error getting loaded scene: {ex.Message}");
-            yield break;
-        }
-
-        // Set active scene if valid
-        if (loadedScene.IsValid())
-        {
-            try
-            {
-                SceneManager.SetActiveScene(loadedScene);
-                // Instead, just ensure the researcher scene remains active for lighting
-                //Scene researcherScene = SceneManager.GetSceneByName("s.researcher");
-                //if (researcherScene.IsValid())
-                //{
-                //    SceneManager.SetActiveScene(researcherScene);
-                //    Debug.Log("Kept researcher scene active to preserve lighting");
-                //}
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Error setting active scene: {ex.Message}");
-            }
-
-            yield return null; // Wait another frame for safety
-        }
-    }
-
-
-
-    // Step 4: Initialize traffic controller
-    private bool InitializeTrafficController(Scenario scenario)
-    {
-        try
-        {
-            if (AITrafficController.Instance != null)
-            {
-                Debug.Log($"Initializing traffic controller for scenario with density {scenario.trafficDensity}");
-
-                // Make sure controller is active
-                AITrafficController.Instance.enabled = true;
-
-                // Update density setting
-                AITrafficController.Instance.density = scenario.trafficDensity;
-
-                // Register routes and spawn points in new scene
-                AITrafficController.Instance.RegisterAllRoutesInScene();
-                AITrafficController.Instance.InitializeSpawnPoints();
-
-                Debug.Log("Traffic controller initialized successfully");
-                return true;
-            }
-
-            Debug.LogError("No AITrafficController instance found!");
-            return false;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error initializing traffic controller: {ex.Message}");
-            return false;
-        }
-    }
-
-    // Step 5: Spawn traffic (as coroutine)
-    // For the SpawnTrafficCoroutine, we need to separate execution
-    private IEnumerator SpawnTrafficCoroutine(int density)
-    {
-        Debug.Log($"Starting traffic spawn with density {density}");
-
-        if (AITrafficController.Instance == null)
-        {
-            Debug.LogError("AITrafficController.Instance is null");
-            yield break;
-        }
-
-        // Ensure controller has correct density set
-        AITrafficController.Instance.density = density;
-        Debug.Log($"Set AITrafficController density to {density}");
-
-        // Make sure controller can process cars
-        AITrafficController.Instance.enabled = true;
-
-        // Wait a frame for controller to initialize
-        yield return null;
-
-        // Get count before enabling - move outside try/catch
-        int pooledCarsCount = 0;
-        int totalCarsCount = 0;
-
-        try
-        {
-            pooledCarsCount = AITrafficController.Instance.GetTrafficPool().Count;
-            totalCarsCount = AITrafficController.Instance.GetCarList().Count;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error getting car counts: {ex.Message}");
-        }
-
-        Debug.Log($"Before enabling: {totalCarsCount - pooledCarsCount} active cars, {pooledCarsCount} cars in pool");
-
-        // Use STS native method to enable cars
-        Debug.Log("Calling DirectlySpawnVehicles native method");
-        try
-        {
-            AITrafficController.Instance.DirectlySpawnVehicles(density);
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error spawning vehicles: {ex.Message}");
-        }
-
-        // Wait for cars to initialize - outside try/catch
-        yield return new WaitForSeconds(1.0f);
-
-        // Get count after enabling - outside try/catch
-        pooledCarsCount = 0;
-        totalCarsCount = 0;
-
-        try
-        {
-            pooledCarsCount = AITrafficController.Instance.GetTrafficPool().Count;
-            totalCarsCount = AITrafficController.Instance.GetCarList().Count;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error getting updated car counts: {ex.Message}");
-        }
-
-        Debug.Log($"After enabling: {totalCarsCount - pooledCarsCount} active cars, {pooledCarsCount} cars in pool");
-
-        // Wait a bit longer for processing to stabilize - outside try/catch
-        yield return new WaitForSeconds(0.5f);
-
-        // Force rebuild internal data structures
-        AITrafficController.Instance.RebuildTransformArrays();
-        AITrafficController.Instance.RebuildInternalDataStructures();
-    }
-
-    // Add this helper method to force rebuild if needed
-    private IEnumerator ForceRebuildTrafficSystem(int density)
-    {
-        Debug.Log("EMERGENCY: Force rebuilding traffic system");
-
-        // Force-rebuild routes
-        AITrafficController.Instance.RegisterAllRoutesInScene();
-        yield return new WaitForSeconds(0.2f);
-
-        // Re-initialize spawn points
-        AITrafficController.Instance.InitializeSpawnPoints();
-        yield return new WaitForSeconds(0.2f);
-
-        // Try direct spawn method
-        Debug.Log($"Trying direct spawn with density {density}");
-        AITrafficController.Instance.DirectlySpawnVehicles(density);
-
-        // Wait for spawning to complete
-        yield return new WaitForSeconds(1.0f);
-
-        // Get count after emergency spawn
-        int pooledCarsCount = AITrafficController.Instance.GetTrafficPool().Count;
-        int totalCarsCount = AITrafficController.Instance.GetCarList().Count;
-        Debug.Log($"After emergency spawn: {totalCarsCount - pooledCarsCount} active cars, {pooledCarsCount} cars in pool");
-    }
-    // Step 6: Set up bus spawning
-    private bool SetupBusForScenario(Scenario scenario)
-    {
-        try
-        {
-            if (!scenario.spawnBus)
-            {
-                Debug.Log("This scenario doesn't use bus spawning");
-                return true; // Not an error, just no bus for this scenario
-            }
-
-            // Find or create BusSpawnerSimple
-            BusSpawnerSimple busSpawner = FindObjectOfType<BusSpawnerSimple>();
-            if (busSpawner == null)
-            {
-                GameObject spawnerObj = new GameObject("BusSpawnerSimple");
-                busSpawner = spawnerObj.AddComponent<BusSpawnerSimple>();
-                DontDestroyOnLoad(spawnerObj);
-                Debug.Log("Created new BusSpawnerSimple");
-            }
-
-            // Reset first to clear previous state
-            busSpawner.Reset();
-
-            // Set the bus prefab
-            if (busPrefab != null)
-            {
-                busSpawner.busPrefab = busPrefab;
-            }
-            else
-            {
-                Debug.LogError("No bus prefab assigned in ScenarioManager!");
-                return false;
-            }
-
-            // Determine which routes to use for this scenario
-            AITrafficWaypointRoute mainRoute = scenario.scenarioBusRoute;
-            if (mainRoute == null)
-            {
-                mainRoute = initialRoute;
-                Debug.Log("Using default bus route (scenario route is null)");
-            }
-
-            // Set routes and trigger spawn
-            if (mainRoute != null && busStopRoute != null)
-            {
-                // Log route status
-                Debug.Log($"Main route '{mainRoute.name}' registered: {mainRoute.isRegistered}");
-                Debug.Log($"Intersection route '{intersectionRoute.name}' registered: {intersectionRoute.isRegistered}");
-                Debug.Log($"Bus stop route '{busStopRoute.name}' registered: {busStopRoute.isRegistered}");
-
-                // Force register routes if needed
-                if (!mainRoute.isRegistered)
-                {
-                    AITrafficController.Instance.RegisterAITrafficWaypointRoute(mainRoute);
-                    mainRoute.RegisterRoute();
-                    Debug.Log($"Registered main route: {mainRoute.name}");
-                }
-
-                if (!busStopRoute.isRegistered)
-                {
-                    AITrafficController.Instance.RegisterAITrafficWaypointRoute(busStopRoute);
-                    busStopRoute.RegisterRoute();
-                    Debug.Log($"Registered bus stop route: {busStopRoute.name}");
-                }
-
-                // Set up routes
-                busSpawner.initialRoute = mainRoute;
-                busSpawner.intersectionRoute = intersectionRoute;
-                busSpawner.busStopRoute = busStopRoute;
-                busSpawner.SetupBusRoutes(initialRoute, intersectionRoute, busStopRoute);
-
-                // Trigger spawn with delay
-                Debug.Log($"Triggering bus spawn with {scenario.busSpawnDelay} seconds delay");
-                busSpawner.TriggerBusSpawn(scenario.busSpawnDelay);
-
-                return true;
-            }
-            else
-            {
-                Debug.LogError("Missing routes for bus setup!");
-                if (mainRoute == null) Debug.LogError("Main route is null");
-                if (busStopRoute == null) Debug.LogError("Bus stop route is null");
-                return false;
-            }
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error setting up bus: {ex.Message}");
-            return false;
-        }
-    }
-
-    // Step 7: Position player
-    private bool PositionPlayerForScenario(Scenario scenario)
-    {
-        try
-        {
-            Debug.Log("=== POSITIONING PLAYER FOR SCENARIO ===");
-
-            if (scenario.playerStartPosition != null)
-            {
-                GameObject xrOrigin = FindXROrigin();
-                if (xrOrigin != null)
-                {
-                    // Get current camera position
-                    Vector3 cameraOffset = Vector3.zero;
-                    if (Camera.main != null)
-                    {
-                        cameraOffset = Camera.main.transform.position - xrOrigin.transform.position;
-                        cameraOffset.y = 0; // Only horizontal offset
-                    }
-
-                    // Calculate target position
-                    Vector3 targetPosition = scenario.playerStartPosition.position - cameraOffset;
-                    targetPosition.y = xrOrigin.transform.position.y; // Maintain floor height
-
-                    // CRITICAL: Move XR Origin, but DON'T modify the tracking space alignment
-                    Vector3 originalPosition = xrOrigin.transform.position;
-
-                    // Move XR Origin to scenario start position
-                    xrOrigin.transform.position = targetPosition;
-                    xrOrigin.transform.rotation = scenario.playerStartPosition.rotation;
-
-                    Debug.Log($"Moved XR Origin from {originalPosition} to {targetPosition}");
-
-                    // IMPORTANT: Update the redirected walking system for the new virtual position
-                    // but preserve the physical space alignment
-                    if (persistentRDW != null)
-                    {
-                        // Use the improved alignment method that preserves physical space
-                        Vector3 roadDirection = scenario.playerStartPosition.forward;
-                        roadDirection.y = 0;
-                        roadDirection.Normalize();
-
-                        persistentRDW.UpdateVirtualPositionOnly(targetPosition, roadDirection);
-                    }
-                    else
-                    {
-                        // Fallback: update RedirectionManager carefully
-                        var rm = FindObjectOfType<RedirectionManager>();
-                        if (rm != null)
-                        {
-                            // Check if physical space is calibrated using the field we added
-                            if (rm.physicalSpaceCalibrated)
-                            {
-                                // DON'T recalibrate physical space, just update virtual position
-                                rm.UpdateVirtualPositionForScenario(targetPosition, scenario.playerStartPosition.forward);
-                            }
-                            else
-                            {
-                                Debug.LogWarning("Physical space not calibrated - performing initial calibration");
-                                rm.CalibratePhysicalSpaceReference();
-
-                                // Then update virtual position
-                                rm.UpdateVirtualPositionForScenario(targetPosition, scenario.playerStartPosition.forward);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    Debug.LogError("Could not find XR Origin in the scene");
-                    return false;
-                }
-            }
-            else
-            {
-                Debug.Log("No player start position specified in scenario");
-            }
-
-            Debug.Log("=== PLAYER POSITIONING COMPLETE ===");
-            return true;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error positioning player: {ex.Message}");
-            return false;
-        }
-    }
-
-    // Add this method to safely update tracking space for new scenarios
-    //private void UpdateTrackingSpaceForScenario(Vector3 newVirtualPosition, Vector3 roadDirection)
-    //{
-    //    var rm = FindObjectOfType<RedirectionManager>();
-    //    if (rm == null || !rm.physicalSpaceCalibrated) return;
-
-    //    Debug.Log("Updating tracking space for new scenario while preserving physical space");
-
-    //    // Calculate the offset needed to place the player at the new virtual position
-    //    Vector3 currentHeadPos = rm.headTransform.position;
-    //    Vector3 currentRealPos = rm.GetPosReal(currentHeadPos);
-
-    //    // The new tracking space position should place the player at the desired virtual location
-    //    // while keeping their physical position in the room the same
-    //    Vector3 newTrackingSpacePos = newVirtualPosition - currentRealPos;
-    //    newTrackingSpacePos.y = 0; // Keep at ground level
-
-    //    // Update tracking space position
-    //    rm.trackingSpace.position = newTrackingSpacePos;
-
-    //    // Update rotation to align with road direction while preserving physical space
-    //    float roadAngle = Mathf.Atan2(roadDirection.x, roadDirection.z) * Mathf.Rad2Deg;
-    //    rm.trackingSpace.rotation = Quaternion.Euler(0, roadAngle, 0);
-
-    //    Debug.Log($"Updated tracking space position: {newTrackingSpacePos}");
-    //    Debug.Log($"Updated tracking space rotation: {roadAngle}°");
-
-    //    // Verify the player is at the correct virtual position
-    //    Vector3 verifyVirtualPos = rm.headTransform.position;
-    //    Vector3 verifyRealPos = rm.GetPosReal(verifyVirtualPos);
-
-    //    Debug.Log($"Verification - Virtual pos: {verifyVirtualPos}, Real pos: {verifyRealPos}");
-    //}
-
-    // Helper method to clear visual markers if persistentRDW isn't available
-    private void ClearVisualMarkers()
-    {
-        // Find markers by name
-        string[] markerNames = new string[] {
-        "Corner_0", "Corner_1", "Corner_2", "Corner_3",
-        "TrackingSpaceCenter", "ForwardDirection", "RightDirection",
-        "DirectionLabel"
-    };
-
-        foreach (string name in markerNames)
-        {
-            GameObject obj = GameObject.Find(name);
-            if (obj != null)
-            {
-                Destroy(obj);
-            }
-        }
-
-        // Try by tag as well
-        try
-        {
-            GameObject[] taggedMarkers = GameObject.FindGameObjectsWithTag("CornerMarker");
-            foreach (var marker in taggedMarkers)
-            {
-                if (marker != null)
-                    Destroy(marker);
-            }
-        }
-        catch (System.Exception)
-        {
-            // Tag might not exist, that's ok
-        }
-
-        Debug.Log("Cleared existing visual markers");
-    }
-
-    // Helper method to create alignment markers directly if persistentRDW isn't available
-    private void CreateAlignmentMarkers(RedirectionManager rm, float width, float length, Vector3 roadDirection)
-    {
-        if (rm == null || rm.trackingSpace == null)
-            return;
-
-        Transform trackingSpace = rm.trackingSpace;
-
-        // Create corner markers at the four corners of the rectangle
-        Vector2[] corners = new Vector2[]
-        {
-        new Vector2(width/2, length/2),   // Front Right
-        new Vector2(-width/2, length/2),  // Front Left
-        new Vector2(-width/2, -length/2), // Back Left
-        new Vector2(width/2, -length/2)   // Back Right
-        };
-
-        Color[] cornerColors = new Color[]
-        {
-        Color.blue,    // 0: Front Right - Blue
-        Color.green,   // 1: Front Left - Green
-        Color.yellow,  // 2: Back Left - Yellow
-        Color.magenta  // 3: Back Right - Magenta
-        };
-
-        for (int i = 0; i < corners.Length; i++)
-        {
-            // Convert local space corner to world space
-            Vector3 worldCorner = trackingSpace.TransformPoint(
-                new Vector3(corners[i].x, 0, corners[i].y));
-
-            // Create the marker
-            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            marker.name = $"Corner_{i}";
-
-            // Try to tag it - handle if tag doesn't exist
-            try
-            {
-                marker.tag = "CornerMarker";
-            }
-            catch (System.Exception)
-            {
-                // Tag might not exist, that's ok
-            }
-
-            // Position and scale
-            marker.transform.position = worldCorner + Vector3.up * 0.5f;
-            marker.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f);
-
-            // Set color
-            Material mat = new Material(Shader.Find("Standard"));
-            mat.color = cornerColors[i];
-            marker.GetComponent<Renderer>().material = mat;
-        }
-
-        // Create center marker
-        GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        centerMarker.name = "TrackingSpaceCenter";
-        try { centerMarker.tag = "CornerMarker"; } catch { }
-        centerMarker.transform.position = trackingSpace.position + Vector3.up * 0.1f;
-        centerMarker.transform.localScale = Vector3.one * 0.3f;
-
-        Material centerMat = new Material(Shader.Find("Standard"));
-        centerMat.color = Color.red;
-        centerMarker.GetComponent<Renderer>().material = centerMat;
-
-        // Create direction indicators
-
-        // Forward (blue) - along LONG dimension
-        GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        forwardMarker.name = "ForwardDirection";
-        try { forwardMarker.tag = "CornerMarker"; } catch { }
-        forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * (length / 3) + Vector3.up * 0.05f;
-        forwardMarker.transform.rotation = trackingSpace.rotation;
-        forwardMarker.transform.localScale = new Vector3(0.2f, 0.05f, length / 2);
-
-        Material blueMat = new Material(Shader.Find("Standard"));
-        blueMat.color = Color.blue;
-        forwardMarker.GetComponent<Renderer>().material = blueMat;
-
-        // Right (red) - along SHORT dimension
-        GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightMarker.name = "RightDirection";
-        try { rightMarker.tag = "CornerMarker"; } catch { }
-        rightMarker.transform.position = trackingSpace.position + trackingSpace.right * (width / 3) + Vector3.up * 0.05f;
-        rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
-        rightMarker.transform.localScale = new Vector3(0.2f, 0.05f, width / 2);
-
-        Material redMat = new Material(Shader.Find("Standard"));
-        redMat.color = Color.red;
-        rightMarker.GetComponent<Renderer>().material = redMat;
-
-        // Add label
-        GameObject labelObj = new GameObject("DirectionLabel");
-        try { labelObj.tag = "CornerMarker"; } catch { }
-        TextMesh textMesh = labelObj.AddComponent<TextMesh>();
-        textMesh.text = "BLUE = Forward (Long)\nRED = Right (Short)";
-        textMesh.fontSize = 72;
-        textMesh.characterSize = 0.03f;
-        textMesh.color = Color.white;
-        textMesh.anchor = TextAnchor.MiddleCenter;
-        textMesh.alignment = TextAlignment.Center;
-        labelObj.transform.position = trackingSpace.position + Vector3.up * 0.5f;
-
-        // Make text face the camera if possible
-        if (Camera.main != null)
-        {
-            Vector3 lookDir = Camera.main.transform.position - labelObj.transform.position;
-            lookDir.y = 0; // Keep it level
-            if (lookDir != Vector3.zero)
-                labelObj.transform.rotation = Quaternion.LookRotation(lookDir);
-        }
-        else
-        {
-            labelObj.transform.rotation = trackingSpace.rotation;
-        }
-
-        Debug.Log("Created alignment markers");
-    }
-
-    // Helper method to create visual markers showing tracking space orientation
-    private void CreateTrackingSpaceAlignmentMarkers(RedirectionManager rm, Vector3 roadDirection)
-    {
-        if (rm == null || rm.trackingSpace == null || rdwGlobalConfiguration == null ||
-            rdwGlobalConfiguration.physicalSpaces == null || rdwGlobalConfiguration.physicalSpaces.Count == 0)
-            return;
-
-        var physicalSpace = rdwGlobalConfiguration.physicalSpaces[0];
-        float width = 0, length = 0;
-
-        // Calculate dimensions
-        if (physicalSpace.trackingSpace != null && physicalSpace.trackingSpace.Count >= 4)
-        {
-            float minX = float.MaxValue, maxX = float.MinValue;
-            float minZ = float.MaxValue, maxZ = float.MinValue;
-
-            foreach (var point in physicalSpace.trackingSpace)
-            {
-                minX = Mathf.Min(minX, point.x);
-                maxX = Mathf.Max(maxX, point.x);
-                minZ = Mathf.Min(minZ, point.y); // y in 2D coords is z in 3D
-                maxZ = Mathf.Max(maxZ, point.y);
-            }
-
-            width = maxX - minX;
-            length = maxZ - minZ;
-        }
-
-        // Create directional arrows
-        GameObject forwardArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        forwardArrow.name = "ForwardDirection";
-        forwardArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.forward * (length / 4) + Vector3.up * 0.05f;
-        forwardArrow.transform.rotation = rm.trackingSpace.rotation;
-        forwardArrow.transform.localScale = new Vector3(0.1f, 0.05f, 1.0f);
-        forwardArrow.GetComponent<Renderer>().material.color = Color.blue;
-
-        GameObject rightArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightArrow.name = "RightDirection";
-        rightArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.right * (width / 4) + Vector3.up * 0.05f;
-        rightArrow.transform.rotation = Quaternion.Euler(0, rm.trackingSpace.rotation.eulerAngles.y + 90, 0);
-        rightArrow.transform.localScale = new Vector3(0.1f, 0.05f, 0.5f);
-        rightArrow.GetComponent<Renderer>().material.color = Color.red;
-
-        // Clean up after 1 minute
-        Destroy(forwardArrow, 60f);
-        Destroy(rightArrow, 60f);
-
-        Debug.Log($"Created tracking space direction indicators: Blue arrow = Forward (length: {length}m), Red arrow = Right (width: {width}m)");
-    }
-
-    // Step 8: Initialize traffic lights
-    private bool InitializeTrafficLights()
-    {
-        try
-        {
-            // Find and enable traffic light managers in the current scene
-            var lightManagers = FindObjectsOfType<AITrafficLightManager>();
-            Debug.Log($"Found {lightManagers.Length} traffic light managers");
-
-            foreach (var manager in lightManagers)
-            {
-                if (manager != null)
-                {
-                    // Reset and enable
-                    manager.ResetLightManager();
-                    manager.enabled = true;
-                    Debug.Log($"Enabled traffic light manager: {manager.name}");
-                }
-            }
-
-            // Force controller to recognize light state changes
-            if (AITrafficController.Instance != null)
-            {
-                AITrafficController.Instance.CheckForTrafficLightsChangedToGreen();
-            }
-
-            return true;
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"Error initializing traffic lights: {ex.Message}");
-            return false;
-        }
-    }
-
-
-    private IEnumerator SpawnCarsFromPool(AITrafficController controller, int desiredDensity)
-    {
-        Debug.Log($"Spawning {desiredDensity} cars from pool");
-
-        // Get all spawn points in the current scene
-        var allSpawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
-        var validSpawnPoints = new List<AITrafficSpawnPoint>();
-
-        // Filter for valid spawn points with proper route connections
-        foreach (var point in allSpawnPoints)
-        {
-            if (point != null && point.waypoint != null &&
-                point.waypoint.onReachWaypointSettings.parentRoute != null &&
-                point.waypoint.onReachWaypointSettings.nextPointInRoute != null &&
-                !point.isTrigger)
-            {
-                validSpawnPoints.Add(point);
-            }
-        }
-
-        if (validSpawnPoints.Count == 0)
-        {
-            Debug.LogWarning("No valid spawn points found in scene!");
-            yield break;
-        }
-
-        Debug.Log($"Found {validSpawnPoints.Count} valid spawn points for car spawning");
-
-        // Calculate how many cars to spawn
-        int spawnCount = Mathf.Min(desiredDensity, validSpawnPoints.Count);
-        int spawnedCount = 0;
-
-        // Randomize spawn points to avoid patterns
-        validSpawnPoints = validSpawnPoints.OrderBy(x => UnityEngine.Random.value).ToList();
-
-        // Spawn cars at valid points
-        for (int i = 0; i < spawnCount; i++)
-        {
-            if (i >= validSpawnPoints.Count) break;
-
-            var spawnPoint = validSpawnPoints[i];
-
-            // Check for existing cars near this spawn point
-            bool spawnPointClear = true;
-            Vector3 spawnPosition = spawnPoint.transform.position + new Vector3(0, 0.1f, 0);
-            Collider[] nearbyColliders = Physics.OverlapSphere(spawnPosition, 5f); // 5-meter radius check
-
-            foreach (var collider in nearbyColliders)
-            {
-                if (collider.GetComponent<AITrafficCar>() != null)
-                {
-                    // Found another car too close to this spawn point
-                    spawnPointClear = false;
-                    Debug.Log($"Spawn point {spawnPoint.name} blocked by existing car");
-                    break;
-                }
-            }
-
-            if (!spawnPointClear)
-            {
-                // Skip this spawn point and try another
-                continue;
-            }
-
-            var route = spawnPoint.waypoint.onReachWaypointSettings.parentRoute;
-
-            // Get a car from the pool that matches the route's vehicle types
-            AITrafficCar car = controller.SpawnCarsFromPool(route);
-
-            if (car != null)
-            {
-                bool spawnSuccess = false;
-
-                try
-                {
-                    // STEP 1: Ensure the car is properly assigned to this route
-                    car.waypointRoute = route;
-                    car.RegisterCar(route);
-
-                    // STEP 2: Position the car precisely at spawn point
-                    Quaternion spawnRotation = spawnPoint.transform.rotation;
-                    car.transform.SetPositionAndRotation(spawnPosition, spawnRotation);
-
-                    // STEP 3: Get correct next waypoint
-                    Transform nextWaypointTransform = spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute?.transform;
-                    //Transform nextWaypointTransform = spawnPoint.waypoint.GetNextWaypointTransform();
-
-                    if (nextWaypointTransform == null && route.waypointDataList.Count > 0)
-                    {
-                        // Fallback to first waypoint if next isn't defined
-                        nextWaypointTransform = route.waypointDataList[0]._transform;
-                    }
-
-                    if (nextWaypointTransform != null)
-                    {
-                        // STEP 4: Make car face next waypoint
-                        car.transform.LookAt(nextWaypointTransform);
-
-                        // STEP 5: Properly set up DriveTarget
-                        Transform driveTarget = car.transform.Find("DriveTarget");
-                        if (driveTarget == null)
-                        {
-                            driveTarget = new GameObject("DriveTarget").transform;
-                            driveTarget.SetParent(car.transform);
-                        }
-
-                        // Position drive target exactly at the next waypoint
-                        driveTarget.position = nextWaypointTransform.position;
-                        Debug.Log($"Positioned drive target for {car.name} at {driveTarget.position}");
-
-                        // STEP 6: Force reinitialize route connection
-                        car.ReinitializeRouteConnection();
-                    }
-
-                    spawnSuccess = true;
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.LogError($"Error during car spawn process: {ex.Message}");
-                }
-
-                if (spawnSuccess)
-                {
-                    // STEP 7: Ensure car is set to drive
-                    car.StopDriving(); // First stop to reset state
-                    yield return null; // Allow a frame for state to update
-
-                    car.StartDriving();
-
-                    // STEP 8: Update controller arrays
-                    if (car.assignedIndex >= 0)
-                    {
-                        controller.Set_IsDrivingArray(car.assignedIndex, true);
-                        controller.Set_CanProcess(car.assignedIndex, true);
-                    }
-
-                    spawnedCount++;
-                    Debug.Log($"Successfully spawned car {car.name} (ID: {car.assignedIndex}) on route {route.name}");
-                }
-
-                // Small delay between spawns to prevent physics issues
-                yield return new WaitForEndOfFrame();
-            }
-        }
-
-        Debug.Log($"Successfully spawned {spawnedCount} cars from pool");
-
-        // Wait for physics to settle
-        yield return new WaitForSeconds(1.0f);
-
-        // Final verification
-        var spawnedActiveCars = FindObjectsOfType<AITrafficCar>()
-            .Where(c => c.gameObject.activeInHierarchy)
-            .ToArray();
-
-        Debug.Log($"Final verification: {spawnedActiveCars.Length} active cars in scene");
-
-        // Log the state of each spawned car
-        foreach (var car in spawnedActiveCars)
-        {
-            if (car.isDriving)
-            {
-                Debug.Log($"Car {car.name} (ID: {car.assignedIndex}) is driving on route {car.waypointRoute.name}");
-            }
-            else
-            {
-                Debug.LogWarning($"Car {car.name} (ID: {car.assignedIndex}) is NOT driving. Route: {car.waypointRoute.name}");
-            }
-        }
-    }
+    
 
 
     public void ForceTrafficMovement(int density = 0)
@@ -3239,453 +1433,7 @@ public class ScenarioManager : MonoBehaviour
     }
 
 
-    // Add this helper method that replicates the key logic from SpawnStartupTrafficCoroutine
-    private IEnumerator DistributeTrafficVehicles(AITrafficController controller, int density)
-    {
-        Debug.Log($"Starting distributed spawning with density {density}");
-
-        // First clear any existing cars
-        var existingCars = FindObjectsOfType<AITrafficCar>();
-        foreach (var car in existingCars)
-        {
-            if (car != null) Destroy(car.gameObject);
-        }
-        yield return new WaitForSeconds(0.3f);
-
-        // Get all available spawn points
-        var spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
-        List<AITrafficSpawnPoint> availableSpawnPoints = new List<AITrafficSpawnPoint>();
-
-        // Filter for valid spawn points
-        foreach (var point in spawnPoints)
-        {
-            if (point != null &&
-                point.waypoint != null &&
-                point.waypoint.onReachWaypointSettings.parentRoute != null)
-            {
-                availableSpawnPoints.Add(point);
-            }
-        }
-
-        // Track used positions to prevent overlap
-        List<Vector3> usedPositions = new List<Vector3>();
-        int spawnedVehicles = 0;
-
-        // Distribute spawning across spawn points
-        if (availableSpawnPoints.Count > 0)
-        {
-            // Shuffle the spawn points to distribute cars randomly
-            availableSpawnPoints = availableSpawnPoints.OrderBy(x => UnityEngine.Random.value).ToList();
-
-            // Try each spawn point
-            foreach (var spawnPoint in availableSpawnPoints)
-            {
-                // Stop if we've reached desired density
-                if (spawnedVehicles >= density) break;
-
-                // Get route from spawn point
-                var route = spawnPoint.waypoint.onReachWaypointSettings.parentRoute;
-
-                // Calculate spawn position with slight randomness
-                Vector3 spawnPos = spawnPoint.transform.position;
-                spawnPos.y += 0.5f; // Raise slightly to avoid ground clipping
-
-                // Check if this position is too close to existing cars
-                bool tooClose = usedPositions.Any(pos => Vector3.Distance(spawnPos, pos) < 10f);
-                if (tooClose) continue;
-
-                // Find compatible prefab
-                AITrafficCar prefabToSpawn = null;
-                foreach (var prefab in controller.trafficPrefabs)
-                {
-                    if (prefab == null) continue;
-
-                    foreach (var vehicleType in route.vehicleTypes)
-                    {
-                        if (vehicleType == prefab.vehicleType)
-                        {
-                            prefabToSpawn = prefab;
-                            break;
-                        }
-                    }
-
-                    if (prefabToSpawn != null) break;
-                }
-
-                if (prefabToSpawn != null)
-                {
-                    // Calculate proper rotation facing the next waypoint
-                    Vector3 nextWaypointPos = Vector3.zero;
-                    if (spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute != null)
-                    {
-                        nextWaypointPos = spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute.transform.position;
-                    }
-                    else if (route.waypointDataList.Count > 0)
-                    {
-                        nextWaypointPos = route.waypointDataList[0]._transform.position;
-                    }
-
-                    Quaternion spawnRot = spawnPoint.transform.rotation;
-                    if (nextWaypointPos != Vector3.zero)
-                    {
-                        Vector3 direction = nextWaypointPos - spawnPos;
-                        if (direction != Vector3.zero)
-                        {
-                            spawnRot = Quaternion.LookRotation(direction);
-                        }
-                    }
-
-                    // Instantiate vehicle
-                    GameObject vehicle = Instantiate(prefabToSpawn.gameObject, spawnPos, spawnRot);
-                    AITrafficCar carComponent = vehicle.GetComponent<AITrafficCar>();
-
-                    if (carComponent != null)
-                    {
-                        // Register with route
-                        carComponent.waypointRoute = route;
-                        carComponent.RegisterCar(route);
-                        carComponent.ReinitializeRouteConnection();
-
-                        // Properly initialize drive target
-                        Transform driveTarget = carComponent.transform.Find("DriveTarget");
-                        if (driveTarget == null)
-                        {
-                            driveTarget = new GameObject("DriveTarget").transform;
-                            driveTarget.SetParent(carComponent.transform);
-                        }
-
-                        // Position drive target properly
-                        if (nextWaypointPos != Vector3.zero)
-                        {
-                            driveTarget.position = nextWaypointPos;
-                        }
-
-                        // Start driving
-                        carComponent.StartDriving();
-
-                        // Record used position
-                        usedPositions.Add(spawnPos);
-                        spawnedVehicles++;
-
-                        // Small yield between spawns to help with physics stabilization
-                        yield return null;
-                    }
-                }
-            }
-        }
-
-        Debug.Log($"Successfully spawned {spawnedVehicles} distributed vehicles");
-
-        // Give time for physics to settle
-        yield return new WaitForSeconds(0.5f);
-    }
-
-
-    // Add this new method specifically for disconnected drive targets
-    private void ForceReconnectAllCarTargets()
-    {
-        Debug.Log("EMERGENCY: Force reconnecting all car drive targets");
-
-        AITrafficController controller = AITrafficController.Instance;
-        if (controller == null) return;
-
-        // Ensure controller is enabled
-        controller.enabled = true;
-
-        // STEP 1: Get all valid routes
-        var routes = FindObjectsOfType<AITrafficWaypointRoute>()
-            .Where(r => r.isRegistered && r.waypointDataList.Count > 1)
-            .ToArray();
-
-        Debug.Log($"Found {routes.Length} valid routes for cars");
-
-        // STEP 2: Get all cars
-        var allCars = FindObjectsOfType<AITrafficCar>();
-        Debug.Log($"Found {allCars.Length} cars to reconnect");
-
-        // STEP 3: First stop all cars
-        foreach (var car in allCars)
-        {
-            if (car == null) continue;
-            car.StopDriving();
-        }
-
-        // STEP 4: Position cars directly on routes - this is the key fix
-        int carsPlaced = 0;
-
-        foreach (var car in allCars)
-        {
-            if (car == null) continue;
-
-            // Find a compatible route
-            AITrafficWaypointRoute bestRoute = null;
-            foreach (var route in routes)
-            {
-                // Check vehicle type compatibility
-                bool typeMatched = false;
-                foreach (var routeType in route.vehicleTypes)
-                {
-                    if (routeType == car.vehicleType)
-                    {
-                        typeMatched = true;
-                        break;
-                    }
-                }
-
-                if (typeMatched)
-                {
-                    bestRoute = route;
-                    break;
-                }
-            }
-
-            // Skip car if no compatible route
-            if (bestRoute == null) continue;
-
-            // Teleport car to a random position on route
-            int waypointIndex = UnityEngine.Random.Range(0, bestRoute.waypointDataList.Count - 1);
-            var waypointTransform = bestRoute.waypointDataList[waypointIndex]._transform;
-
-            if (waypointTransform != null)
-            {
-                // Position car at waypoint
-                car.transform.position = waypointTransform.position;
-                car.transform.rotation = waypointTransform.rotation;
-
-                // Assign route
-                car.waypointRoute = bestRoute;
-                car.RegisterCar(bestRoute);
-                car.ReinitializeRouteConnection(); // Add this line
-
-                // Force update the waypoint index in controller
-                controller.Set_CurrentRoutePointIndexArray(car.assignedIndex, waypointIndex, bestRoute.waypointDataList[waypointIndex]._waypoint);
-
-                // Update drive target - super important
-                Transform driveTarget = car.transform.Find("DriveTarget");
-                if (driveTarget == null)
-                {
-                    driveTarget = new GameObject("DriveTarget").transform;
-                    driveTarget.SetParent(car.transform);
-                }
-
-                // Position drive target at NEXT waypoint
-                if (waypointIndex + 1 < bestRoute.waypointDataList.Count)
-                {
-                    driveTarget.position = bestRoute.waypointDataList[waypointIndex + 1]._transform.position;
-                }
-
-                carsPlaced++;
-            }
-        }
-
-        Debug.Log($"Positioned {carsPlaced} cars on routes");
-
-        // STEP 5: Rebuild controller arrays
-        controller.RebuildTransformArrays();
-        controller.RebuildInternalDataStructures();
-
-        // STEP 6: Start cars driving again
-        foreach (var car in allCars)
-        {
-            if (car == null || car.waypointRoute == null) continue;
-            car.ReinitializeRouteConnection();
-            car.StartDriving();
-            car.ForceWaypointPathUpdate();
-        }
-
-        Debug.Log("EMERGENCY car reconnection complete");
-    }
-
-    private AITrafficController FindOrCreateTrafficController()
-    {
-        // First try to find the persistent controller
-        AITrafficController controller = AITrafficController.Instance;
-
-        if (controller == null)
-        {
-            // If no persistent controller, find one in current scene
-            var controllers = FindObjectsOfType<AITrafficController>();
-            if (controllers.Length > 0)
-            {
-                controller = controllers[0];
-                Debug.Log($"Using scene controller: {controller.name}");
-            }
-            else
-            {
-                // Create new controller if none found
-                GameObject controllerObj = new GameObject("AITrafficController");
-                controller = controllerObj.AddComponent<AITrafficController>();
-                DontDestroyOnLoad(controllerObj);
-                Debug.Log("Created new persistent traffic controller");
-            }
-        }
-
-        // Update TrafficSystemManager reference
-        TrafficSystemManager.Instance.trafficController = controller;
-
-        return controller;
-    }
-
-    IEnumerator SetupCarAfterSpawn(AITrafficCar car)
-    {
-        yield return null; // wait 1 frame
-        yield return null; // wait 2 frames just to be safe
-
-        if (car == null || car.waypointRoute == null)
-        {
-            Debug.LogError($"Car {car.name} is not fully initialized!");
-            yield break;
-        }
-
-        car.isDriving = true;
-        car.isActiveInTraffic = true;
-
-        // Ensure the car has a valid route and is registered
-        if (car.assignedIndex < 0)
-        {
-            car.RegisterCar(car.waypointRoute);
-        }
-
-        // Allow some time for initialization to propagate before updating the path
-        yield return new WaitForSeconds(0.5f);
-
-        // Update the path once the car is fully initialized
-        car.ForceWaypointPathUpdate();
-    }
-    public void SynchronizeTrafficLights()
-    {
-        Debug.Log("Synchronizing traffic light awareness for all vehicles");
-
-        // First get all traffic light managers
-        var lightManagers = FindObjectsOfType<AITrafficLightManager>();
-        Debug.Log($"Found {lightManagers.Length} traffic light managers");
-
-        // Force reset/update all light managers
-        foreach (var manager in lightManagers)
-        {
-            if (manager == null) continue;
-
-            // Disable and re-enable to force refresh
-            bool wasEnabled = manager.enabled;
-            manager.enabled = false;
-            manager.enabled = true;
-
-            // Force update all lights in this manager
-            var trafficLights = manager.GetComponentsInChildren<AITrafficLight>();
-            foreach (var light in trafficLights)
-            {
-                if (light == null) continue;
-
-                // Update routes controlled by this light
-                if (light.waypointRoute != null && light.waypointRoute.routeInfo != null)
-                {
-                    // Force enable the route info component
-                    light.waypointRoute.routeInfo.enabled = true;
-
-                    // Synchronize state based on light color
-                    bool shouldStop = false;
-
-                    // Check if red or yellow light is active
-                    if ((light.redMesh != null && light.redMesh.enabled) ||
-                        (light.yellowMesh != null && light.yellowMesh.enabled))
-                    {
-                        shouldStop = true;
-                    }
-
-                    // Update route info
-                    light.waypointRoute.StopForTrafficlight(shouldStop);
-
-                    if (shouldStop)
-                    {
-                        Debug.Log($"Route {light.waypointRoute.name} should stop for traffic light");
-                    }
-                }
-
-                // Also update additional routes if assigned
-                if (light.waypointRoutes != null)
-                {
-                    foreach (var route in light.waypointRoutes)
-                    {
-                        if (route != null && route.routeInfo != null)
-                        {
-                            // Force enable the route info component
-                            route.routeInfo.enabled = true;
-
-                            // Same logic for state synchronization
-                            bool shouldStop = false;
-                            if ((light.redMesh != null && light.redMesh.enabled) ||
-                                (light.yellowMesh != null && light.yellowMesh.enabled))
-                            {
-                                shouldStop = true;
-                            }
-
-                            route.StopForTrafficlight(shouldStop);
-
-                            if (shouldStop)
-                            {
-                                Debug.Log($"Route {route.name} should stop for traffic light");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Force update all cars with their current route info
-        var cars = FindObjectsOfType<AITrafficCar>();
-        foreach (var car in cars)
-        {
-            if (car != null && car.waypointRoute != null &&
-                car.waypointRoute.routeInfo != null && car.assignedIndex >= 0)
-            {
-                AITrafficController.Instance.Set_RouteInfo(car.assignedIndex, car.waypointRoute.routeInfo);
-
-                // If route says to stop for traffic light, force the car to be aware
-                if (car.waypointRoute.routeInfo.stopForTrafficLight)
-                {
-                    Debug.Log($"Car {car.name} should be stopping for traffic light");
-                }
-            }
-        }
-    }
-
-    private void ReconnectTrafficControllerToLightManagers()
-    {
-        AITrafficController controller = AITrafficController.Instance;
-        if (controller == null) return;
-
-        // Find all light managers in the current scene
-        var lightManagers = FindObjectsOfType<AITrafficLightManager>();
-        Debug.Log($"Found {lightManagers.Length} traffic light managers to reconnect");
-
-        // Force traffic light synchronization
-        //controller.SynchronizeTrafficLights();
-        //controller.SynchronizeTrafficLightAwareness();
-
-        // Reset light managers
-        foreach (var manager in lightManagers)
-        {
-            if (manager != null)
-            {
-                // Force a reset and re-enable
-                manager.enabled = false;
-                manager.ResetLightManager();
-                manager.enabled = true;
-            }
-        }
-    }
-
-    // Helper method to force path update after a delay
-    private IEnumerator DelayedForceUpdatePath(AITrafficCar car, float delay)
-    {
-        yield return new WaitForSeconds(delay);
-
-        if (car != null && car.gameObject.activeInHierarchy && car.waypointRoute != null)
-        {
-            //car.ForceWaypointPathUpdate();
-            Debug.Log($"Delayed force update for {car.name}");
-        }
-    }
+    
 
 
     public void ReinitializeTrafficCars()
@@ -3790,11 +1538,11 @@ public class ScenarioManager : MonoBehaviour
 
 
     /// <summary>
-    /// Placeholder for screen fading - implement your own or use a screen fader component
+    /// Placeholder for screen fading - implement   own or use a screen fader component
     /// </summary>
     private IEnumerator FadeScreen(bool fadeOut, float duration)
     {
-        // Placeholder for screen fading - implement your own
+        // Placeholder for screen fading - implement   own
         yield return new WaitForSeconds(duration);
     }
     #endregion
@@ -3803,7 +1551,7 @@ public class ScenarioManager : MonoBehaviour
     /// <summary>
     /// Check for and handle duplicate managers (EventSystem, XRInteractionManager, etc.)
     /// </summary>
-    /// // Add this diagnostic method to your ScenarioManager class
+    /// // Add this diagnostic method to   ScenarioManager class
 
 
 
@@ -3865,7 +1613,7 @@ public class ScenarioManager : MonoBehaviour
         CheckForDuplicateManagers();
     }
 
-    // Add this to ScenarioManager.cs after loading a scene
+
 
     /// <summary>
     /// Configure components in a newly loaded scenario scene
@@ -3874,41 +1622,8 @@ public class ScenarioManager : MonoBehaviour
     /// Configure components in a newly loaded scenario scene
     /// </summary>
     /// 
+    // helper method that replicates the key logic from SpawnStartupTrafficCoroutine
 
-    private IEnumerator ReplicateInitialSpawningProcess(AITrafficController controller, int density)
-    {
-        Debug.Log($"Starting initial spawning process replication with density {density}");
-
-        // 1. First ensure the controller is ready
-        bool originalPoolingState = controller.usePooling;
-        controller.usePooling = false;
-        controller.density = density;
-
-        // 2. Remove all existing cars
-        var existingCars = FindObjectsOfType<AITrafficCar>();
-        foreach (var car in existingCars)
-        {
-            if (car != null) Destroy(car.gameObject);
-        }
-
-        // Wait for car destruction to complete
-        yield return new WaitForSeconds(1.0f);
-
-        // 3. Use the original startup method that we know works
-        controller.RespawnTrafficAsInitial(density);
-
-        // 4. Wait for spawning to complete (the original method is a coroutine)
-        yield return new WaitForSeconds(3.0f);
-
-        // 5. Rebuild controller data
-        controller.RebuildTransformArrays();
-        controller.RebuildInternalDataStructures();
-
-        // 6. Restore original pooling state
-        controller.usePooling = originalPoolingState;
-
-        Debug.Log("Initial spawning process replication complete");
-    }
     public void EnsureRoutesAreRegistered()
     {
         AITrafficController controller = AITrafficController.Instance;
@@ -3969,7 +1684,7 @@ public class ScenarioManager : MonoBehaviour
 
         StartCoroutine(RestoreMasterLightingAfterFrame());
     }
-    // Add this to ScenarioManager.cs
+
 
     private IEnumerator RestoreMasterLightingAfterFrame()
     {
@@ -4083,7 +1798,7 @@ public class ScenarioManager : MonoBehaviour
         Debug.Log("Stored master lighting components");
     }
 
-    // Add this method to your ScenarioManager.cs class
+
 
     private void SetupBusButtonsForScenario(Scenario scenario)
     {
@@ -4135,9 +1850,7 @@ public class ScenarioManager : MonoBehaviour
         Debug.Log($"Bus button setup complete for scenario: {scenario.scenarioName}");
     }
 
-    // Call this method in your TransitionToScenario coroutine, after the scene loads:
-    // Add this line after: "yield return StartCoroutine(SafeVisualizationRefresh());"
-    // 
+
     private void PreserveMasterLighting(Scene newScene)
     {
         Debug.Log("Preserving master lighting settings");
@@ -4178,7 +1891,1351 @@ public class ScenarioManager : MonoBehaviour
     /// <summary>
     /// Set the layer of GameObject and all children
     /// </summary>
+    //private IEnumerator DistributeTrafficVehicles(AITrafficController controller, int density)
+    //{
+    //    Debug.Log($"Starting distributed spawning with density {density}");
 
+    //    // First clear any existing cars
+    //    var existingCars = FindObjectsOfType<AITrafficCar>();
+    //    foreach (var car in existingCars)
+    //    {
+    //        if (car != null) Destroy(car.gameObject);
+    //    }
+    //    yield return new WaitForSeconds(0.3f);
+
+    //    // Get all available spawn points
+    //    var spawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
+    //    List<AITrafficSpawnPoint> availableSpawnPoints = new List<AITrafficSpawnPoint>();
+
+    //    // Filter for valid spawn points
+    //    foreach (var point in spawnPoints)
+    //    {
+    //        if (point != null &&
+    //            point.waypoint != null &&
+    //            point.waypoint.onReachWaypointSettings.parentRoute != null)
+    //        {
+    //            availableSpawnPoints.Add(point);
+    //        }
+    //    }
+
+    //    // Track used positions to prevent overlap
+    //    List<Vector3> usedPositions = new List<Vector3>();
+    //    int spawnedVehicles = 0;
+
+    //    // Distribute spawning across spawn points
+    //    if (availableSpawnPoints.Count > 0)
+    //    {
+    //        // Shuffle the spawn points to distribute cars randomly
+    //        availableSpawnPoints = availableSpawnPoints.OrderBy(x => UnityEngine.Random.value).ToList();
+
+    //        // Try each spawn point
+    //        foreach (var spawnPoint in availableSpawnPoints)
+    //        {
+    //            // Stop if we've reached desired density
+    //            if (spawnedVehicles >= density) break;
+
+    //            // Get route from spawn point
+    //            var route = spawnPoint.waypoint.onReachWaypointSettings.parentRoute;
+
+    //            // Calculate spawn position with slight randomness
+    //            Vector3 spawnPos = spawnPoint.transform.position;
+    //            spawnPos.y += 0.5f; // Raise slightly to avoid ground clipping
+
+    //            // Check if this position is too close to existing cars
+    //            bool tooClose = usedPositions.Any(pos => Vector3.Distance(spawnPos, pos) < 10f);
+    //            if (tooClose) continue;
+
+    //            // Find compatible prefab
+    //            AITrafficCar prefabToSpawn = null;
+    //            foreach (var prefab in controller.trafficPrefabs)
+    //            {
+    //                if (prefab == null) continue;
+
+    //                foreach (var vehicleType in route.vehicleTypes)
+    //                {
+    //                    if (vehicleType == prefab.vehicleType)
+    //                    {
+    //                        prefabToSpawn = prefab;
+    //                        break;
+    //                    }
+    //                }
+
+    //                if (prefabToSpawn != null) break;
+    //            }
+
+    //            if (prefabToSpawn != null)
+    //            {
+    //                // Calculate proper rotation facing the next waypoint
+    //                Vector3 nextWaypointPos = Vector3.zero;
+    //                if (spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute != null)
+    //                {
+    //                    nextWaypointPos = spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute.transform.position;
+    //                }
+    //                else if (route.waypointDataList.Count > 0)
+    //                {
+    //                    nextWaypointPos = route.waypointDataList[0]._transform.position;
+    //                }
+
+    //                Quaternion spawnRot = spawnPoint.transform.rotation;
+    //                if (nextWaypointPos != Vector3.zero)
+    //                {
+    //                    Vector3 direction = nextWaypointPos - spawnPos;
+    //                    if (direction != Vector3.zero)
+    //                    {
+    //                        spawnRot = Quaternion.LookRotation(direction);
+    //                    }
+    //                }
+
+    //                // Instantiate vehicle
+    //                GameObject vehicle = Instantiate(prefabToSpawn.gameObject, spawnPos, spawnRot);
+    //                AITrafficCar carComponent = vehicle.GetComponent<AITrafficCar>();
+
+    //                if (carComponent != null)
+    //                {
+    //                    // Register with route
+    //                    carComponent.waypointRoute = route;
+    //                    carComponent.RegisterCar(route);
+    //                    carComponent.ReinitializeRouteConnection();
+
+    //                    // Properly initialize drive target
+    //                    Transform driveTarget = carComponent.transform.Find("DriveTarget");
+    //                    if (driveTarget == null)
+    //                    {
+    //                        driveTarget = new GameObject("DriveTarget").transform;
+    //                        driveTarget.SetParent(carComponent.transform);
+    //                    }
+
+    //                    // Position drive target properly
+    //                    if (nextWaypointPos != Vector3.zero)
+    //                    {
+    //                        driveTarget.position = nextWaypointPos;
+    //                    }
+
+    //                    // Start driving
+    //                    carComponent.StartDriving();
+
+    //                    // Record used position
+    //                    usedPositions.Add(spawnPos);
+    //                    spawnedVehicles++;
+
+    //                    // Small yield between spawns to help with physics stabilization
+    //                    yield return null;
+    //                }
+    //            }
+    //        }
+    //    }
+
+    //    Debug.Log($"Successfully spawned {spawnedVehicles} distributed vehicles");
+
+    //    // Give time for physics to settle
+    //    yield return new WaitForSeconds(0.5f);
+    //}
+
+
+    //// Add this new method specifically for disconnected drive targets
+    //private void ForceReconnectAllCarTargets()
+    //{
+    //    Debug.Log("EMERGENCY: Force reconnecting all car drive targets");
+
+    //    AITrafficController controller = AITrafficController.Instance;
+    //    if (controller == null) return;
+
+    //    // Ensure controller is enabled
+    //    controller.enabled = true;
+
+    //    // STEP 1: Get all valid routes
+    //    var routes = FindObjectsOfType<AITrafficWaypointRoute>()
+    //        .Where(r => r.isRegistered && r.waypointDataList.Count > 1)
+    //        .ToArray();
+
+    //    Debug.Log($"Found {routes.Length} valid routes for cars");
+
+    //    // STEP 2: Get all cars
+    //    var allCars = FindObjectsOfType<AITrafficCar>();
+    //    Debug.Log($"Found {allCars.Length} cars to reconnect");
+
+    //    // STEP 3: First stop all cars
+    //    foreach (var car in allCars)
+    //    {
+    //        if (car == null) continue;
+    //        car.StopDriving();
+    //    }
+
+    //    // STEP 4: Position cars directly on routes - this is the key fix
+    //    int carsPlaced = 0;
+
+    //    foreach (var car in allCars)
+    //    {
+    //        if (car == null) continue;
+
+    //        // Find a compatible route
+    //        AITrafficWaypointRoute bestRoute = null;
+    //        foreach (var route in routes)
+    //        {
+    //            // Check vehicle type compatibility
+    //            bool typeMatched = false;
+    //            foreach (var routeType in route.vehicleTypes)
+    //            {
+    //                if (routeType == car.vehicleType)
+    //                {
+    //                    typeMatched = true;
+    //                    break;
+    //                }
+    //            }
+
+    //            if (typeMatched)
+    //            {
+    //                bestRoute = route;
+    //                break;
+    //            }
+    //        }
+
+    //        // Skip car if no compatible route
+    //        if (bestRoute == null) continue;
+
+    //        // Teleport car to a random position on route
+    //        int waypointIndex = UnityEngine.Random.Range(0, bestRoute.waypointDataList.Count - 1);
+    //        var waypointTransform = bestRoute.waypointDataList[waypointIndex]._transform;
+
+    //        if (waypointTransform != null)
+    //        {
+    //            // Position car at waypoint
+    //            car.transform.position = waypointTransform.position;
+    //            car.transform.rotation = waypointTransform.rotation;
+
+    //            // Assign route
+    //            car.waypointRoute = bestRoute;
+    //            car.RegisterCar(bestRoute);
+    //            car.ReinitializeRouteConnection(); // Add this line
+
+    //            // Force update the waypoint index in controller
+    //            controller.Set_CurrentRoutePointIndexArray(car.assignedIndex, waypointIndex, bestRoute.waypointDataList[waypointIndex]._waypoint);
+
+    //            // Update drive target - super important
+    //            Transform driveTarget = car.transform.Find("DriveTarget");
+    //            if (driveTarget == null)
+    //            {
+    //                driveTarget = new GameObject("DriveTarget").transform;
+    //                driveTarget.SetParent(car.transform);
+    //            }
+
+    //            // Position drive target at NEXT waypoint
+    //            if (waypointIndex + 1 < bestRoute.waypointDataList.Count)
+    //            {
+    //                driveTarget.position = bestRoute.waypointDataList[waypointIndex + 1]._transform.position;
+    //            }
+
+    //            carsPlaced++;
+    //        }
+    //    }
+
+    //    Debug.Log($"Positioned {carsPlaced} cars on routes");
+
+    //    // STEP 5: Rebuild controller arrays
+    //    controller.RebuildTransformArrays();
+    //    controller.RebuildInternalDataStructures();
+
+    //    // STEP 6: Start cars driving again
+    //    foreach (var car in allCars)
+    //    {
+    //        if (car == null || car.waypointRoute == null) continue;
+    //        car.ReinitializeRouteConnection();
+    //        car.StartDriving();
+    //        car.ForceWaypointPathUpdate();
+    //    }
+
+    //    Debug.Log("EMERGENCY car reconnection complete");
+    //}
+
+    //private AITrafficController FindOrCreateTrafficController()
+    //{
+    //    // First try to find the persistent controller
+    //    AITrafficController controller = AITrafficController.Instance;
+
+    //    if (controller == null)
+    //    {
+    //        // If no persistent controller, find one in current scene
+    //        var controllers = FindObjectsOfType<AITrafficController>();
+    //        if (controllers.Length > 0)
+    //        {
+    //            controller = controllers[0];
+    //            Debug.Log($"Using scene controller: {controller.name}");
+    //        }
+    //        else
+    //        {
+    //            // Create new controller if none found
+    //            GameObject controllerObj = new GameObject("AITrafficController");
+    //            controller = controllerObj.AddComponent<AITrafficController>();
+    //            DontDestroyOnLoad(controllerObj);
+    //            Debug.Log("Created new persistent traffic controller");
+    //        }
+    //    }
+
+    //    // Update TrafficSystemManager reference
+    //    TrafficSystemManager.Instance.trafficController = controller;
+
+    //    return controller;
+    //}
+
+    //IEnumerator SetupCarAfterSpawn(AITrafficCar car)
+    //{
+    //    yield return null; // wait 1 frame
+    //    yield return null; // wait 2 frames just to be safe
+
+    //    if (car == null || car.waypointRoute == null)
+    //    {
+    //        Debug.LogError($"Car {car.name} is not fully initialized!");
+    //        yield break;
+    //    }
+
+    //    car.isDriving = true;
+    //    car.isActiveInTraffic = true;
+
+    //    // Ensure the car has a valid route and is registered
+    //    if (car.assignedIndex < 0)
+    //    {
+    //        car.RegisterCar(car.waypointRoute);
+    //    }
+
+    //    // Allow some time for initialization to propagate before updating the path
+    //    yield return new WaitForSeconds(0.5f);
+
+    //    // Update the path once the car is fully initialized
+    //    car.ForceWaypointPathUpdate();
+    //}
+
+    //private IEnumerator UnloadPreviousScenarioCoroutine()
+    //{
+    //    if (!currentlyLoadedScenario.IsValid() || currentlyLoadedScenario.name == "s.researcher")
+    //    {
+    //        Debug.Log("No previous scenario to unload or attempting to unload researcher scene");
+    //        yield break;
+    //    }
+
+    //    Debug.Log($"Unloading previous scenario: {currentlyLoadedScenario.name}");
+
+    //    AsyncOperation asyncUnload = SceneManager.UnloadSceneAsync(currentlyLoadedScenario);
+
+    //    if (asyncUnload == null)
+    //    {
+    //        Debug.LogError($"Failed to start unload operation for {currentlyLoadedScenario.name}");
+    //        yield break;
+    //    }
+
+    //    while (!asyncUnload.isDone)
+    //        yield return null;
+
+    //    Debug.Log($"Successfully unloaded previous scenario: {currentlyLoadedScenario.name}");
+
+    //    // Wait for cleanup
+    //    yield return new WaitForSeconds(0.3f);
+    //}
+
+
+    //// Step 3: Load new scenario (as coroutine)
+    //private IEnumerator LoadNewScenarioCoroutine(Scenario scenario)
+    //{
+    //    // Check if the scene exists
+    //    bool sceneExists = false;
+    //    for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+    //    {
+    //        string scenePath = SceneUtility.GetScenePathByBuildIndex(i);
+    //        string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
+    //        if (sceneName == scenario.sceneBuildName)
+    //        {
+    //            sceneExists = true;
+    //            break;
+    //        }
+    //    }
+
+    //    if (!sceneExists)
+    //    {
+    //        Debug.LogError($"Scene '{scenario.sceneBuildName}' does not exist in build settings!");
+    //        yield break;
+    //    }
+
+    //    Debug.Log($"Loading scenario scene: {scenario.sceneBuildName}");
+
+    //    AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(scenario.sceneBuildName, LoadSceneMode.Additive);
+
+    //    if (asyncLoad == null)
+    //    {
+    //        Debug.LogError($"Failed to start loading scene: {scenario.sceneBuildName}");
+    //        yield break;
+    //    }
+
+    //    asyncLoad.allowSceneActivation = true;
+
+    //    while (!asyncLoad.isDone)
+    //        yield return null;
+
+    //    Debug.Log($"Scene loaded: {scenario.sceneBuildName}");
+    //}
+
+
+    //private IEnumerator SafeLoadSceneAsync(string sceneName, LoadSceneMode mode)
+    //{
+    //    // Create the async operation outside try-catch
+    //    AsyncOperation asyncLoad = null;
+
+    //    try
+    //    {
+    //        // Start loading but don't activate yet
+    //        asyncLoad = SceneManager.LoadSceneAsync(sceneName, mode);
+    //        asyncLoad.allowSceneActivation = false;
+    //    }
+    //    catch (System.Exception ex)
+    //    {
+    //        Debug.LogError($"Error starting load operation: {ex.Message}");
+    //        yield break;
+    //    }
+
+    //    // Only proceed if we have a valid operation
+    //    if (asyncLoad == null)
+    //    {
+    //        Debug.LogError("Failed to start scene loading operation");
+    //        yield break;
+    //    }
+
+    //    // Wait until it reaches 90% - outside try-catch
+    //    while (asyncLoad.progress < 0.9f)
+    //    {
+    //        yield return null;
+    //    }
+
+    //    // Now allow activation
+    //    asyncLoad.allowSceneActivation = true;
+
+    //    // Wait until it's truly done
+    //    while (!asyncLoad.isDone)
+    //    {
+    //        yield return null;
+    //    }
+
+    //    // Get the loaded scene
+    //    Scene loadedScene = default(Scene);
+
+    //    try
+    //    {
+    //        loadedScene = SceneManager.GetSceneByName(sceneName);
+    //    }
+    //    catch (System.Exception ex)
+    //    {
+    //        Debug.LogError($"Error getting loaded scene: {ex.Message}");
+    //        yield break;
+    //    }
+
+    //    // Set active scene if valid
+    //    if (loadedScene.IsValid())
+    //    {
+    //        try
+    //        {
+    //            SceneManager.SetActiveScene(loadedScene);
+    //            // Instead, just ensure the researcher scene remains active for lighting
+    //            //Scene researcherScene = SceneManager.GetSceneByName("s.researcher");
+    //            //if (researcherScene.IsValid())
+    //            //{
+    //            //    SceneManager.SetActiveScene(researcherScene);
+    //            //    Debug.Log("Kept researcher scene active to preserve lighting");
+    //            //}
+    //        }
+    //        catch (System.Exception ex)
+    //        {
+    //            Debug.LogError($"Error setting active scene: {ex.Message}");
+    //        }
+
+    //        yield return null; // Wait another frame for safety
+    //    }
+    //}
+
+
+
+    //// Step 4: Initialize traffic controller
+    //private bool InitializeTrafficController(Scenario scenario)
+    //{
+    //    try
+    //    {
+    //        if (AITrafficController.Instance != null)
+    //        {
+    //            Debug.Log($"Initializing traffic controller for scenario with density {scenario.trafficDensity}");
+
+    //            // Make sure controller is active
+    //            AITrafficController.Instance.enabled = true;
+
+    //            // Update density setting
+    //            AITrafficController.Instance.density = scenario.trafficDensity;
+
+    //            // Register routes and spawn points in new scene
+    //            AITrafficController.Instance.RegisterAllRoutesInScene();
+    //            AITrafficController.Instance.InitializeSpawnPoints();
+
+    //            Debug.Log("Traffic controller initialized successfully");
+    //            return true;
+    //        }
+
+    //        Debug.LogError("No AITrafficController instance found!");
+    //        return false;
+    //    }
+    //    catch (System.Exception ex)
+    //    {
+    //        Debug.LogError($"Error initializing traffic controller: {ex.Message}");
+    //        return false;
+    //    }
+    //}
+
+    //// Step 5: Spawn traffic (as coroutine)
+    //// For the SpawnTrafficCoroutine, we need to separate execution
+    //private IEnumerator SpawnTrafficCoroutine(int density)
+    //{
+    //    Debug.Log($"Starting traffic spawn with density {density}");
+
+    //    if (AITrafficController.Instance == null)
+    //    {
+    //        Debug.LogError("AITrafficController.Instance is null");
+    //        yield break;
+    //    }
+
+    //    // Ensure controller has correct density set
+    //    AITrafficController.Instance.density = density;
+    //    Debug.Log($"Set AITrafficController density to {density}");
+
+    //    // Make sure controller can process cars
+    //    AITrafficController.Instance.enabled = true;
+
+    //    // Wait a frame for controller to initialize
+    //    yield return null;
+
+    //    // Get count before enabling - move outside try/catch
+    //    int pooledCarsCount = 0;
+    //    int totalCarsCount = 0;
+
+    //    try
+    //    {
+    //        pooledCarsCount = AITrafficController.Instance.GetTrafficPool().Count;
+    //        totalCarsCount = AITrafficController.Instance.GetCarList().Count;
+    //    }
+    //    catch (System.Exception ex)
+    //    {
+    //        Debug.LogError($"Error getting car counts: {ex.Message}");
+    //    }
+
+    //    Debug.Log($"Before enabling: {totalCarsCount - pooledCarsCount} active cars, {pooledCarsCount} cars in pool");
+
+    //    // Use STS native method to enable cars
+    //    Debug.Log("Calling DirectlySpawnVehicles native method");
+    //    try
+    //    {
+    //        AITrafficController.Instance.DirectlySpawnVehicles(density);
+    //    }
+    //    catch (System.Exception ex)
+    //    {
+    //        Debug.LogError($"Error spawning vehicles: {ex.Message}");
+    //    }
+
+    //    // Wait for cars to initialize - outside try/catch
+    //    yield return new WaitForSeconds(1.0f);
+
+    //    // Get count after enabling - outside try/catch
+    //    pooledCarsCount = 0;
+    //    totalCarsCount = 0;
+
+    //    try
+    //    {
+    //        pooledCarsCount = AITrafficController.Instance.GetTrafficPool().Count;
+    //        totalCarsCount = AITrafficController.Instance.GetCarList().Count;
+    //    }
+    //    catch (System.Exception ex)
+    //    {
+    //        Debug.LogError($"Error getting updated car counts: {ex.Message}");
+    //    }
+
+    //    Debug.Log($"After enabling: {totalCarsCount - pooledCarsCount} active cars, {pooledCarsCount} cars in pool");
+
+    //    // Wait a bit longer for processing to stabilize - outside try/catch
+    //    yield return new WaitForSeconds(0.5f);
+
+    //    // Force rebuild internal data structures
+    //    AITrafficController.Instance.RebuildTransformArrays();
+    //    AITrafficController.Instance.RebuildInternalDataStructures();
+    //}
+
+    //// helper method to force rebuild if needed
+    //private IEnumerator ForceRebuildTrafficSystem(int density)
+    //{
+    //    Debug.Log("EMERGENCY: Force rebuilding traffic system");
+
+    //    // Force-rebuild routes
+    //    AITrafficController.Instance.RegisterAllRoutesInScene();
+    //    yield return new WaitForSeconds(0.2f);
+
+    //    // Re-initialize spawn points
+    //    AITrafficController.Instance.InitializeSpawnPoints();
+    //    yield return new WaitForSeconds(0.2f);
+
+    //    // Try direct spawn method
+    //    Debug.Log($"Trying direct spawn with density {density}");
+    //    AITrafficController.Instance.DirectlySpawnVehicles(density);
+
+    //    // Wait for spawning to complete
+    //    yield return new WaitForSeconds(1.0f);
+
+    //    // Get count after emergency spawn
+    //    int pooledCarsCount = AITrafficController.Instance.GetTrafficPool().Count;
+    //    int totalCarsCount = AITrafficController.Instance.GetCarList().Count;
+    //    Debug.Log($"After emergency spawn: {totalCarsCount - pooledCarsCount} active cars, {pooledCarsCount} cars in pool");
+    //}
+    //// Step 6: Set up bus spawning
+    //private bool SetupBusForScenario(Scenario scenario)
+    //{
+    //    try
+    //    {
+    //        if (!scenario.spawnBus)
+    //        {
+    //            Debug.Log("This scenario doesn't use bus spawning");
+    //            return true; // Not an error, just no bus for this scenario
+    //        }
+
+    //        // Find or create BusSpawnerSimple
+    //        BusSpawnerSimple busSpawner = FindObjectOfType<BusSpawnerSimple>();
+    //        if (busSpawner == null)
+    //        {
+    //            GameObject spawnerObj = new GameObject("BusSpawnerSimple");
+    //            busSpawner = spawnerObj.AddComponent<BusSpawnerSimple>();
+    //            DontDestroyOnLoad(spawnerObj);
+    //            Debug.Log("Created new BusSpawnerSimple");
+    //        }
+
+    //        // Reset first to clear previous state
+    //        busSpawner.Reset();
+
+    //        // Set the bus prefab
+    //        if (busPrefab != null)
+    //        {
+    //            busSpawner.busPrefab = busPrefab;
+    //        }
+    //        else
+    //        {
+    //            Debug.LogError("No bus prefab assigned in ScenarioManager!");
+    //            return false;
+    //        }
+
+    //        // Determine which routes to use for this scenario
+    //        AITrafficWaypointRoute mainRoute = scenario.scenarioBusRoute;
+    //        if (mainRoute == null)
+    //        {
+    //            mainRoute = initialRoute;
+    //            Debug.Log("Using default bus route (scenario route is null)");
+    //        }
+
+    //        // Set routes and trigger spawn
+    //        if (mainRoute != null && busStopRoute != null)
+    //        {
+    //            // Log route status
+    //            Debug.Log($"Main route '{mainRoute.name}' registered: {mainRoute.isRegistered}");
+    //            Debug.Log($"Intersection route '{intersectionRoute.name}' registered: {intersectionRoute.isRegistered}");
+    //            Debug.Log($"Bus stop route '{busStopRoute.name}' registered: {busStopRoute.isRegistered}");
+
+    //            // Force register routes if needed
+    //            if (!mainRoute.isRegistered)
+    //            {
+    //                AITrafficController.Instance.RegisterAITrafficWaypointRoute(mainRoute);
+    //                mainRoute.RegisterRoute();
+    //                Debug.Log($"Registered main route: {mainRoute.name}");
+    //            }
+
+    //            if (!busStopRoute.isRegistered)
+    //            {
+    //                AITrafficController.Instance.RegisterAITrafficWaypointRoute(busStopRoute);
+    //                busStopRoute.RegisterRoute();
+    //                Debug.Log($"Registered bus stop route: {busStopRoute.name}");
+    //            }
+
+    //            // Set up routes
+    //            busSpawner.initialRoute = mainRoute;
+    //            busSpawner.intersectionRoute = intersectionRoute;
+    //            busSpawner.busStopRoute = busStopRoute;
+    //            busSpawner.SetupBusRoutes(initialRoute, intersectionRoute, busStopRoute);
+
+    //            // Trigger spawn with delay
+    //            Debug.Log($"Triggering bus spawn with {scenario.busSpawnDelay} seconds delay");
+    //            busSpawner.TriggerBusSpawn(scenario.busSpawnDelay);
+
+    //            return true;
+    //        }
+    //        else
+    //        {
+    //            Debug.LogError("Missing routes for bus setup!");
+    //            if (mainRoute == null) Debug.LogError("Main route is null");
+    //            if (busStopRoute == null) Debug.LogError("Bus stop route is null");
+    //            return false;
+    //        }
+    //    }
+    //    catch (System.Exception ex)
+    //    {
+    //        Debug.LogError($"Error setting up bus: {ex.Message}");
+    //        return false;
+    //    }
+    //}
+
+    //// Step 7: Position player
+    //private bool PositionPlayerForScenario(Scenario scenario)
+    //{
+    //    try
+    //    {
+    //        Debug.Log("=== POSITIONING PLAYER FOR SCENARIO ===");
+
+    //        if (scenario.playerStartPosition != null)
+    //        {
+    //            GameObject xrOrigin = FindXROrigin();
+    //            if (xrOrigin != null)
+    //            {
+    //                // Get current camera position
+    //                Vector3 cameraOffset = Vector3.zero;
+    //                if (Camera.main != null)
+    //                {
+    //                    cameraOffset = Camera.main.transform.position - xrOrigin.transform.position;
+    //                    cameraOffset.y = 0; // Only horizontal offset
+    //                }
+
+    //                // Calculate target position
+    //                Vector3 targetPosition = scenario.playerStartPosition.position - cameraOffset;
+    //                targetPosition.y = xrOrigin.transform.position.y; // Maintain floor height
+
+    //                // CRITICAL: Move XR Origin, but DON'T modify the tracking space alignment
+    //                Vector3 originalPosition = xrOrigin.transform.position;
+
+    //                // Move XR Origin to scenario start position
+    //                xrOrigin.transform.position = targetPosition;
+    //                xrOrigin.transform.rotation = scenario.playerStartPosition.rotation;
+
+    //                Debug.Log($"Moved XR Origin from {originalPosition} to {targetPosition}");
+
+    //                // IMPORTANT: Update the redirected walking system for the new virtual position
+    //                // but preserve the physical space alignment
+    //                if (persistentRDW != null)
+    //                {
+    //                    // Use the improved alignment method that preserves physical space
+    //                    Vector3 roadDirection = scenario.playerStartPosition.forward;
+    //                    roadDirection.y = 0;
+    //                    roadDirection.Normalize();
+
+    //                    persistentRDW.UpdateVirtualPositionOnly(targetPosition, roadDirection);
+    //                }
+    //                else
+    //                {
+    //                    // Fallback: update RedirectionManager carefully
+    //                    var rm = FindObjectOfType<RedirectionManager>();
+    //                    if (rm != null)
+    //                    {
+    //                        // Check if physical space is calibrated using the field we added
+    //                        if (rm.physicalSpaceCalibrated)
+    //                        {
+    //                            // DON'T recalibrate physical space, just update virtual position
+    //                            rm.UpdateVirtualPositionForScenario(targetPosition, scenario.playerStartPosition.forward);
+    //                        }
+    //                        else
+    //                        {
+    //                            Debug.LogWarning("Physical space not calibrated - performing initial calibration");
+    //                            rm.CalibratePhysicalSpaceReference();
+
+    //                            // Then update virtual position
+    //                            rm.UpdateVirtualPositionForScenario(targetPosition, scenario.playerStartPosition.forward);
+    //                        }
+    //                    }
+    //                }
+    //            }
+    //            else
+    //            {
+    //                Debug.LogError("Could not find XR Origin in the scene");
+    //                return false;
+    //            }
+    //        }
+    //        else
+    //        {
+    //            Debug.Log("No player start position specified in scenario");
+    //        }
+
+    //        Debug.Log("=== PLAYER POSITIONING COMPLETE ===");
+    //        return true;
+    //    }
+    //    catch (System.Exception ex)
+    //    {
+    //        Debug.LogError($"Error positioning player: {ex.Message}");
+    //        return false;
+    //    }
+    //}
+
+
+    //private void ClearVisualMarkers()
+    //{
+    //    // Find markers by name
+    //    string[] markerNames = new string[] {
+    //    "Corner_0", "Corner_1", "Corner_2", "Corner_3",
+    //    "TrackingSpaceCenter", "ForwardDirection", "RightDirection",
+    //    "DirectionLabel"
+    //};
+
+    //    foreach (string name in markerNames)
+    //    {
+    //        GameObject obj = GameObject.Find(name);
+    //        if (obj != null)
+    //        {
+    //            Destroy(obj);
+    //        }
+    //    }
+
+    //    // Try by tag as well
+    //    try
+    //    {
+    //        GameObject[] taggedMarkers = GameObject.FindGameObjectsWithTag("CornerMarker");
+    //        foreach (var marker in taggedMarkers)
+    //        {
+    //            if (marker != null)
+    //                Destroy(marker);
+    //        }
+    //    }
+    //    catch (System.Exception)
+    //    {
+    //        // Tag might not exist, that's ok
+    //    }
+
+    //    Debug.Log("Cleared existing visual markers");
+    //}
+
+
+    //private IEnumerator SetupVisualizationManagerForScenario()
+    //{
+    //    var vm = FindObjectOfType<VisualizationManager>();
+    //    if (vm != null)
+    //    {
+    //        // Ensure proper initialization
+    //        vm.EnsureInitialized();
+    //        yield return null;
+
+    //        vm.EnsureTrackingSpaces();
+    //        yield return null;
+
+    //        // Configure for below-ground reference lines
+    //        vm.referenceLineHeight = -0.5f; // 50cm below ground
+    //        vm.referenceLineWidth = 0.05f;
+    //        vm.referenceLineColor = new Color(1f, 0f, 0f, 0.8f); // Semi-transparent red
+    //        vm.showReferenceLines = true;
+    //        vm.showCornerMarkers = true;
+    //        vm.cornerMarkerSize = 0.2f;
+
+    //        // Update the reference lines
+    //        vm.UpdateReferenceLines();
+
+    //        Debug.Log("VisualizationManager configured for scenario");
+    //    }
+    //    else
+    //    {
+    //        Debug.LogError("No VisualizationManager found for scenario setup!");
+    //    }
+    //}
+
+
+    //private void OnRDWInitialized()
+    //{
+    //    isRDWInitialized = true;
+    //    Debug.Log("RDW system successfully initialized!");
+
+    //    // Update references for current scenario
+    //    //UpdateRDWReferencesForScene();
+    //}
+    //private IEnumerator DelayedTrackingSpaceInitialization(TrackingSpaceManager manager)
+    //{
+    //    // Wait a short delay to allow other components to initialize
+    //    yield return new WaitForSeconds(0.5f);
+
+    //    if (manager != null)
+    //    {
+    //        // Calibrate tracking space
+    //        manager.CalibrateTrackingSpace();
+
+    //        // Create visual markers
+    //        manager.CreatePermanentBoundaryMarkers();
+
+    //        Debug.Log("Initialized tracking space using TrackingSpaceManager");
+    //    }
+    //}
+
+    //private IEnumerator DelayedPersistentRDWInitialization(PersistentRDW rdw)
+    //{
+    //    // Wait a short delay to allow other components to initialize
+    //    yield return new WaitForSeconds(0.5f);
+
+    //    if (rdw != null)
+    //    {
+    //        // Calibrate tracking space
+    //        rdw.CalibrateTrackingSpace();
+
+    //        // Create corner markers
+    //        rdw.CreatePersistentCornerMarkers(8.4f, 14.0f);
+
+    //        Debug.Log("Initialized tracking space using PersistentRDW");
+    //    }
+    //}
+    //private GameObject FindRDWRoot()
+    //{
+    //    GameObject rdwRoot = GameObject.Find("RDW");
+
+    //    if (rdwRoot != null)
+    //    {
+    //        Debug.Log($"Found RDW root: {rdwRoot.name}");
+    //    }
+    //    else
+    //    {
+    //        Debug.LogError("RDW root not found! Make sure RDWSceneSetup has initialized it.");
+    //    }
+
+    //    return rdwRoot;
+    //}
+    //private void CreateTrackingSpaceVisualizations(Transform trackingSpace)
+    //{
+    //    // CHECK MASTER CONTROL AND LOCAL SETTING
+    //    if (disableScenarioManagerVisualization || !TrackingSpaceVisualizationController.ShouldShowAnyVisualization())
+    //    {
+    //        Debug.Log("ScenarioManager: Tracking space visualization disabled");
+    //        return;
+    //    }
+
+    //    Debug.Log("ScenarioManager: Creating tracking space visualizations (master control allows)");
+    //    // ... rest of existing method (only if you want ScenarioManager to create any)
+    //    if (trackingSpace == null) return;
+
+    //    // Create tracking space center indicator
+    //    GameObject centerMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+    //    centerMarker.name = "TrackingSpaceCenter";
+    //    centerMarker.transform.position = trackingSpace.position + new Vector3(0, 0.01f, 0);
+    //    centerMarker.transform.localScale = new Vector3(0.5f, 0.02f, 0.5f);
+    //    centerMarker.GetComponent<Renderer>().material.color = Color.cyan;
+
+    //    // Create forward direction indicator
+    //    GameObject forwardMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+    //    forwardMarker.name = "ForwardDirection";
+    //    forwardMarker.transform.position = trackingSpace.position + trackingSpace.forward * 2f + new Vector3(0, 0.05f, 0);
+    //    forwardMarker.transform.rotation = trackingSpace.rotation;
+    //    forwardMarker.transform.localScale = new Vector3(0.2f, 0.05f, 4f);
+    //    forwardMarker.GetComponent<Renderer>().material.color = Color.blue;
+
+    //    // Create right direction indicator
+    //    GameObject rightMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+    //    rightMarker.name = "RightDirection";
+    //    rightMarker.transform.position = trackingSpace.position + trackingSpace.right * 1f + new Vector3(0, 0.05f, 0);
+    //    rightMarker.transform.rotation = Quaternion.Euler(0, trackingSpace.rotation.eulerAngles.y + 90, 0);
+    //    rightMarker.transform.localScale = new Vector3(0.2f, 0.05f, 2f);
+    //    rightMarker.GetComponent<Renderer>().material.color = Color.red;
+
+    //    Debug.Log("Created temporary tracking space visualizations");
+    //}
+    //private void ClearExistingMarkers()
+    //{
+    //    // Find all scenario manager markers
+    //    var existingMarkers = FindObjectsOfType<ScenarioManagerMarker>();
+    //    foreach (var marker in existingMarkers)
+    //    {
+    //        if (marker != null)
+    //        {
+    //            Destroy(marker.gameObject);
+    //        }
+    //    }
+
+    //    // Also clear by name pattern
+    //    for (int i = 0; i < 10; i++)
+    //    {
+    //        GameObject marker = GameObject.Find($"ScenarioManager_Corner_{i}");
+    //        if (marker != null)
+    //        {
+    //            Destroy(marker);
+    //        }
+    //    }
+    //}
+    //private bool DisableTrafficSystem()
+    //{
+    //    try
+    //    {
+    //        if (TrafficSystemManager.Instance != null)
+    //        {
+    //            // Start coroutine but don't try to return it as a bool
+    //            StartCoroutine(TrafficSystemManager.Instance.DisableTrafficSystemCoroutine());
+    //            return true;
+    //        }
+    //        return true;
+    //    }
+    //    catch (System.Exception ex)
+    //    {
+    //        Debug.LogError($"Error disabling traffic system: {ex.Message}");
+    //        return false;
+    //    }
+    //}
+
+    //// helper method to keep the Simulated User aligned with XR Origin if needed
+    //private void UpdateSimulatedUserPosition()
+    //{
+    //    GameObject xrOrigin = FindXROrigin();
+    //    GameObject simulatedUser = GameObject.Find("Simulated User");
+
+    //    if (xrOrigin != null && simulatedUser != null)
+    //    {
+    //        // Only update XZ position to match XR Origin
+    //        simulatedUser.transform.position = new Vector3(
+    //            xrOrigin.transform.position.x,
+    //            simulatedUser.transform.position.y, // Keep original height
+    //            xrOrigin.transform.position.z
+    //        );
+
+    //        // Make it face the same direction as XR Origin
+    //        Vector3 forward = xrOrigin.transform.forward;
+    //        forward.y = 0;
+    //        if (forward != Vector3.zero)
+    //        {
+    //            simulatedUser.transform.forward = forward.normalized;
+    //        }
+
+    //        Debug.Log("Updated Simulated User position to match XR Origin");
+    //    }
+    //}
+
+    //// helper method to fix hierarchy issues
+    //private void FixRedirectedAvatarHierarchy()
+    //{
+    //    GameObject redirectedAvatar = GameObject.Find("Redirected Avatar");
+    //    if (redirectedAvatar == null) return;
+
+    //    // Find TrackingSpace and ensure it's a child of Redirected Avatar
+    //    Transform trackingSpace = GameObject.Find("Tracking Space")?.transform;
+    //    if (trackingSpace != null && trackingSpace.parent != redirectedAvatar.transform)
+    //    {
+    //        Debug.Log("Fixing TrackingSpace parent");
+    //        trackingSpace.SetParent(redirectedAvatar.transform);
+    //    }
+
+    //    // Find Body and ensure it's a child of Redirected Avatar
+    //    Transform body = GameObject.Find("Body")?.transform;
+    //    if (body != null && body.parent != redirectedAvatar.transform)
+    //    {
+    //        Debug.Log("Fixing Body parent");
+    //        body.SetParent(redirectedAvatar.transform);
+    //    }
+
+    //    // Find Simulated User and ensure it's a child of Redirected Avatar
+    //    Transform simulatedUser = GameObject.Find("Simulated User")?.transform;
+    //    if (simulatedUser != null && simulatedUser.parent != redirectedAvatar.transform)
+    //    {
+    //        Debug.Log("Fixing Simulated User parent");
+    //        simulatedUser.SetParent(redirectedAvatar.transform);
+    //    }
+
+    //    Debug.Log("Redirected Avatar hierarchy fixed");
+    //}
+
+    //// NEW: helper method to ensure tracking space remains visible
+    //// helper method to ScenarioManager.cs
+    //private void ForceTrackingSpaceVisualization()
+    //{
+    //    // Find all redirection managers in scene
+    //    var redirectionManagers = FindObjectsOfType<RedirectionManager>();
+    //    foreach (var rm in redirectionManagers)
+    //    {
+    //        if (rm != null)
+    //        {
+    //            // Toggle visualization on
+    //            rm.ToggleTrackingSpaceVisualization();
+
+    //            // Ensure it's on (in case it was already on before toggling)
+    //            if (rm.visualizationManager != null)
+    //            {
+    //                rm.visualizationManager.ChangeTrackingSpaceVisibility(true);
+
+    //                // Update global config setting
+    //                if (rm.globalConfiguration != null)
+    //                {
+    //                    rm.globalConfiguration.trackingSpaceVisible = true;
+    //                }
+    //            }
+
+    //            Debug.Log($"Forced tracking space visualization ON for {rm.name}");
+    //        }
+    //    }
+    //}
+
+    //private void CreateTrackingSpaceMarkers(RedirectionManager rm)
+    //{
+    //    // CHECK MASTER CONTROL
+    //    if (!TrackingSpaceVisualizationController.ShouldShowAnyVisualization())
+    //    {
+    //        Debug.Log("ScenarioManager: Tracking space markers disabled by master control");
+    //        return;
+    //    }
+
+    //    Debug.Log("ScenarioManager: Creating tracking space markers (master control allows)");
+    //    // ... rest of existing method
+    //    if (rm == null || rm.trackingSpace == null || rdwGlobalConfiguration == null ||
+    //        rdwGlobalConfiguration.physicalSpaces == null || rdwGlobalConfiguration.physicalSpaces.Count == 0)
+    //        return;
+
+    //    var physicalSpace = rdwGlobalConfiguration.physicalSpaces[0];
+    //    float width = 0, length = 0;
+
+    //    // Calculate dimensions
+    //    if (physicalSpace.trackingSpace != null && physicalSpace.trackingSpace.Count >= 4)
+    //    {
+    //        float minX = float.MaxValue, maxX = float.MinValue;
+    //        float minZ = float.MaxValue, maxZ = float.MinValue;
+
+    //        foreach (var point in physicalSpace.trackingSpace)
+    //        {
+    //            minX = Mathf.Min(minX, point.x);
+    //            maxX = Mathf.Max(maxX, point.x);
+    //            minZ = Mathf.Min(minZ, point.y); // y in 2D coords is z in 3D
+    //            maxZ = Mathf.Max(maxZ, point.y);
+    //        }
+
+    //        width = maxX - minX;
+    //        length = maxZ - minZ;
+    //    }
+
+    //    // Create directional arrows
+    //    GameObject forwardArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+    //    forwardArrow.name = "ForwardDirection";
+    //    forwardArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.forward * (length / 4) + Vector3.up * 0.05f;
+    //    forwardArrow.transform.rotation = rm.trackingSpace.rotation;
+    //    forwardArrow.transform.localScale = new Vector3(0.1f, 0.05f, 1.0f);
+    //    forwardArrow.GetComponent<Renderer>().material.color = Color.blue;
+
+    //    GameObject rightArrow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+    //    rightArrow.name = "RightDirection";
+    //    rightArrow.transform.position = rm.trackingSpace.position + rm.trackingSpace.right * (width / 4) + Vector3.up * 0.05f;
+    //    rightArrow.transform.rotation = Quaternion.Euler(0, rm.trackingSpace.rotation.eulerAngles.y + 90, 0);
+    //    rightArrow.transform.localScale = new Vector3(0.1f, 0.05f, 0.5f);
+    //    rightArrow.GetComponent<Renderer>().material.color = Color.red;
+
+    //    // Clean up after 1 minute
+    //    Destroy(forwardArrow, 60f);
+    //    Destroy(rightArrow, 60f);
+
+    //    Debug.Log($"Created tracking space direction indicators: Blue arrow = Forward (length: {length}m), Red arrow = Right (width: {width}m)");
+    //}
+
+    //private IEnumerator SpawnCarsFromPool(AITrafficController controller, int desiredDensity)
+    //{
+    //    Debug.Log($"Spawning {desiredDensity} cars from pool");
+
+    //    // Get all spawn points in the current scene
+    //    var allSpawnPoints = FindObjectsOfType<AITrafficSpawnPoint>();
+    //    var validSpawnPoints = new List<AITrafficSpawnPoint>();
+
+    //    // Filter for valid spawn points with proper route connections
+    //    foreach (var point in allSpawnPoints)
+    //    {
+    //        if (point != null && point.waypoint != null &&
+    //            point.waypoint.onReachWaypointSettings.parentRoute != null &&
+    //            point.waypoint.onReachWaypointSettings.nextPointInRoute != null &&
+    //            !point.isTrigger)
+    //        {
+    //            validSpawnPoints.Add(point);
+    //        }
+    //    }
+
+    //    if (validSpawnPoints.Count == 0)
+    //    {
+    //        Debug.LogWarning("No valid spawn points found in scene!");
+    //        yield break;
+    //    }
+
+    //    Debug.Log($"Found {validSpawnPoints.Count} valid spawn points for car spawning");
+
+    //    // Calculate how many cars to spawn
+    //    int spawnCount = Mathf.Min(desiredDensity, validSpawnPoints.Count);
+    //    int spawnedCount = 0;
+
+    //    // Randomize spawn points to avoid patterns
+    //    validSpawnPoints = validSpawnPoints.OrderBy(x => UnityEngine.Random.value).ToList();
+
+    //    // Spawn cars at valid points
+    //    for (int i = 0; i < spawnCount; i++)
+    //    {
+    //        if (i >= validSpawnPoints.Count) break;
+
+    //        var spawnPoint = validSpawnPoints[i];
+
+    //        // Check for existing cars near this spawn point
+    //        bool spawnPointClear = true;
+    //        Vector3 spawnPosition = spawnPoint.transform.position + new Vector3(0, 0.1f, 0);
+    //        Collider[] nearbyColliders = Physics.OverlapSphere(spawnPosition, 5f); // 5-meter radius check
+
+    //        foreach (var collider in nearbyColliders)
+    //        {
+    //            if (collider.GetComponent<AITrafficCar>() != null)
+    //            {
+    //                // Found another car too close to this spawn point
+    //                spawnPointClear = false;
+    //                Debug.Log($"Spawn point {spawnPoint.name} blocked by existing car");
+    //                break;
+    //            }
+    //        }
+
+    //        if (!spawnPointClear)
+    //        {
+    //            // Skip this spawn point and try another
+    //            continue;
+    //        }
+
+    //        var route = spawnPoint.waypoint.onReachWaypointSettings.parentRoute;
+
+    //        // Get a car from the pool that matches the route's vehicle types
+    //        AITrafficCar car = controller.SpawnCarsFromPool(route);
+
+    //        if (car != null)
+    //        {
+    //            bool spawnSuccess = false;
+
+    //            try
+    //            {
+    //                // STEP 1: Ensure the car is properly assigned to this route
+    //                car.waypointRoute = route;
+    //                car.RegisterCar(route);
+
+    //                // STEP 2: Position the car precisely at spawn point
+    //                Quaternion spawnRotation = spawnPoint.transform.rotation;
+    //                car.transform.SetPositionAndRotation(spawnPosition, spawnRotation);
+
+    //                // STEP 3: Get correct next waypoint
+    //                Transform nextWaypointTransform = spawnPoint.waypoint.onReachWaypointSettings.nextPointInRoute?.transform;
+    //                //Transform nextWaypointTransform = spawnPoint.waypoint.GetNextWaypointTransform();
+
+    //                if (nextWaypointTransform == null && route.waypointDataList.Count > 0)
+    //                {
+    //                    // Fallback to first waypoint if next isn't defined
+    //                    nextWaypointTransform = route.waypointDataList[0]._transform;
+    //                }
+
+    //                if (nextWaypointTransform != null)
+    //                {
+    //                    // STEP 4: Make car face next waypoint
+    //                    car.transform.LookAt(nextWaypointTransform);
+
+    //                    // STEP 5: Properly set up DriveTarget
+    //                    Transform driveTarget = car.transform.Find("DriveTarget");
+    //                    if (driveTarget == null)
+    //                    {
+    //                        driveTarget = new GameObject("DriveTarget").transform;
+    //                        driveTarget.SetParent(car.transform);
+    //                    }
+
+    //                    // Position drive target exactly at the next waypoint
+    //                    driveTarget.position = nextWaypointTransform.position;
+    //                    Debug.Log($"Positioned drive target for {car.name} at {driveTarget.position}");
+
+    //                    // STEP 6: Force reinitialize route connection
+    //                    car.ReinitializeRouteConnection();
+    //                }
+
+    //                spawnSuccess = true;
+    //            }
+    //            catch (System.Exception ex)
+    //            {
+    //                Debug.LogError($"Error during car spawn process: {ex.Message}");
+    //            }
+
+    //            if (spawnSuccess)
+    //            {
+    //                // STEP 7: Ensure car is set to drive
+    //                car.StopDriving(); // First stop to reset state
+    //                yield return null; // Allow a frame for state to update
+
+    //                car.StartDriving();
+
+    //                // STEP 8: Update controller arrays
+    //                if (car.assignedIndex >= 0)
+    //                {
+    //                    controller.Set_IsDrivingArray(car.assignedIndex, true);
+    //                    controller.Set_CanProcess(car.assignedIndex, true);
+    //                }
+
+    //                spawnedCount++;
+    //                Debug.Log($"Successfully spawned car {car.name} (ID: {car.assignedIndex}) on route {route.name}");
+    //            }
+
+    //            // Small delay between spawns to prevent physics issues
+    //            yield return new WaitForEndOfFrame();
+    //        }
+    //    }
+
+    //    Debug.Log($"Successfully spawned {spawnedCount} cars from pool");
+
+    //    // Wait for physics to settle
+    //    yield return new WaitForSeconds(1.0f);
+
+    //    // Final verification
+    //    var spawnedActiveCars = FindObjectsOfType<AITrafficCar>()
+    //        .Where(c => c.gameObject.activeInHierarchy)
+    //        .ToArray();
+
+    //    Debug.Log($"Final verification: {spawnedActiveCars.Length} active cars in scene");
+
+    //    // Log the state of each spawned car
+    //    foreach (var car in spawnedActiveCars)
+    //    {
+    //        if (car.isDriving)
+    //        {
+    //            Debug.Log($"Car {car.name} (ID: {car.assignedIndex}) is driving on route {car.waypointRoute.name}");
+    //        }
+    //        else
+    //        {
+    //            Debug.LogWarning($"Car {car.name} (ID: {car.assignedIndex}) is NOT driving. Route: {car.waypointRoute.name}");
+    //        }
+    //    }
+    //}
+
+
+
+    //// Helper method to force path update after a delay
+    //private IEnumerator DelayedForceUpdatePath(AITrafficCar car, float delay)
+    //{
+    //    yield return new WaitForSeconds(delay);
+
+    //    if (car != null && car.gameObject.activeInHierarchy && car.waypointRoute != null)
+    //    {
+    //        //car.ForceWaypointPathUpdate();
+    //        Debug.Log($"Delayed force update for {car.name}");
+    //    }
+    //}
+    //private IEnumerator ReplicateInitialSpawningProcess(AITrafficController controller, int density)
+    //{
+    //    Debug.Log($"Starting initial spawning process replication with density {density}");
+
+    //    // 1. First ensure the controller is ready
+    //    bool originalPoolingState = controller.usePooling;
+    //    controller.usePooling = false;
+    //    controller.density = density;
+
+    //    // 2. Remove all existing cars
+    //    var existingCars = FindObjectsOfType<AITrafficCar>();
+    //    foreach (var car in existingCars)
+    //    {
+    //        if (car != null) Destroy(car.gameObject);
+    //    }
+
+    //    // Wait for car destruction to complete
+    //    yield return new WaitForSeconds(1.0f);
+
+    //    // 3. Use the original startup method that we know works
+    //    controller.RespawnTrafficAsInitial(density);
+
+    //    // 4. Wait for spawning to complete (the original method is a coroutine)
+    //    yield return new WaitForSeconds(3.0f);
+
+    //    // 5. Rebuild controller data
+    //    controller.RebuildTransformArrays();
+    //    controller.RebuildInternalDataStructures();
+
+    //    // 6. Restore original pooling state
+    //    controller.usePooling = originalPoolingState;
+
+    //    Debug.Log("Initial spawning process replication complete");
+    //}
     #endregion
 }
 #endregion

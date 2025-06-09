@@ -3,8 +3,8 @@ using UnityEngine.InputSystem;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 using UnityEngine.XR.Interaction.Toolkit.Inputs;
-using UnityEngine.XR.Interaction.Toolkit.Utilities.Internal;
 using UnityEngine.XR.Interaction.Toolkit.Samples.StarterAssets;
+using UnityEngine.XR.Interaction.Toolkit.Utilities.Internal;
 
 namespace UnityEngine.XR.Interaction.Toolkit.Samples.ARStarterAssets
 {
@@ -171,7 +171,7 @@ namespace UnityEngine.XR.Interaction.Toolkit.Samples.ARStarterAssets
             var attemptSpawn = false;
             var currentControllerState = m_ARInteractorAsControllerInteractor.xrController.currentControllerState;
 
-            if(m_BlockSpawnWhenInteractorHasSelection)
+            if (m_BlockSpawnWhenInteractorHasSelection)
             {
                 if (currentControllerState.selectInteractionState.activatedThisFrame)
                     m_EverHadSelection = m_ARInteractorAsControllerInteractor.hasSelection;

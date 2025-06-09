@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEngine.SceneManagement;
-using UnityEditor.SceneManagement;
 #endif
 using UnityEngine;
 using TMPro;
@@ -17,22 +15,22 @@ using UnityEngine.InputSystem;
 [ExecuteInEditMode]
 public class PRSSamplesShowcase : MonoBehaviour
 {
-    
+
     public string headline = "Headline Goes Here";
     // Color of the headline. light and dark theme variant.
-    public Color headlineLightColor = new Color(0.066f,0.066f,0.066f,1f);
-    public Color headlineDarkColor = new Color(0.82f,0.82f,0.82f,1f);
+    public Color headlineLightColor = new Color(0.066f, 0.066f, 0.066f, 1f);
+    public Color headlineDarkColor = new Color(0.82f, 0.82f, 0.82f, 1f);
     // Color of the text when a link is used to open an asset. light and dark theme variant.
-    public Color openLightColor = new Color(0.086f,0.427f,0.792f,1f);
-    public Color openDarkColor = new Color(0.478f,0.658f,0.933f,1f);  
+    public Color openLightColor = new Color(0.086f, 0.427f, 0.792f, 1f);
+    public Color openDarkColor = new Color(0.478f, 0.658f, 0.933f, 1f);
     // Color of the text when a link is used to highlight an asset in the scene. light and dark theme variant.
-    public Color highlightLightColor = new Color(0.6f,0.4f,0f,1f);  
-    public Color highlightDarkColor = new Color(1f,0.89f,0.45f,1f); 
+    public Color highlightLightColor = new Color(0.6f, 0.4f, 0f, 1f);
+    public Color highlightDarkColor = new Color(1f, 0.89f, 0.45f, 1f);
     // Color for code markdown. light and dark theme variant.      
-    public Color codeLightColor = new Color(0.76f,0.41f,0f,1f);
-    public Color codeDarkColor = new Color(0.91f,0.57f,0.17f,1f);               
+    public Color codeLightColor = new Color(0.76f, 0.41f, 0f, 1f);
+    public Color codeDarkColor = new Color(0.91f, 0.57f, 0.17f, 1f);
     public TextAsset SamplesDescriptionsJson;
-    public enum Mode {Instantiation, Focus, TextOnly};
+    public enum Mode { Instantiation, Focus, TextOnly };
     public GameObject[] samplesPrefabs;
     public Mode PresentationMode = Mode.TextOnly;
     public bool enableSelectButton = true;
@@ -41,10 +39,10 @@ public class PRSSamplesShowcase : MonoBehaviour
     int prefabIndex;
     private Coroutine cameraCoroutine;
 
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     [SerializeField]
     public PRSRequiredSettingsSO requiredSettingsSO;
-    #endif
+#endif
 
     //Variable containing TMPPro compatible sanitized text
     public static string SanitizedIntroduction;
@@ -59,9 +57,9 @@ public class PRSSamplesShowcase : MonoBehaviour
 
     private bool needUpdate;
     private Vector3 savedPrefabPosition;
-    
+
     //Delegate to update every instance of samples showcase inspector UI
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     public delegate void UpdateSamplesInspectorDelegate();
     public static UpdateSamplesInspectorDelegate OnUpdateSamplesInspector;
     void UpdateSamplesInspector()
@@ -71,11 +69,11 @@ public class PRSSamplesShowcase : MonoBehaviour
             OnUpdateSamplesInspector();
         }
     }
-    #endif
+#endif
 
-	void OnEnable()
-	{
-		// JSon data of the samples
+    void OnEnable()
+    {
+        // JSon data of the samples
         if (SamplesDescriptionsJson != null)
         {
             string jsonText = CleanupJson(SamplesDescriptionsJson.text);
@@ -88,7 +86,7 @@ public class PRSSamplesShowcase : MonoBehaviour
 
             PRSSamplesShowcase.SanitizedDescriptions = new Dictionary<string, string>();
             PRSSamplesShowcase.SanitizedTitles = new Dictionary<string, string>();
-            foreach(GameObject prefab in samplesPrefabs)
+            foreach (GameObject prefab in samplesPrefabs)
             {
                 PRSSample currentSample = sampleJsonObject.FindSampleWithPrefab(prefab);
                 if (currentSample == null)
@@ -98,8 +96,8 @@ public class PRSSamplesShowcase : MonoBehaviour
                 PRSSamplesShowcase.SanitizedDescriptions.Add(prefab.name, description);
                 PRSSamplesShowcase.SanitizedTitles.Add(prefab.name, currentSample.title);
             }
-		}
-	}
+        }
+    }
 
     void OnValidate()
     {
@@ -114,26 +112,26 @@ public class PRSSamplesShowcase : MonoBehaviour
             if (Application.isFocused && Application.isPlaying)
             {
 #if ENABLE_LEGACY_INPUT_MANAGER
-                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.UpArrow) )
+                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.UpArrow))
                 {
-                    SwitchEffect(currentIndex+1);
+                    SwitchEffect(currentIndex + 1);
                 }
-                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.DownArrow) )
+                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.DownArrow))
                 {
-                    SwitchEffect(currentIndex-1);
+                    SwitchEffect(currentIndex - 1);
                 }
 #endif
 
 #if ENABLE_INPUT_SYSTEM
-                if(Keyboard.current.rightArrowKey.wasPressedThisFrame || Keyboard.current.upArrowKey.wasPressedThisFrame)
+                if (Keyboard.current.rightArrowKey.wasPressedThisFrame || Keyboard.current.upArrowKey.wasPressedThisFrame)
                 {
-                    SwitchEffect(currentIndex+1);
-                } 
-                
-                if(Keyboard.current.leftArrowKey.wasPressedThisFrame ||Keyboard.current.downArrowKey.wasPressedThisFrame)
+                    SwitchEffect(currentIndex + 1);
+                }
+
+                if (Keyboard.current.leftArrowKey.wasPressedThisFrame || Keyboard.current.downArrowKey.wasPressedThisFrame)
                 {
-                    SwitchEffect(currentIndex-1);
-                }           
+                    SwitchEffect(currentIndex - 1);
+                }
 #endif
 
             }
@@ -178,38 +176,38 @@ public class PRSSamplesShowcase : MonoBehaviour
                         instantiatedPrefab.transform.localRotation = Quaternion.identity;
                         currentPrefab = instantiatedPrefab;
                         prefabIndex = index;
-                        
+
                         // This is for keeping the prefab at the same position as before
                         instantiatedPrefab.transform.position = savedPrefabPosition;
-                            
+
                     }
-                }    
-            break;
+                }
+                break;
 
             case Mode.Focus:
                 if (index <= samplesPrefabs.Length && samplesPrefabs.Length > 0)
-                    {
-                        currentPrefab = samplesPrefabs[index];
-                    }
+                {
+                    currentPrefab = samplesPrefabs[index];
+                }
 
                 if (currentPrefab != null)
                 {
-                   Transform viewPoint = currentPrefab.transform.Find("ViewPoint");
+                    Transform viewPoint = currentPrefab.transform.Find("ViewPoint");
                     if (viewPoint != null)
                     {
                         // Align Scene View Camera
-                        #if UNITY_EDITOR
+#if UNITY_EDITOR
                         SceneView view = SceneView.lastActiveSceneView;
                         if (view != null)
                         {
                             view.AlignViewToObject(viewPoint.transform);
                         }
-                        #endif
+#endif
 
                         // Align game view if a gameViewCamera is set
                         if (gameViewCamera != null)
                         {
-                            if(cameraCoroutine !=null)
+                            if (cameraCoroutine != null)
                             {
                                 StopCoroutine(cameraCoroutine);
                             }
@@ -217,21 +215,21 @@ public class PRSSamplesShowcase : MonoBehaviour
                         }
                     }
                 }
-            break;
+                break;
         }
-    
-        #if UNITY_EDITOR
+
+#if UNITY_EDITOR
         UpdateSamplesInspector();
-        #endif
+#endif
     }
 
     private IEnumerator lerpTransform(Transform transformA, Transform transformB)
     {
-        float startTime=Time.time; 
-        while(Time.time-startTime<=1)//one second
-        { 
-            transformA.position=Vector3.Lerp(transformA.position,transformB.position,Time.time-startTime); 
-            transformA.rotation = Quaternion.Lerp(transformA.rotation,transformB.rotation, Time.time-startTime);
+        float startTime = Time.time;
+        while (Time.time - startTime <= 1)//one second
+        {
+            transformA.position = Vector3.Lerp(transformA.position, transformB.position, Time.time - startTime);
+            transformA.rotation = Quaternion.Lerp(transformA.rotation, transformB.rotation, Time.time - startTime);
             yield return 1; // wait for next frame
         }
     }
@@ -244,40 +242,40 @@ public class PRSSamplesShowcase : MonoBehaviour
         {
             // This is for keeping the prefab at the same position as before
             savedPrefabPosition = transform.GetChild(0).position;
-            
+
             foreach (Transform child in transform)
             {
                 GameObject.DestroyImmediate(child.gameObject);
             }
         }
     }
-    
+
     public static string GetSanitizedDescription(string prefabName)
     {
-        if(SanitizedDescriptions == null) return "";
-        
-        if(SanitizedDescriptions.ContainsKey(prefabName))
+        if (SanitizedDescriptions == null) return "";
+
+        if (SanitizedDescriptions.ContainsKey(prefabName))
             return SanitizedDescriptions[prefabName];
-            
+
         return "";
     }
-    
+
     public static string GetSanitizedTitle(string prefabName)
     {
-        if(SanitizedTitles == null) return "";
-        
-        if(SanitizedTitles.ContainsKey(prefabName))
+        if (SanitizedTitles == null) return "";
+
+        if (SanitizedTitles.ContainsKey(prefabName))
             return SanitizedTitles[prefabName];
-          
+
         return "";
     }
-    
+
     public static string GetSanitizedIntroduction()
     {
         return SanitizedIntroduction;
     }
-	
-	public static string SanitizeText(string text)
+
+    public static string SanitizeText(string text)
     {
         // Convert <br> to line break characters
         text = text.Replace("<br>", "\n");
@@ -294,8 +292,8 @@ public class PRSSamplesShowcase : MonoBehaviour
 
         return text;
     }
-	
-	public static string CleanupJson(string jsonString)
+
+    public static string CleanupJson(string jsonString)
     {
         // Reformat json
         // For text between triple quotes, remove \r \n \t characters

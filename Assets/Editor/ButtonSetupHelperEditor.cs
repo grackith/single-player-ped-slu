@@ -1,5 +1,5 @@
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 [CustomEditor(typeof(ButtonSetupHelper))]
 public class ButtonSetupHelperEditor : Editor
@@ -23,7 +23,7 @@ public class ButtonSetupHelperEditor : Editor
             MessageType.Info);
 
         EditorGUILayout.HelpBox(
-            "1. Assign the parent GameObject containing all your UI buttons to 'Button Container'\n" +
+            "1. Assign the parent GameObject containing all   UI buttons to 'Button Container'\n" +
             "2. Enable 'Assign Keyboard Shortcuts' to add keyboard shortcuts\n" +
             "3. Customize key mappings as needed\n" +
             "4. Click 'Setup All Buttons' to apply changes",

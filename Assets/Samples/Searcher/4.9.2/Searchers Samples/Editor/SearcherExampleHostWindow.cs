@@ -81,7 +81,7 @@ namespace UnityEditor.Searcher
                 })
             };
 
-            m_DummyVisualElement = new Label {text = "Click here"};
+            m_DummyVisualElement = new Label { text = "Click here" };
             m_DummyVisualElement.style.unityTextAlign = TextAnchor.MiddleCenter;
             m_DummyVisualElement.style.backgroundColor = new Color(0.12f, 0.12f, 0.12f, 1.0f);
             m_DummyVisualElement.StretchToParentSize();
@@ -107,7 +107,8 @@ namespace UnityEditor.Searcher
         void OnKeyDown(KeyDownEvent evt)
         {
             if (evt.keyCode == KeyCode.Space)
-                SearcherWindow.Show(this, m_SearcherItems, "OnKeyDown", item => {
+                SearcherWindow.Show(this, m_SearcherItems, "OnKeyDown", item =>
+                {
                     Debug.Log("Searcher item selected: " + (item?.Name ?? "<none>"));
                     return true;
                 }, evt.originalMousePosition);
@@ -115,10 +116,11 @@ namespace UnityEditor.Searcher
 
         void OnMouseDown(MouseDownEvent evt)
         {
-            SearcherWindow.Show(this, m_SearcherItems, "OnMouseDown", item => {
-                    Debug.Log("Searcher item selected: " + (item?.Name ?? "<none>"));
-                    return true;
-                }, evt.mousePosition);
+            SearcherWindow.Show(this, m_SearcherItems, "OnMouseDown", item =>
+            {
+                Debug.Log("Searcher item selected: " + (item?.Name ?? "<none>"));
+                return true;
+            }, evt.mousePosition);
         }
     }
 }

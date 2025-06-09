@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections;
 public class NullResetter : Resetter
 {
     public override void InitializeReset() { }

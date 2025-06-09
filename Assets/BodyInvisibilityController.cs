@@ -11,7 +11,7 @@ public class BodyVisibilityController : MonoBehaviour
     [Tooltip("Completely disable the body in VR?")]
     public bool disableBodyInVR = true;
 
-    
+
 
     void Start()
     {

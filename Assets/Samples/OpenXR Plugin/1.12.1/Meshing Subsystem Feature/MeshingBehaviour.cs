@@ -1,8 +1,4 @@
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.SubsystemsImplementation;
-using UnityEngine.XR;
 
 namespace UnityEngine.XR.OpenXR.Samples.MeshingFeature
 {

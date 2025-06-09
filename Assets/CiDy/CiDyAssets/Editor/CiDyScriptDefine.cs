@@ -1,12 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 using UnityEditor;
 
 /// <summary>
 /// Adds the given define symbols to PlayerSettings define symbols.
-/// Just add your own define symbols to the Symbols property at the below.
+/// Just add   own define symbols to the Symbols property at the below.
 /// </summary>
 [InitializeOnLoad]
 public class CiDyScriptDefine : Editor

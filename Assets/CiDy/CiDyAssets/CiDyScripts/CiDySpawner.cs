@@ -1,7 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 namespace CiDy
@@ -606,7 +604,7 @@ namespace CiDy
             if (worldUp)
             {
                 fwd.y = 0;
-                newObj = Instantiate(prefab, pos+positionCorrection, Quaternion.LookRotation(fwd, Vector3.up) * Quaternion.Euler(rotationCorrection.x, rotationCorrection.y, rotationCorrection.z), transform);
+                newObj = Instantiate(prefab, pos + positionCorrection, Quaternion.LookRotation(fwd, Vector3.up) * Quaternion.Euler(rotationCorrection.x, rotationCorrection.y, rotationCorrection.z), transform);
             }
             else
             {

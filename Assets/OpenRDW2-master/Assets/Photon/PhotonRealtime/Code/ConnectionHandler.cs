@@ -21,16 +21,16 @@ namespace Photon.Realtime
     using System.Diagnostics;
     using SupportClass = ExitGames.Client.Photon.SupportClass;
 
-    #if SUPPORTED_UNITY
+#if SUPPORTED_UNITY
     using UnityEngine;
-    #endif
+#endif
 
 
-    #if SUPPORTED_UNITY
+#if SUPPORTED_UNITY
     public class ConnectionHandler : MonoBehaviour
-    #else
+#else
     public class ConnectionHandler
-    #endif
+#endif
     {
         /// <summary>
         /// Photon client to log information and statistics from.
@@ -85,9 +85,9 @@ namespace Photon.Realtime
 
         private Timer stateTimer;
 
-        #if SUPPORTED_UNITY
+#if SUPPORTED_UNITY
 
-        #if UNITY_2019_4_OR_NEWER
+#if UNITY_2019_4_OR_NEWER
 
         /// <summary>
         /// Resets statics for Domain Reload
@@ -102,7 +102,7 @@ namespace Photon.Realtime
             AppOutOfFocusRecent = false;
         }
 
-        #endif
+#endif
 
 
         /// <summary></summary>
@@ -180,7 +180,7 @@ namespace Photon.Realtime
         }
 
 
-        #endif
+#endif
 
 
         /// <summary>
@@ -189,26 +189,26 @@ namespace Photon.Realtime
         /// <returns>Application.internetReachability != NetworkReachability.NotReachable</returns>
         public static bool IsNetworkReachableUnity()
         {
-            #if SUPPORTED_UNITY
+#if SUPPORTED_UNITY
             return Application.internetReachability != NetworkReachability.NotReachable;
-            #else
+#else
             return true;
-            #endif
+#endif
         }
 
         /// <summary>Starts periodic calls of RealtimeFallbackThread.</summary>
         public void StartFallbackSendAckThread()
         {
-            #if UNITY_WEBGL
+#if UNITY_WEBGL
             if (!this.FallbackThreadRunning) this.InvokeRepeating(nameof(this.RealtimeFallbackInvoke), 0.05f, 0.05f);
-            #else
+#else
             if (this.stateTimer != null)
             {
                 return;
             }
 
             stateTimer = new Timer(this.RealtimeFallback, null, 50, 50);
-            #endif
+#endif
 
             this.FallbackThreadRunning = true;
         }
@@ -217,15 +217,15 @@ namespace Photon.Realtime
         /// <summary>Stops the periodic calls of RealtimeFallbackThread.</summary>
         public void StopFallbackSendAckThread()
         {
-            #if UNITY_WEBGL
+#if UNITY_WEBGL
             if (this.FallbackThreadRunning) this.CancelInvoke(nameof(this.RealtimeFallbackInvoke));
-            #else
+#else
             if (this.stateTimer != null)
             {
                 this.stateTimer.Dispose();
                 this.stateTimer = null;
             }
-            #endif
+#endif
 
             this.FallbackThreadRunning = false;
         }

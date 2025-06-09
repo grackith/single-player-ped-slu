@@ -1,10 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using UnityEngine;
-using AvatarInfo = ExperimentSetup.AvatarInfo;
-using PathSeedChoice = GlobalConfiguration.PathSeedChoice;
 
 public class VisualizationManager : MonoBehaviour
 {
@@ -70,25 +67,34 @@ public class VisualizationManager : MonoBehaviour
 
     void Awake()
     {
-        // Your existing Awake code...
+
         ifVisible = true;
         generalManager = GetComponentInParent<GlobalConfiguration>();
         redirectionManager = GetComponent<RedirectionManager>();
         movementManager = GetComponent<MovementManager>();
 
-        headFollower = transform.Find("Body").GetComponent<HeadFollower>();
+        Transform bodyTransform = transform.Find("Body");
+        if (bodyTransform != null)
+        {
+            headFollower = bodyTransform.GetComponent<HeadFollower>();
+            if (headFollower == null)
+            {
+                Debug.LogWarning("VisualizationManager: HeadFollower component not found on Body transform");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("VisualizationManager: Body transform not found");
+        }
 
         obstacleParents = new List<Transform>();
         bufferParents = new List<Transform>();
         bufferRepresentations = new List<GameObject>();
         avatarBufferRepresentations = new List<GameObject>();
         allPlanes = new List<GameObject>();
-
-        // Initialize reference line collections
         referenceLineObjects = new List<GameObject>();
         cornerMarkerObjects = new List<GameObject>();
 
-        // Set up target line (your existing code)
         if (drawTargetLine)
         {
             if (transform.Find("Target Line") == null)
@@ -125,12 +131,14 @@ public class VisualizationManager : MonoBehaviour
         {
             targetLine = null;
         }
+
+        Debug.Log("VisualizationManager: Awake completed with null-safe initialization");
     }
 
-    // Add this method to create reference lines at custom height
-    
 
-  
+
+
+
     // Add context menu for easy testing in editor
     [ContextMenu("Refresh Reference Lines")]
     public void RefreshReferenceLines()
@@ -210,10 +218,10 @@ public class VisualizationManager : MonoBehaviour
         }
     }
 
-    // Override your existing GenerateTrackingSpaceMesh to include reference lines
+
     public void GenerateTrackingSpaceMesh(List<SingleSpace> physicalSpaces)
     {
-        // Your existing code for generating tracking space mesh...
+
         EnsureInitialized();
 
         if (physicalSpaces == null || physicalSpaces.Count == 0)
@@ -348,10 +356,10 @@ public class VisualizationManager : MonoBehaviour
         CreateReferenceLines();
     }
 
-    // Your existing methods remain the same...
+
     public void EnsureInitialized()
     {
-        // Your existing code...
+
         if (obstacleParents == null)
         {
             obstacleParents = new List<Transform>();
@@ -393,7 +401,7 @@ public class VisualizationManager : MonoBehaviour
             cornerMarkerObjects = new List<GameObject>();
         }
 
-        // Your existing reference setup code...
+
         if (generalManager == null)
         {
             generalManager = GetComponentInParent<GlobalConfiguration>();
@@ -421,14 +429,6 @@ public class VisualizationManager : MonoBehaviour
         Debug.Log("VisualizationManager collections initialized");
     }
 
-    // Update the DestroyAll method to include reference lines
-
-
-    // Add validation in OnValidate to update lines when values change in editor
-
-    // Add this method to your VisualizationManager.cs class
-    // Place it somewhere after the Awake method but before the methods that use these collections
-
     /// <summary>
     /// Ensures all collections are properly initialized
     /// Call this before any methods that might use the collections
@@ -447,6 +447,7 @@ public class VisualizationManager : MonoBehaviour
             Debug.Log("VisualizationManager: Initialization skipped due to master control");
             // Still ensure basic initialization without visuals
             EnsureInitialized();
+            InitializeRedirectionComponents(); // NEW: Always initialize components
         }
     }
     private IEnumerator InitializeInOrder()
@@ -459,14 +460,125 @@ public class VisualizationManager : MonoBehaviour
         // Step 1: Basic initialization
         EnsureInitialized();
 
-        // Step 2: Create tracking spaces if needed
+        // Step 2: Initialize redirection components
+        InitializeRedirectionComponents(); // NEW
+
+        // Step 3: Create tracking spaces if needed
         EnsureTrackingSpaces();
 
-        // Step 3: Set up visualization components
+        // Step 4: Set up visualization components
         SetupVisualization();
 
         Debug.Log("VisualizationManager: Ordered initialization complete");
     }
+    private void InitializeRedirectionComponents()
+    {
+        // Find RedirectionManager if missing
+        if (redirectionManager == null)
+        {
+            redirectionManager = GetComponent<RedirectionManager>();
+
+            if (redirectionManager == null)
+            {
+                // Try to find it in parent or scene
+                redirectionManager = GetComponentInParent<RedirectionManager>();
+
+                if (redirectionManager == null)
+                {
+                    redirectionManager = FindObjectOfType<RedirectionManager>();
+                    Debug.LogWarning("VisualizationManager: Found RedirectionManager in scene rather than on same GameObject");
+                }
+            }
+        }
+
+        // Initialize simulatedHead if missing
+        if (redirectionManager != null && redirectionManager.simulatedHead == null)
+        {
+            // Try to find simulatedHead in the RedirectionManager's hierarchy
+            Transform[] allChildren = redirectionManager.GetComponentsInChildren<Transform>(true);
+
+            foreach (Transform child in allChildren)
+            {
+                if (child.name.ToLower().Contains("head") ||
+                    child.name.ToLower().Contains("simulated"))
+                {
+                    redirectionManager.simulatedHead = child;
+                    Debug.Log($"Found simulatedHead: {child.name}");
+                    break;
+                }
+            }
+
+            // If still not found, create fallback structure
+            if (redirectionManager.simulatedHead == null)
+            {
+                Debug.LogWarning("Creating fallback simulatedHead structure");
+                CreateFallbackSimulatedHead();
+            }
+        }
+
+        // Ensure person view objects exist
+        if (redirectionManager != null && redirectionManager.simulatedHead != null)
+        {
+            EnsurePersonViewObjects();
+        }
+    }
+
+    private void CreateFallbackSimulatedHead()
+    {
+        if (redirectionManager == null) return;
+
+        GameObject simulatedHeadObj = new GameObject("SimulatedHead");
+        simulatedHeadObj.transform.SetParent(redirectionManager.transform);
+        simulatedHeadObj.transform.localPosition = new Vector3(0, 1.7f, 0); // Typical head height
+
+        redirectionManager.simulatedHead = simulatedHeadObj.transform;
+
+        // Create the required view objects
+        CreatePersonViewObjects();
+
+        Debug.Log("Created fallback simulatedHead structure");
+    }
+
+    private void EnsurePersonViewObjects()
+    {
+        if (redirectionManager?.simulatedHead == null) return;
+
+        Transform firstPersonView = redirectionManager.simulatedHead.Find("1st Person View");
+        Transform thirdPersonView = redirectionManager.simulatedHead.Find("3rd Person View");
+
+        if (firstPersonView == null || thirdPersonView == null)
+        {
+            Debug.Log("Creating missing person view objects");
+            CreatePersonViewObjects();
+        }
+    }
+
+    private void CreatePersonViewObjects()
+    {
+        if (redirectionManager?.simulatedHead == null) return;
+
+        // Create 1st Person View
+        GameObject firstPersonView = new GameObject("1st Person View");
+        firstPersonView.transform.SetParent(redirectionManager.simulatedHead);
+        firstPersonView.transform.localPosition = Vector3.zero;
+
+        // Add a camera for first person
+        Camera fpsCam = firstPersonView.AddComponent<Camera>();
+        fpsCam.enabled = false; // Start disabled
+
+        // Create 3rd Person View
+        GameObject thirdPersonView = new GameObject("3rd Person View");
+        thirdPersonView.transform.SetParent(redirectionManager.simulatedHead);
+        thirdPersonView.transform.localPosition = new Vector3(0, 0, -2f); // Behind the head
+
+        // Add a camera for third person
+        Camera tpsCam = thirdPersonView.AddComponent<Camera>();
+        tpsCam.enabled = false; // Start disabled
+
+        Debug.Log("Created person view objects with cameras");
+    }
+
+
     public void CreateReferenceLines()
     {
         // CHECK MASTER CONTROL FIRST
@@ -737,7 +849,7 @@ public class VisualizationManager : MonoBehaviour
             Debug.LogWarning("VisualizationManager: Cannot set up visualization - physical spaces not available");
         }
     }
-    
+
     public void SetRealTargetVisibility(bool visible)
     {
         realWaypoint.GetComponent<MeshRenderer>().enabled = visible;
@@ -826,8 +938,40 @@ public class VisualizationManager : MonoBehaviour
 
     public void SwitchPersonView(bool ifFirstPersonView)
     {
-        redirectionManager.simulatedHead.Find("1st Person View").gameObject.SetActive(ifFirstPersonView);
-        redirectionManager.simulatedHead.Find("3rd Person View").gameObject.SetActive(!ifFirstPersonView);
+        // Add null checks to prevent build errors
+        if (redirectionManager == null)
+        {
+            Debug.LogWarning("VisualizationManager: redirectionManager is null in SwitchPersonView");
+            return;
+        }
+
+        if (redirectionManager.simulatedHead == null)
+        {
+            Debug.LogWarning("VisualizationManager: redirectionManager.simulatedHead is null in SwitchPersonView");
+            return;
+        }
+
+        // Check if the required child objects exist before accessing them
+        Transform firstPersonView = redirectionManager.simulatedHead.Find("1st Person View");
+        Transform thirdPersonView = redirectionManager.simulatedHead.Find("3rd Person View");
+
+        if (firstPersonView != null)
+        {
+            firstPersonView.gameObject.SetActive(ifFirstPersonView);
+        }
+        else
+        {
+            Debug.LogWarning("VisualizationManager: '1st Person View' not found under simulatedHead");
+        }
+
+        if (thirdPersonView != null)
+        {
+            thirdPersonView.gameObject.SetActive(!ifFirstPersonView);
+        }
+        else
+        {
+            Debug.LogWarning("VisualizationManager: '3rd Person View' not found under simulatedHead");
+        }
     }
     public void ChangeTrackingSpaceVisibility(bool ifVisible)
     {
@@ -849,7 +993,7 @@ public class VisualizationManager : MonoBehaviour
         // Clear reference lines first
         ClearReferenceLines();
 
-        // Your existing destruction code...
+
         foreach (var plane in allPlanes)
         {
             Destroy(plane);
@@ -884,7 +1028,7 @@ public class VisualizationManager : MonoBehaviour
         }
     }
 #endif
-    // Add this method to VisualizationManager to help debug the issue
+
     public void Initialize(int avatarId)
     {
         Debug.Log($"VisualizationManager.Initialize called for avatar {avatarId}");
@@ -979,7 +1123,7 @@ public class VisualizationManager : MonoBehaviour
         TrackingSpaceGenerator.GenerateObstacleMesh(virtualSpace.obstaclePolygons, obstacleParent, generalManager.virtualObstacleColor, generalManager.if3dObstacle, generalManager.obstacleHeight);
     }
 
-    
+
 
 
     public GameObject AddBufferMesh(Mesh bufferMesh, Transform bufferParent)
@@ -1004,11 +1148,10 @@ public class VisualizationManager : MonoBehaviour
         hf.followedObj = followedObj;
         return obj;
     }
-    //visualization relative, update other avatar representations...
-    // Add this debug method to VisualizationManager
+
     [ContextMenu("Debug Target Line")]
 
-    // Add context menu for easy testing in editor
+
     public void DebugTargetLine()
     {
         Debug.Log("=== Target Line Debug ===");
@@ -1038,7 +1181,7 @@ public class VisualizationManager : MonoBehaviour
         }
     }
 
-    // Update the UpdateVisualizations method to better handle target line
+
     public void UpdateVisualizations()
     {
         //update avatar
@@ -1079,11 +1222,6 @@ public class VisualizationManager : MonoBehaviour
         }
     }
 
-    // Modified SetBufferVisibility method for VisualizationManager.cs
-    // Replace the existing method with this version
-
-    // Modified SetBufferVisibility method for VisualizationManager.cs
-    // Replace the existing method with this version
 
     public void SetBufferVisibility(bool ifVisible)
     {

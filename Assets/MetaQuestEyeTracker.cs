@@ -2,8 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR;
-using System;
-using System.Linq;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
 using UnityEngine.XR.OpenXR;
@@ -125,7 +123,7 @@ public class MetaQuestEyeTracker : MonoBehaviour
         {
             Debug.Log("Meta Quest Feature found. Eye tracking permissions are handled through OpenXR settings.");
             // Note: Modern versions handle permissions through the OpenXR manifest
-            // Make sure you've enabled eye tracking in your OpenXR Feature settings
+            // Make sure you've enabled eye tracking in   OpenXR Feature settings
         }
         else
         {

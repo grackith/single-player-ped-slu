@@ -5,12 +5,10 @@
 //=============================================================================
 
 using UnityEngine;
-using Valve.VR;
 using System.IO;
-using System.Linq;
 
 #if UNITY_2017_2_OR_NEWER
-    using UnityEngine.XR;
+using UnityEngine.XR;
 #else
 using XRSettings = UnityEngine.VR.VRSettings;
 using XRDevice = UnityEngine.VR.VRDevice;
@@ -141,7 +139,7 @@ namespace Valve.VR
             string errorLog = "<b>[SteamVR]</b> Initialization failed. ";
 
 #if OPENVR_XR_API
-            errorLog += "Please verify that you have SteamVR installed, your hmd is functioning, and OpenVR Loader is checked in the XR Plugin Management section of Project Settings.";
+            errorLog += "Please verify that you have SteamVR installed,   hmd is functioning, and OpenVR Loader is checked in the XR Plugin Management section of Project Settings.";
 #else
 
             if (XRSettings.enabled == false)
@@ -149,13 +147,13 @@ namespace Valve.VR
             if (XRSettings.supportedDevices != null && XRSettings.supportedDevices.Length > 0)
             {
                 if (XRSettings.supportedDevices.Contains("OpenVR") == false)
-                    errorLog += "OpenVR is not in your list of supported virtual reality SDKs. Add it to the list in player settings. ";
+                    errorLog += "OpenVR is not in   list of supported virtual reality SDKs. Add it to the list in player settings. ";
                 else if (XRSettings.supportedDevices.First().Contains("OpenVR") == false)
-                    errorLog += "OpenVR is not first in your list of supported virtual reality SDKs. <b>This is okay, but if you have an Oculus device plugged in, and Oculus above OpenVR in this list, it will try and use the Oculus SDK instead of OpenVR.</b> ";
+                    errorLog += "OpenVR is not first in   list of supported virtual reality SDKs. <b>This is okay, but if you have an Oculus device plugged in, and Oculus above OpenVR in this list, it will try and use the Oculus SDK instead of OpenVR.</b> ";
             }
             else
             {
-                errorLog += "You have no SDKs in your Player Settings list of supported virtual reality SDKs. Add OpenVR to it. ";
+                errorLog += "You have no SDKs in   Player Settings list of supported virtual reality SDKs. Add OpenVR to it. ";
             }
 
             errorLog += "To attempt to force OpenVR initialization call SteamVR.Initialize(true). ";
@@ -619,7 +617,7 @@ namespace Valve.VR
             }
         }
 
-#region Event callbacks
+        #region Event callbacks
 
         private void OnInitializing(bool initializing)
         {
@@ -684,7 +682,7 @@ namespace Valve.VR
             }
         }
 
-#endregion
+        #endregion
 
         private SteamVR()
         {
@@ -744,9 +742,9 @@ namespace Valve.VR
                     textureType = ETextureType.OpenGL;
                     break;
 #if !(UNITY_5_4)
-			case UnityEngine.Rendering.GraphicsDeviceType.Vulkan:
-				textureType = ETextureType.Vulkan;
-				break;
+                case UnityEngine.Rendering.GraphicsDeviceType.Vulkan:
+                    textureType = ETextureType.Vulkan;
+                    break;
 #endif
                 default:
                     textureType = ETextureType.DirectX;

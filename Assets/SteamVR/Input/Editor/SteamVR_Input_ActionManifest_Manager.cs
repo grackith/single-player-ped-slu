@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using UnityEditor;
 using UnityEngine;
 using Valve.Newtonsoft.Json;
@@ -541,7 +540,7 @@ namespace Valve.VR
             {
                 string bindingPath = Path.Combine(partialBindingDirectory, newDefaultPath.binding_url);
                 string newBindingPath = Path.Combine(bindingsFolder, newDefaultPath.binding_url);
-                File.Copy(bindingPath, newBindingPath, true); 
+                File.Copy(bindingPath, newBindingPath, true);
             }
 
             partialBinding.imported = true;
@@ -785,7 +784,7 @@ namespace Valve.VR
 
                 if (actionsExists)
                 {
-                    string mergeDialogText = "You have two options for importing this binding:\n Replace your current action file (delete all your actions)\n Merge the partial action file with your existing actions";
+                    string mergeDialogText = "You have two options for importing this binding:\n Replace   current action file (delete all   actions)\n Merge the partial action file with   existing actions";
                     bool shouldMerge = EditorUtility.DisplayDialog("SteamVR Input", mergeDialogText, "Merge", "Replace");
 
                     if (shouldMerge)

@@ -1,7 +1,4 @@
-﻿using UnityEngine;
-using System.Collections;
-
-public class NullRedirector : Redirector
+﻿public class NullRedirector : Redirector
 {
     public override void InjectRedirection()
     {

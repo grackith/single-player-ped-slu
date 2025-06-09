@@ -57,12 +57,12 @@ namespace Photon.Chat.Editor
 
         internal static string UrlCloudDashboard = "https://dashboard.photonengine.com/en-US/";
 
-        public string WelcomeText = "Thanks for importing Photon Chat.\nThis window should set you up.\n\nYou will need a free Photon Account to setup a Photon Chat application.\nOpen the Photon Dashboard (webpage) to access your account (see button below).\n\nCopy and paste a Chat AppId into the field below and click \"Setup\".";
-        //public string AlreadyRegisteredInfo = "The email is registered so we can't fetch your AppId (without password).\n\nPlease login online to get your AppId and paste it above.";
-        //public string RegisteredNewAccountInfo = "We created a (free) account and fetched you an AppId.\nWelcome. Your Photon Chat project is setup.";
-        //public string FailedToRegisterAccount = "This wizard failed to register an account right now. Please check your mail address or try via the Dashboard.";
-        //public string AppliedToSettingsInfo = "Your AppId is now applied to this project.";
-        public string SetupCompleteInfo = "<b>Done!</b>\nYour Chat AppId is now stored in the <b>Scripts</b> object, Chat App Settings.";
+        public string WelcomeText = "Thanks for importing Photon Chat.\nThis window should set you up.\n\nYou will need a free Photon Account to setup a Photon Chat application.\nOpen the Photon Dashboard (webpage) to access   account (see button below).\n\nCopy and paste a Chat AppId into the field below and click \"Setup\".";
+        //public string AlreadyRegisteredInfo = "The email is registered so we can't fetch   AppId (without password).\n\nPlease login online to get   AppId and paste it above.";
+        //public string RegisteredNewAccountInfo = "We created a (free) account and fetched you an AppId.\nWelcome.   Photon Chat project is setup.";
+        //public string FailedToRegisterAccount = "This wizard failed to register an account right now. Please check   mail address or try via the Dashboard.";
+        //public string AppliedToSettingsInfo = "  AppId is now applied to this project.";
+        public string SetupCompleteInfo = "<b>Done!</b>\n  Chat AppId is now stored in the <b>Scripts</b> object, Chat App Settings.";
         public string CloseWindowButton = "Close";
         public string OpenCloudDashboardText = "Photon Dashboard Login";
         public string OpenCloudDashboardTooltip = "Review Cloud App information and statistics.";
@@ -72,11 +72,11 @@ namespace Photon.Chat.Editor
         {
             if (this.cGui == null)
             {
-                #if UNITY_6000_0_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
                 cGui = FindFirstObjectByType<ChatGui>();
-                #else
+#else
                 cGui = FindObjectOfType<ChatGui>();
-                #endif
+#endif
             }
 
             GUI.skin.label.wordWrap = true;

@@ -21,7 +21,7 @@ namespace Photon.Pun.Demo
     public class WebRpcImplementationExample : MonoBehaviour, IWebRpcCallback
     {
         /// <summary>
-        /// example of WebRPC method name, add yours as enum or constants to avoid typos and have them in one place
+        /// example of WebRPC method name, add  s as enum or constants to avoid typos and have them in one place
         /// </summary>
         public const string GetGameListWebRpcMethodName = "GetGameList";
 
@@ -41,7 +41,7 @@ namespace Photon.Pun.Demo
                     {
                         switch (webRpcResponse.Name)
                         {
-                            // todo: add your code here
+                            // todo: add   code here
                             case GetGameListWebRpcMethodName: // example
                                 // ... 
                                 break;
