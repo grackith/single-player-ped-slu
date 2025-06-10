@@ -374,6 +374,9 @@ public class TrackingSpaceGenerator
             Debug.LogError($"Tracking space file not found. Attempted paths:");
             Debug.LogError($"Original: {path}");
             Debug.LogError($"Resolved: {resolvedPath}");
+
+            // Create fallback default space
+            CreateDefaultSpace(out physicalSpaces, out virtualSpace);
             return;
         }
 
@@ -393,226 +396,481 @@ public class TrackingSpaceGenerator
 
         try
         {
-            var content = File.ReadAllLines(resolvedPath);
+            string[] content;
+
+            // Read file content with proper encoding handling for builds
+            try
+            {
+                content = File.ReadAllLines(resolvedPath, System.Text.Encoding.UTF8);
+            }
+            catch (Exception readException)
+            {
+                Debug.LogError($"Failed to read file with UTF8 encoding: {readException.Message}");
+                try
+                {
+                    content = File.ReadAllLines(resolvedPath, System.Text.Encoding.Default);
+                    Debug.Log("Successfully read file with default encoding");
+                }
+                catch (Exception fallbackException)
+                {
+                    Debug.LogError($"Failed to read file with default encoding: {fallbackException.Message}");
+                    CreateDefaultSpace(out physicalSpaces, out virtualSpace);
+                    return;
+                }
+            }
+
+            if (content == null || content.Length == 0)
+            {
+                Debug.LogError("File is empty or could not be read");
+                CreateDefaultSpace(out physicalSpaces, out virtualSpace);
+                return;
+            }
+
             int lineId = 0;
 
             foreach (var line in content)
             {
                 lineId++;
-                Debug.Log($"Line {lineId}: '{line}' Status: {status}");
+                string trimmedLine = line.Trim();
+
+                // Skip empty lines and comments at the beginning
+                if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#"))
+                {
+                    continue;
+                }
+
+                Debug.Log($"Line {lineId}: '{trimmedLine}' Status: {status}");
 
                 if (status == ReadStatus.AVATARNUM)
                 {
-                    // Skip the avatar number line
+                    // Skip the avatar number line or parse if needed
+                    if (int.TryParse(trimmedLine, out int avatarCount))
+                    {
+                        Debug.Log($"Avatar count: {avatarCount}");
+                    }
                     status = ReadStatus.VSPACE;
                     continue;
                 }
                 else if (status == ReadStatus.VSPACE)
                 {
-                    if (line.Trim().Length == 0)
+                    if (trimmedLine.Length == 0)
                     {
                         // Empty line after virtual space vertices
                         if (nowPolygon.Count > 2)
                         {
-                            reVirtualTrackingSpace = nowPolygon;
+                            reVirtualTrackingSpace = new List<Vector2>(nowPolygon);
+                            Debug.Log($"Virtual space loaded with {nowPolygon.Count} vertices");
                         }
-                        nowPolygon = new List<Vector2>();
+                        nowPolygon.Clear();
                         status = ReadStatus.VOBSTACLE;
                         continue;
                     }
-                    else if (line.Trim() == "//")
+                    else if (trimmedLine == "//")
                     {
-                        // Direct transition to physical space (no obstacles)
+                        // Direct transition to physical space (no virtual obstacles)
                         if (nowPolygon.Count > 2)
                         {
-                            reVirtualTrackingSpace = nowPolygon;
+                            reVirtualTrackingSpace = new List<Vector2>(nowPolygon);
+                            Debug.Log($"Virtual space loaded with {nowPolygon.Count} vertices (direct transition)");
                         }
-                        nowPolygon = new List<Vector2>();
+                        nowPolygon.Clear();
                         status = ReadStatus.SPACE;
                         continue;
                     }
                 }
                 else if (status == ReadStatus.VOBSTACLE)
                 {
-                    if (line.Trim() == "//")
+                    if (trimmedLine == "//")
                     {
                         // End of virtual configuration
+                        if (nowPolygon.Count > 2)
+                        {
+                            reVirtualObstacles.Add(new List<Vector2>(nowPolygon));
+                            Debug.Log($"Virtual obstacle added with {nowPolygon.Count} vertices");
+                        }
                         status = ReadStatus.SPACE;
-                        nowPolygon = new List<Vector2>();
+                        nowPolygon.Clear();
                         continue;
                     }
-                    else if (line.Trim().Length == 0)
+                    else if (trimmedLine.Length == 0)
                     {
                         // Empty line after obstacle vertices
                         if (nowPolygon.Count > 2)
                         {
-                            reVirtualObstacles.Add(nowPolygon);
+                            reVirtualObstacles.Add(new List<Vector2>(nowPolygon));
+                            Debug.Log($"Virtual obstacle added with {nowPolygon.Count} vertices");
                         }
-                        nowPolygon = new List<Vector2>();
+                        nowPolygon.Clear();
                         continue;
                     }
                 }
                 else if (status == ReadStatus.SPACE)
                 {
-                    if (line.Trim().Length == 0)
+                    if (trimmedLine.Length == 0)
                     {
                         // Empty line after physical space vertices
                         if (nowPolygon.Count > 2)
                         {
-                            reTrackingSpacePoints = nowPolygon;
+                            reTrackingSpacePoints = new List<Vector2>(nowPolygon);
+                            Debug.Log($"Physical space loaded with {nowPolygon.Count} vertices");
                         }
-                        nowPolygon = new List<Vector2>();
+                        nowPolygon.Clear();
                         status = ReadStatus.OBSTACLE;
                         continue;
                     }
-                    else if (line.Trim() == "/")
+                    else if (trimmedLine == "/")
                     {
-                        // Direct transition to avatar configuration (no obstacles)
+                        // Direct transition to avatar configuration (no physical obstacles)
                         if (nowPolygon.Count > 2)
                         {
-                            reTrackingSpacePoints = nowPolygon;
+                            reTrackingSpacePoints = new List<Vector2>(nowPolygon);
+                            Debug.Log($"Physical space loaded with {nowPolygon.Count} vertices (direct transition)");
                         }
-                        nowPolygon = new List<Vector2>();
+                        nowPolygon.Clear();
                         status = ReadStatus.AVATAR;
                         continue;
                     }
                 }
                 else if (status == ReadStatus.OBSTACLE)
                 {
-                    if (line.Trim() == "/")
+                    if (trimmedLine == "/")
                     {
                         // End of obstacle configuration
+                        if (nowPolygon.Count > 2)
+                        {
+                            reObstaclePolygons.Add(new List<Vector2>(nowPolygon));
+                            Debug.Log($"Physical obstacle added with {nowPolygon.Count} vertices");
+                        }
                         status = ReadStatus.AVATAR;
-                        nowPolygon = new List<Vector2>();
+                        nowPolygon.Clear();
                         continue;
                     }
-                    else if (line.Trim().Length == 0)
+                    else if (trimmedLine.Length == 0)
                     {
                         // Empty line after obstacle vertices
                         if (nowPolygon.Count > 2)
                         {
-                            reObstaclePolygons.Add(nowPolygon);
+                            reObstaclePolygons.Add(new List<Vector2>(nowPolygon));
+                            Debug.Log($"Physical obstacle added with {nowPolygon.Count} vertices");
                         }
-                        nowPolygon = new List<Vector2>();
+                        nowPolygon.Clear();
                         continue;
                     }
                 }
                 else if (status == ReadStatus.AVATAR)
                 {
-                    if (line.Trim() == "//")
+                    if (trimmedLine == "//")
                     {
                         // End of this physical space configuration
-                        if (nowPolygon.Count == 4)
+                        if (nowPolygon.Count >= 4)
                         {
+                            // Parse avatar poses (physical pos, physical dir, virtual pos, virtual dir)
                             reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
                             reVirtualPoses.Add(new InitialPose(nowPolygon[2], nowPolygon[3].normalized));
+                            Debug.Log($"Avatar poses added - Physical: {nowPolygon[0]}, Virtual: {nowPolygon[2]}");
+                        }
+                        else if (nowPolygon.Count == 2)
+                        {
+                            // Only physical pose provided, use same for virtual
+                            reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
+                            reVirtualPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
+                            Debug.Log($"Single avatar pose added: {nowPolygon[0]}");
                         }
 
                         // Add this physical space
-                        rePhysicalSpaces.Add(new SingleSpace(reTrackingSpacePoints, reObstaclePolygons, reInitialPoses));
+                        if (reTrackingSpacePoints.Count > 0)
+                        {
+                            rePhysicalSpaces.Add(new SingleSpace(
+                                new List<Vector2>(reTrackingSpacePoints),
+                                new List<List<Vector2>>(reObstaclePolygons),
+                                new List<InitialPose>(reInitialPoses)
+                            ));
+                            Debug.Log($"Physical space added to collection");
+                        }
 
                         // Reset for next physical space (if any)
-                        reTrackingSpacePoints = new List<Vector2>();
-                        reObstaclePolygons = new List<List<Vector2>>();
-                        reInitialPoses = new List<InitialPose>();
-                        nowPolygon = new List<Vector2>();
+                        reTrackingSpacePoints.Clear();
+                        reObstaclePolygons.Clear();
+                        reInitialPoses.Clear();
+                        nowPolygon.Clear();
                         status = ReadStatus.SPACE;
                         continue;
                     }
-                    else if (line.Trim().Length == 0)
+                    else if (trimmedLine.Length == 0)
                     {
                         // Empty line after avatar configuration
-                        if (nowPolygon.Count == 4)
+                        if (nowPolygon.Count >= 4)
                         {
                             reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
                             reVirtualPoses.Add(new InitialPose(nowPolygon[2], nowPolygon[3].normalized));
+                            Debug.Log($"Avatar poses added - Physical: {nowPolygon[0]}, Virtual: {nowPolygon[2]}");
                         }
-                        nowPolygon = new List<Vector2>();
+                        else if (nowPolygon.Count == 2)
+                        {
+                            reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
+                            reVirtualPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
+                            Debug.Log($"Single avatar pose added: {nowPolygon[0]}");
+                        }
+                        nowPolygon.Clear();
                         continue;
                     }
                 }
 
                 // Parse coordinates if not a special marker
-                if (line.Trim().Length > 0 && line.Trim() != "/" && line.Trim() != "//")
+                if (trimmedLine.Length > 0 && trimmedLine != "/" && trimmedLine != "//")
                 {
-                    var split = line.Split(',');
-                    if (split.Length >= 2)
+                    if (TryParseCoordinate(trimmedLine, out Vector2 coordinate))
                     {
-                        float x = float.Parse(split[0].Trim());
-                        float y = float.Parse(split[1].Trim());
-                        nowPolygon.Add(new Vector2(x, y));
+                        nowPolygon.Add(coordinate);
                     }
                     else
                     {
-                        Debug.LogError($"Invalid coordinate format in line {lineId}: {line}");
+                        Debug.LogWarning($"Failed to parse coordinate in line {lineId}: {trimmedLine}");
                     }
                 }
             }
 
             // Handle any remaining data at end of file
-            if (status == ReadStatus.AVATAR && nowPolygon.Count == 4)
+            if (status == ReadStatus.AVATAR && nowPolygon.Count >= 2)
             {
-                reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
-                reVirtualPoses.Add(new InitialPose(nowPolygon[2], nowPolygon[3].normalized));
+                if (nowPolygon.Count >= 4)
+                {
+                    reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
+                    reVirtualPoses.Add(new InitialPose(nowPolygon[2], nowPolygon[3].normalized));
+                }
+                else
+                {
+                    reInitialPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
+                    reVirtualPoses.Add(new InitialPose(nowPolygon[0], nowPolygon[1].normalized));
+                }
             }
 
+            // Add final physical space if not already added
             if (rePhysicalSpaces.Count == 0 && reTrackingSpacePoints.Count > 0)
             {
                 rePhysicalSpaces.Add(new SingleSpace(reTrackingSpacePoints, reObstaclePolygons, reInitialPoses));
+            }
+
+            // Ensure we have at least one physical space
+            if (rePhysicalSpaces.Count == 0)
+            {
+                Debug.LogWarning("No physical spaces found in file, creating default");
+                CreateDefaultSpace(out physicalSpaces, out virtualSpace);
+                return;
+            }
+
+            // Ensure all physical spaces have initial poses
+            foreach (var space in rePhysicalSpaces)
+            {
+                if (space.initialPoses == null || space.initialPoses.Count == 0)
+                {
+                    space.initialPoses = new List<InitialPose> { new InitialPose(Vector2.zero, Vector2.up) };
+                    Debug.Log("Added default initial pose to physical space");
+                }
+            }
+
+            // Ensure virtual poses match physical spaces count
+            while (reVirtualPoses.Count < rePhysicalSpaces.Count)
+            {
+                reVirtualPoses.Add(new InitialPose(Vector2.zero, Vector2.up));
             }
         }
         catch (Exception e)
         {
             Debug.LogError($"Error reading tracking space file: {e.Message}");
             Debug.LogError(e.StackTrace);
+            CreateDefaultSpace(out physicalSpaces, out virtualSpace);
             return;
         }
 
         physicalSpaces = rePhysicalSpaces;
-        virtualSpace = new SingleSpace(reVirtualTrackingSpace, reVirtualObstacles, reVirtualPoses);
 
-        // Log what was loaded for debugging
-        Debug.Log($"Loaded {physicalSpaces.Count} physical spaces");
-        if (physicalSpaces.Count > 0)
+        // Create virtual space
+        if (reVirtualTrackingSpace.Count > 0)
         {
-            Debug.Log($"First physical space has {physicalSpaces[0].trackingSpace.Count} vertices");
-            Debug.Log($"First physical space has {physicalSpaces[0].initialPoses.Count} initial poses");
-            if (physicalSpaces[0].initialPoses.Count > 0)
+            virtualSpace = new SingleSpace(reVirtualTrackingSpace, reVirtualObstacles, reVirtualPoses);
+        }
+        else
+        {
+            // Use first physical space as virtual space if none specified
+            if (physicalSpaces.Count > 0)
             {
-                var pose = physicalSpaces[0].initialPoses[0];
-                Debug.Log($"First pose - Physical: {pose.initialPosition}, Dir: {pose.initialForward}");
+                virtualSpace = new SingleSpace(
+                    new List<Vector2>(physicalSpaces[0].trackingSpace),
+                    new List<List<Vector2>>(physicalSpaces[0].obstaclePolygons),
+                    new List<InitialPose>(reVirtualPoses)
+                );
+            }
+            else
+            {
+                virtualSpace = new SingleSpace(
+                    new List<Vector2>(),
+                    new List<List<Vector2>>(),
+                    new List<InitialPose> { new InitialPose(Vector2.zero, Vector2.up) }
+                );
             }
         }
-        if (virtualSpace != null && virtualSpace.initialPoses.Count > 0)
+
+        // Log final results
+        Debug.Log($"Successfully loaded {physicalSpaces.Count} physical spaces");
+        for (int i = 0; i < physicalSpaces.Count; i++)
         {
-            var vPose = virtualSpace.initialPoses[0];
-            Debug.Log($"Virtual pose: {vPose.initialPosition}, Dir: {vPose.initialForward}");
+            var space = physicalSpaces[i];
+            Debug.Log($"Physical space {i}: {space.trackingSpace.Count} vertices, {space.obstaclePolygons.Count} obstacles, {space.initialPoses.Count} poses");
+            if (space.initialPoses.Count > 0)
+            {
+                var pose = space.initialPoses[0];
+                Debug.Log($"  First pose - Position: {pose.initialPosition}, Direction: {pose.initialForward}");
+            }
+        }
+
+        if (virtualSpace != null)
+        {
+            Debug.Log($"Virtual space: {virtualSpace.trackingSpace.Count} vertices, {virtualSpace.obstaclePolygons.Count} obstacles, {virtualSpace.initialPoses.Count} poses");
         }
     }
 
-    // Helper method to resolve file paths
-    private static string ResolveFilePath(string path)
+    private static string ResolveFilePath(string originalPath)
     {
-        // Try various path combinations
-        string[] pathsToTry = {
-        path,
-        Path.Combine(Application.dataPath, path),
-        Path.Combine(Application.dataPath, "OpenRDW2-master/Assets", path),
-        Path.Combine(Application.dataPath, "OpenRDW2-master/Assets/TrackingSpaces", Path.GetFileName(path)),
-        Path.Combine("Assets", path),
-        Path.Combine("Assets/OpenRDW2-master/Assets", path)
-    };
-
-        foreach (var tryPath in pathsToTry)
+        // Strategy 1: Try original path as-is
+        if (File.Exists(originalPath))
         {
-            if (File.Exists(tryPath))
+            Debug.Log($"Found file at original path: {originalPath}");
+            return originalPath;
+        }
+
+        // Strategy 2: Try relative to StreamingAssets
+        string streamingAssetsPath = Path.Combine(Application.streamingAssetsPath, originalPath);
+        if (File.Exists(streamingAssetsPath))
+        {
+            Debug.Log($"Found file in StreamingAssets: {streamingAssetsPath}");
+            return streamingAssetsPath;
+        }
+
+        // Strategy 3: Try removing "StreamingAssets/" prefix if present
+        string pathWithoutStreamingAssets = originalPath;
+        if (originalPath.StartsWith("StreamingAssets/") || originalPath.StartsWith("StreamingAssets\\"))
+        {
+            pathWithoutStreamingAssets = originalPath.Substring(16); // Remove "StreamingAssets/"
+            string newStreamingPath = Path.Combine(Application.streamingAssetsPath, pathWithoutStreamingAssets);
+            if (File.Exists(newStreamingPath))
             {
-                Debug.Log($"Found tracking space file at: {tryPath}");
-                return tryPath;
+                Debug.Log($"Found file after removing StreamingAssets prefix: {newStreamingPath}");
+                return newStreamingPath;
             }
         }
 
-        return path; // Return original if not found
+        // Strategy 4: Try relative to persistent data path (for some build scenarios)
+        string persistentPath = Path.Combine(Application.persistentDataPath, originalPath);
+        if (File.Exists(persistentPath))
+        {
+            Debug.Log($"Found file in persistent data: {persistentPath}");
+            return persistentPath;
+        }
+
+        // Strategy 5: Try relative to data path
+        string dataPath = Path.Combine(Application.dataPath, originalPath);
+        if (File.Exists(dataPath))
+        {
+            Debug.Log($"Found file in data path: {dataPath}");
+            return dataPath;
+        }
+
+        // Strategy 6: Search in StreamingAssets subdirectories
+        if (Directory.Exists(Application.streamingAssetsPath))
+        {
+            string fileName = Path.GetFileName(originalPath);
+            string[] foundFiles = Directory.GetFiles(Application.streamingAssetsPath, fileName, SearchOption.AllDirectories);
+            if (foundFiles.Length > 0)
+            {
+                Debug.Log($"Found file by searching StreamingAssets: {foundFiles[0]}");
+                return foundFiles[0];
+            }
+        }
+
+        Debug.LogWarning($"Could not resolve file path: {originalPath}");
+        Debug.LogWarning($"Searched paths:");
+        Debug.LogWarning($"  - {originalPath}");
+        Debug.LogWarning($"  - {streamingAssetsPath}");
+        Debug.LogWarning($"  - {persistentPath}");
+        Debug.LogWarning($"  - {dataPath}");
+        Debug.LogWarning($"  - StreamingAssets search for: {Path.GetFileName(originalPath)}");
+
+        return originalPath; // Return original even if not found
+    }
+
+    private static bool TryParseCoordinate(string line, out Vector2 coordinate)
+    {
+        coordinate = Vector2.zero;
+
+        try
+        {
+            // Handle different separators
+            string[] separators = { ",", " ", "\t", ";" };
+            string[] parts = null;
+
+            foreach (string separator in separators)
+            {
+                if (line.Contains(separator))
+                {
+                    parts = line.Split(new string[] { separator }, StringSplitOptions.RemoveEmptyEntries);
+                    break;
+                }
+            }
+
+            if (parts == null || parts.Length < 2)
+            {
+                return false;
+            }
+
+            // Parse X and Y coordinates
+            if (float.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x) &&
+                float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y))
+            {
+                coordinate = new Vector2(x, y);
+                return true;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"Exception parsing coordinate '{line}': {e.Message}");
+        }
+
+        return false;
+    }
+
+    private static void CreateDefaultSpace(out List<SingleSpace> physicalSpaces, out SingleSpace virtualSpace)
+    {
+        Debug.Log("Creating default tracking space");
+
+        // Create a default 4.5m x 12.5m rectangular space (matching your file content)
+        var defaultTrackingSpace = new List<Vector2>
+    {
+        new Vector2(2.25f, 6.25f),   // Front Right
+        new Vector2(-2.25f, 6.25f),  // Front Left  
+        new Vector2(-2.25f, -6.25f), // Back Left
+        new Vector2(2.25f, -6.25f)   // Back Right
+    };
+
+        var defaultInitialPoses = new List<InitialPose>
+    {
+        new InitialPose(Vector2.zero, Vector2.up)
+    };
+
+        var defaultSpace = new SingleSpace(
+            defaultTrackingSpace,
+            new List<List<Vector2>>(), // No obstacles
+            defaultInitialPoses
+        );
+
+        physicalSpaces = new List<SingleSpace> { defaultSpace };
+        virtualSpace = new SingleSpace(
+            new List<Vector2>(defaultTrackingSpace),
+            new List<List<Vector2>>(),
+            new List<InitialPose>(defaultInitialPoses)
+        );
+
+        Debug.Log("Default tracking space created successfully");
     }
     // add triangle to list in clockwise
     public static void AddTriangle(List<int> newTriangles, int a, int b, int c, bool inner)

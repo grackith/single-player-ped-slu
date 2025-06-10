@@ -32,7 +32,7 @@
     "com.unity.xr.hands": "1.5.1",
     "com.unity.xr.interaction.toolkit": "2.6.4",
     "com.unity.xr.management": "4.5.1",
-    "com.unity.xr.oculus": "3.2.2",
+    "com.unity.xr.oculus": "4.3.0",
     "com.unity.xr.openxr": "1.12.1",
     "com.valvesoftware.unity.openvr": "file:../Assets/SteamVR/OpenVRUnityXRPackage/Editor/com.valvesoftware.unity.openvr-1.2.1.tgz",
     "unity-missing-scripts-finder": "https://github.com/RimuruDev/Unity-MissingScriptsFinder.git",

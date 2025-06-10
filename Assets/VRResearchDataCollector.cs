@@ -83,6 +83,7 @@ public class VRResearchDataCollector : MonoBehaviour
     private Vector3 lastGazeDirection;
     private GameObject lastGazedObject;
     private float gazeStartTime;
+    private MetaQuestEyeTracker metaEyeTracker;
 
     [Header("Eye Tracking References")]
     public XRGazeInteractor gazeInteractor; // Drag   XR Gaze Interactor here
@@ -153,8 +154,8 @@ public class VRResearchDataCollector : MonoBehaviour
         // Updated CSV headers for hand tracking
         participantDataBuilder.AppendLine("Timestamp,ScenarioID,HeadPosX,HeadPosY,HeadPosZ,HeadRotX,HeadRotY,HeadRotZ,LeftHandPosX,LeftHandPosY,LeftHandPosZ,LeftHandRotX,LeftHandRotY,LeftHandRotZ,RightHandPosX,RightHandPosY,RightHandPosZ,RightHandRotX,RightHandRotY,RightHandRotZ,UsingHandTracking");
         vehicleDataBuilder.AppendLine("Timestamp,ScenarioID,VehicleID,PosX,PosY,PosZ,RotX,RotY,RotZ,VelocityX,VelocityY,VelocityZ,Speed");
-        eyeTrackingDataBuilder.AppendLine("Timestamp,ScenarioID,GazePosX,GazePosY,GazePosZ,GazeDirectionX,GazeDirectionY,GazeDirectionZ,GazedObjectName,GazeDuration,GazeDistance,UsingRealGaze");
-
+        // Update in VRResearchDataCollector.cs Awake() method
+        eyeTrackingDataBuilder.AppendLine("Timestamp,ScenarioID,GazePosX,GazePosY,GazePosZ,GazeDirectionX,GazeDirectionY,GazeDirectionZ,GazedObjectName,GazeDuration,GazeDistance,UsingRealGaze,UsingMetaTracker");
         DebugLog("VR Research Data Collector initialized for hand tracking");
         DebugLog($"Data will be saved to: {saveFolderPath}");
 
@@ -183,6 +184,12 @@ public class VRResearchDataCollector : MonoBehaviour
         {
             DebugLog("Starting data collection in test mode");
             StartRecording();
+        }
+        // Auto-find Meta eye tracker for enhanced data
+        metaEyeTracker = FindObjectOfType<MetaQuestEyeTracker>();
+        if (metaEyeTracker != null)
+        {
+            DebugLog("Found MetaQuestEyeTracker for enhanced eye tracking");
         }
     }
 
@@ -597,27 +604,45 @@ public class VRResearchDataCollector : MonoBehaviour
         Vector3 gazePosition;
         Vector3 gazeDirection;
         bool usingRealGaze = false;
+        bool usingMetaTracker = false;
 
-        // Try to get real eye tracking data first
-        if (useRealEyeTracking && gazeInteractor != null && gazeInteractor.isActiveAndEnabled)
+        // Priority 1: Try Meta Quest specific tracker (most accurate)
+        if (metaEyeTracker != null && metaEyeTracker.enableEyeTracking && metaEyeTracker.gazeOrigin != Vector3.zero)
         {
-            // Use real eye gaze data
+            gazePosition = metaEyeTracker.gazeOrigin;
+            gazeDirection = metaEyeTracker.gazeDirection;
+            usingRealGaze = metaEyeTracker.eyeTrackingAvailable;
+            usingMetaTracker = true;
+
+            if (enableDebugLogging && Time.frameCount % 300 == 0) // Log every 5 seconds
+            {
+                DebugLog($"Using Meta Quest eye tracker - Real tracking: {usingRealGaze}");
+            }
+        }
+        // Priority 2: Try XR Gaze Interactor (cross-platform)
+        else if (useRealEyeTracking && gazeInteractor != null && gazeInteractor.isActiveAndEnabled)
+        {
             gazePosition = gazeInteractor.rayOriginTransform.position;
             gazeDirection = gazeInteractor.rayOriginTransform.forward;
             usingRealGaze = true;
+            usingMetaTracker = false;
 
-            DebugLog($"Using real eye tracking - Gaze direction: {gazeDirection}");
+            if (enableDebugLogging && Time.frameCount % 300 == 0)
+            {
+                DebugLog($"Using XR Gaze Interactor");
+            }
         }
+        // Priority 3: Fallback to head tracking
         else
         {
-            // Fallback to head-based simulation
             gazePosition = headTransform != null ? headTransform.position : Vector3.zero;
             gazeDirection = headTransform != null ? headTransform.forward : Vector3.forward;
             usingRealGaze = false;
+            usingMetaTracker = false;
 
-            if (useRealEyeTracking)
+            if (useRealEyeTracking && enableDebugLogging && Time.frameCount % 300 == 0)
             {
-                DebugLog("Real eye tracking not available - falling back to head tracking");
+                DebugLog("Eye tracking not available - using head tracking fallback");
             }
         }
 
@@ -632,7 +657,6 @@ public class VRResearchDataCollector : MonoBehaviour
             gazedObjectName = hit.collider.gameObject.name;
             gazeDistance = hit.distance;
 
-            // Calculate gaze duration on same object
             if (lastGazedObject == hit.collider.gameObject)
             {
                 gazeDuration = Time.time - gazeStartTime;
@@ -646,11 +670,11 @@ public class VRResearchDataCollector : MonoBehaviour
         else
         {
             lastGazedObject = null;
-            gazeDistance = 100f; // Max distance if no hit
+            gazeDistance = 100f;
         }
 
-        // Enhanced CSV format with more eye tracking data
-        string line = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}",
+        // Enhanced CSV format with more eye tracking info
+        string line = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12}",
             timestamp.ToString("F4"),
             currentScenarioIndex + 1,
             gazePosition.x.ToString("F4"),
@@ -662,7 +686,8 @@ public class VRResearchDataCollector : MonoBehaviour
             gazedObjectName,
             gazeDuration.ToString("F4"),
             gazeDistance.ToString("F4"),
-            usingRealGaze);
+            usingRealGaze,
+            usingMetaTracker); // New field
 
         eyeTrackingDataBuilder.AppendLine(line);
     }

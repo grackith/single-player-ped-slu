@@ -13,7 +13,7 @@ public class VRResearchAudioRecorder : MonoBehaviour
     public bool recordContinuously = true;
     public bool enableManualRecording = true;
     public int recordingFrequency = 44100;
-    public int maxRecordingSeconds = 3600; // 1 hour max
+    public int maxRecordingSeconds = 3599; // 1 hour max
 
     [Header("Voice Markers")]
     public bool enableVoiceMarkers = true;

@@ -536,6 +536,7 @@ public class GlobalConfiguration : MonoBehaviour
         startTimeOfProgram = Utilities.GetTimeString();
         statisticsLogger = GetComponent<StatisticsLogger>();
         userInterfaceManager = GetComponent<UserInterfaceManager>();
+
         // Safe camera finding
         Transform camTransform = transform.Find("Virtual Top View Cam For All Avatars");
         if (camTransform != null)
@@ -566,7 +567,6 @@ public class GlobalConfiguration : MonoBehaviour
             GameObject cameraObj = new GameObject("Virtual Top View Cam For All Avatars");
             cameraObj.transform.SetParent(transform);
             cameraVirtualTopForAllAvatars = cameraObj.AddComponent<Camera>();
-
             GameObject textObj = new GameObject("Sign Text");
             textObj.transform.SetParent(cameraObj.transform);
             signText = textObj.AddComponent<TextMeshPro>();
@@ -586,6 +586,7 @@ public class GlobalConfiguration : MonoBehaviour
             useSimulationTime = false;
             runInBackstage = false;
         }
+
         // Preserve avatar prefabs more robustly
         if (avatarPrefabs != null && avatarPrefabs.Length > 0)
         {
@@ -597,6 +598,8 @@ public class GlobalConfiguration : MonoBehaviour
             Debug.Log($"Preserved {preservedAvatarPrefabs.Length} avatar prefabs");
         }
 
+        // CALL FINDVIRTUALWORLD HERE - After component setup but before Initialize()
+        FindVirtualWorld();
 
         Initialize();
 
@@ -615,6 +618,7 @@ public class GlobalConfiguration : MonoBehaviour
         //{
         //    avatarNum = 1;
         //}
+
         pathCircleRadius = pathLength / 2 / Mathf.PI;
         timeStepBase = (int)(timeStep * targetFPS);
         timeStepCountDown = 0;
@@ -652,17 +656,156 @@ public class GlobalConfiguration : MonoBehaviour
             //generate experimentSetups according to UI settings
             GenerateExperimentSetupsByUI();
         }
-        if (virtualWorld == null)
+
+        // Enhanced virtual world finding with proper hierarchy search
+        FindVirtualWorld();
+    }
+
+    private void FindVirtualWorld()
+    {
+        if (virtualWorld != null)
         {
-            Debug.LogError("Virtual World is null in Start!");
-            // Try to find it in the scene
-            virtualWorld = GameObject.Find("VirtualWorld") ?? GameObject.Find("CiDyGraph");
-            if (virtualWorld != null)
+            Debug.Log($"Virtual World already assigned: {virtualWorld.name}");
+            return;
+        }
+
+        Debug.Log("Searching for Virtual World...");
+
+        // Strategy 1: Look for CiDyGraph under RDW parent (most likely scenario based on hierarchy)
+        GameObject rdwParent = GameObject.Find("RDW");
+        if (rdwParent != null)
+        {
+            Debug.Log("Found RDW parent, searching for CiDyGraph child...");
+            Transform cidyGraphTransform = rdwParent.transform.Find("CiDyGraph");
+            if (cidyGraphTransform != null)
             {
-                Debug.Log($"Found virtual world: {virtualWorld.name}");
+                virtualWorld = cidyGraphTransform.gameObject;
+                Debug.Log($"Found CiDyGraph under RDW: {virtualWorld.name}");
+                return;
+            }
+            else
+            {
+                Debug.LogWarning("RDW found but CiDyGraph not found as direct child");
+                // Search recursively in RDW
+                cidyGraphTransform = FindChildRecursive(rdwParent.transform, "CiDyGraph");
+                if (cidyGraphTransform != null)
+                {
+                    virtualWorld = cidyGraphTransform.gameObject;
+                    Debug.Log($"Found CiDyGraph recursively under RDW: {virtualWorld.name}");
+                    return;
+                }
             }
         }
+        else
+        {
+            Debug.LogWarning("RDW parent not found in scene");
+        }
+
+        // Strategy 2: Direct search for CiDyGraph in scene
+        virtualWorld = GameObject.Find("CiDyGraph");
+        if (virtualWorld != null)
+        {
+            Debug.Log($"Found CiDyGraph directly in scene: {virtualWorld.name}");
+            return;
+        }
+
+        // Strategy 3: Search for VirtualWorld (fallback name)
+        virtualWorld = GameObject.Find("VirtualWorld");
+        if (virtualWorld != null)
+        {
+            Debug.Log($"Found VirtualWorld: {virtualWorld.name}");
+            return;
+        }
+
+        // Strategy 4: Search by component type (if CiDyGraph has a specific component)
+        // Uncomment if you have a specific component on CiDyGraph
+        /*
+        var cidyComponent = FindObjectOfType<CiDyGraphComponent>(); // Replace with actual component name
+        if (cidyComponent != null)
+        {
+            virtualWorld = cidyComponent.gameObject;
+            Debug.Log($"Found virtual world by component: {virtualWorld.name}");
+            return;
+        }
+        */
+
+        // Strategy 5: Search all objects with "CiDy" or "Virtual" in name
+        GameObject[] allObjects = FindObjectsOfType<GameObject>();
+        foreach (var obj in allObjects)
+        {
+            if (obj.name.ToLower().Contains("cidy") ||
+                obj.name.ToLower().Contains("virtual") ||
+                obj.name.ToLower().Contains("world"))
+            {
+                virtualWorld = obj;
+                Debug.Log($"Found potential virtual world by name pattern: {virtualWorld.name}");
+                return;
+            }
+        }
+
+        // Strategy 6: Look for common virtual environment root objects
+        string[] commonVirtualWorldNames = {
+        "Environment", "World", "Scene", "Map", "Level",
+        "VirtualEnvironment", "VE", "Graph", "City"
+    };
+
+        foreach (string name in commonVirtualWorldNames)
+        {
+            virtualWorld = GameObject.Find(name);
+            if (virtualWorld != null)
+            {
+                Debug.Log($"Found virtual world with common name '{name}': {virtualWorld.name}");
+                return;
+            }
+        }
+
+        Debug.LogError("Virtual World not found! Searched strategies:");
+        Debug.LogError("1. CiDyGraph under RDW parent");
+        Debug.LogError("2. Direct CiDyGraph search");
+        Debug.LogError("3. VirtualWorld search");
+        Debug.LogError("4. Name pattern matching");
+        Debug.LogError("5. Common virtual world names");
+
+        // Create a placeholder if nothing is found
+        CreatePlaceholderVirtualWorld();
     }
+
+    private Transform FindChildRecursive(Transform parent, string childName)
+    {
+        foreach (Transform child in parent)
+        {
+            if (child.name == childName)
+            {
+                return child;
+            }
+
+            Transform found = FindChildRecursive(child, childName);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    private void CreatePlaceholderVirtualWorld()
+    {
+        Debug.LogWarning("Creating placeholder virtual world");
+        virtualWorld = new GameObject("VirtualWorld_Placeholder");
+
+        // Try to parent it under RDW if it exists
+        GameObject rdwParent = GameObject.Find("RDW");
+        if (rdwParent != null)
+        {
+            virtualWorld.transform.SetParent(rdwParent.transform);
+            Debug.Log("Parented placeholder virtual world under RDW");
+        }
+
+        // Add a marker component to identify it as a placeholder
+        var marker = virtualWorld.AddComponent<Transform>();
+        Debug.Log($"Created placeholder virtual world: {virtualWorld.name}");
+    }
+
     public void PreserveReferences()
     {
         if (avatarPrefabs == null || avatarPrefabs.Length == 0)
@@ -670,15 +813,23 @@ public class GlobalConfiguration : MonoBehaviour
             Debug.LogError("Avatar prefabs lost! Check inspector settings.");
         }
 
+        // Use the enhanced virtual world finding method
         if (virtualWorld == null)
         {
-            virtualWorld = GameObject.Find("VirtualWorld") ?? GameObject.Find("CiDyGraph");
+            Debug.LogWarning("Virtual World reference lost! Attempting to re-find...");
+            FindVirtualWorld();
+
             if (virtualWorld == null)
             {
-                Debug.LogError("Virtual World reference lost!");
+                Debug.LogError("Failed to restore Virtual World reference!");
+            }
+            else
+            {
+                Debug.Log($"Successfully restored Virtual World reference: {virtualWorld.name}");
             }
         }
     }
+
 
     // Update is called once per frame
     void Update()
@@ -2432,32 +2583,64 @@ public class GlobalConfiguration : MonoBehaviour
         }
     }
 
+    // Add to GlobalConfiguration.cs
     public void GenerateTrackingSpace(int avatarNum, out List<SingleSpace> physicalSpaces, out SingleSpace virtualSpace)
     {
-        //generate TrackingSpace by choice
         List<SingleSpace> rePhysicalSpaces = new List<SingleSpace>();
         SingleSpace reVirtualSpace = null;
-        switch (trackingSpaceChoice)
+
+        try
         {
-            case TrackingSpaceChoice.Rectangle:
-                TrackingSpaceGenerator.GenerateRectangleTrackingSpace(obstacleType, out rePhysicalSpaces);
-                break;
-            case TrackingSpaceChoice.Triangle:
-                TrackingSpaceGenerator.GenerateTriangleTrackingSpace(obstacleType, out rePhysicalSpaces);
-                break;
-            case TrackingSpaceChoice.T_shape:
-                TrackingSpaceGenerator.GenerateT_ShapeTrackingSpace(obstacleType: obstacleType, out rePhysicalSpaces);
-                break;
-            case TrackingSpaceChoice.FilePath:
-                TrackingSpaceGenerator.LoadTrackingSpacePointsFromFile(trackingSpaceFilePath, out rePhysicalSpaces, out reVirtualSpace);
-                break;
-            case TrackingSpaceChoice.Square:
-                TrackingSpaceGenerator.GenerateRectangleTrackingSpace(obstacleType, out rePhysicalSpaces, squareWidth, squareWidth);
-                break;
-            default:
-                TrackingSpaceGenerator.GenerateRectangleTrackingSpace(0, out rePhysicalSpaces, 10, 10);
-                break;
+            switch (trackingSpaceChoice)
+            {
+                case TrackingSpaceChoice.Rectangle:
+                    TrackingSpaceGenerator.GenerateRectangleTrackingSpace(obstacleType, out rePhysicalSpaces);
+                    break;
+                case TrackingSpaceChoice.Triangle:
+                    TrackingSpaceGenerator.GenerateTriangleTrackingSpace(obstacleType, out rePhysicalSpaces);
+                    break;
+                case TrackingSpaceChoice.T_shape:
+                    TrackingSpaceGenerator.GenerateT_ShapeTrackingSpace(obstacleType: obstacleType, out rePhysicalSpaces);
+                    break;
+                case TrackingSpaceChoice.FilePath:
+                    // Enhanced error handling for file path
+                    try
+                    {
+                        TrackingSpaceGenerator.LoadTrackingSpacePointsFromFile(trackingSpaceFilePath, out rePhysicalSpaces, out reVirtualSpace);
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogError($"Failed to load tracking space from file: {trackingSpaceFilePath}. Error: {e.Message}");
+                        Debug.Log("Falling back to default rectangle tracking space");
+                        TrackingSpaceGenerator.GenerateRectangleTrackingSpace(0, out rePhysicalSpaces, 10, 10);
+                    }
+                    break;
+                case TrackingSpaceChoice.Square:
+                    TrackingSpaceGenerator.GenerateRectangleTrackingSpace(obstacleType, out rePhysicalSpaces, squareWidth, squareWidth);
+                    break;
+                default:
+                    TrackingSpaceGenerator.GenerateRectangleTrackingSpace(0, out rePhysicalSpaces, 10, 10);
+                    break;
+            }
         }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error generating tracking space: {e.Message}");
+            // Create a default fallback space
+            rePhysicalSpaces = new List<SingleSpace>();
+            var defaultSpace = new SingleSpace(
+                new List<Vector2> {
+                new Vector2(2.5f, 2.5f),
+                new Vector2(-2.5f, 2.5f),
+                new Vector2(-2.5f, -2.5f),
+                new Vector2(2.5f, -2.5f)
+                },
+                new List<List<Vector2>>(),
+                new List<InitialPose> { new InitialPose(Vector2.zero, Vector2.up) }
+            );
+            rePhysicalSpaces.Add(defaultSpace);
+        }
+
         physicalSpaces = rePhysicalSpaces;
         virtualSpace = reVirtualSpace;
     }
@@ -2650,6 +2833,7 @@ public class GlobalConfiguration : MonoBehaviour
 
         return avatarRoot;
     }
+
 
 
 }

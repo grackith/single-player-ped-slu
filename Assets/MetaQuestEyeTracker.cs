@@ -32,13 +32,15 @@ public class MetaQuestEyeTracker : MonoBehaviour
     [HideInInspector] public Vector3 gazeOrigin;
     [HideInInspector] public float convergenceDistance;
     [HideInInspector] public GameObject gazedObject;
+    [HideInInspector] public bool eyeTrackingAvailable = false;
 
     // Internal tracking
     private float gazeStartTime;
     private Dictionary<string, float> objectGazeTimes = new Dictionary<string, float>();
-    private bool eyeTrackingAvailable = false;
+    //private bool eyeTrackingAvailable = false;
     private InputDevice eyeTrackingDevice;
     private bool initializedForScene = false;
+    
 
     // Define custom input feature usages
     private static InputFeatureUsage<Vector3> eyeGazePosition = new InputFeatureUsage<Vector3>("eyeGazePosition");
@@ -147,13 +149,13 @@ public class MetaQuestEyeTracker : MonoBehaviour
         if (eyeTrackingDevices.Count > 0)
         {
             eyeTrackingDevice = eyeTrackingDevices[0];
-            eyeTrackingAvailable = true;
+            eyeTrackingAvailable = true; // Make this accessible
             Debug.Log("Eye tracking device found: " + eyeTrackingDevice.name);
         }
         else
         {
             Debug.LogWarning("No eye tracking devices found. Eye tracking will be simulated using head direction.");
-            eyeTrackingAvailable = false;
+            eyeTrackingAvailable = false; // Make this accessible
         }
 
         initializedForScene = true;
