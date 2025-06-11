@@ -27,23 +27,47 @@ public class XRInitializer : MonoBehaviour
 
     IEnumerator Start()
     {
-        // Initialize OpenXR only once
+        // Check if we should initialize XR
         if (useOpenXR && !openXRInitialized)
         {
+            // Try to initialize XR
             yield return XRGeneralSettings.Instance.Manager.InitializeLoader();
 
             if (XRGeneralSettings.Instance.Manager.activeLoader != null)
             {
-                XRGeneralSettings.Instance.Manager.StartSubsystems();
-                openXRInitialized = true;
-                Debug.Log("OpenXR initialized successfully");
+                // Check if XR device is actually present and working
+                bool deviceActive = false;
+
+                // Wait a moment for device detection
+                yield return new WaitForSeconds(1f);
+
+                // Check if XR is properly working
+                var displaySubsystem = XRGeneralSettings.Instance.Manager.activeLoader.GetLoadedSubsystem<UnityEngine.XR.XRDisplaySubsystem>();
+                if (displaySubsystem != null && displaySubsystem.running)
+                {
+                    XRGeneralSettings.Instance.Manager.StartSubsystems();
+                    openXRInitialized = true;
+                    deviceActive = true;
+                    Debug.Log("OpenXR initialized successfully with working headset");
+                }
+
+                // If XR device isn't working properly, disable XR
+                if (!deviceActive)
+                {
+                    Debug.Log("XR device not properly detected - running in desktop mode");
+                    XRGeneralSettings.Instance.Manager.StopSubsystems();
+                    XRGeneralSettings.Instance.Manager.DeinitializeLoader();
+                    useOpenXR = false; // Disable for this session
+                }
+            }
+            else
+            {
+                Debug.Log("No XR loader available - running in desktop mode");
+                useOpenXR = false;
             }
         }
 
-        // Wait a moment
         yield return new WaitForSeconds(0.5f);
-
-        // Initialize OpenRDW in the current scene
         InitializeOpenRDW();
     }
 
