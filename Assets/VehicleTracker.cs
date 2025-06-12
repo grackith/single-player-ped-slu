@@ -26,6 +26,8 @@ public class VehicleTracker : MonoBehaviour
     private bool trackingActive = false;
     private int currentScenarioIndex = -1;
 
+    
+
     [System.Serializable]
     public class VehicleData
     {

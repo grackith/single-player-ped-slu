@@ -145,7 +145,7 @@ public class SimpleTeleportButton : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("MeshRenderer not found on button or children - visual feedback will be limited");
+                //Debug.LogWarning("MeshRenderer not found on button or children - visual feedback will be limited");
             }
         }
 

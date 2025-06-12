@@ -63,19 +63,19 @@ public class RDWDiagnostics : MonoBehaviour
         lastHeadPosition = headPos;
         lastRealPosition = realPos;
 
-        // Log the info
-        Debug.Log($"=== RDW DIAGNOSTICS ===");
-        Debug.Log($"Head Position: {headPos}");
-        Debug.Log($"Real Position: {realPos}");
-        Debug.Log($"Distance to Boundary: {distanceToBoundary}m");
-        Debug.Log($"Reset Buffer: {globalConfig.RESET_TRIGGER_BUFFER}m");
-        Debug.Log($"Will Reset When: Distance to Boundary < {globalConfig.RESET_TRIGGER_BUFFER}m");
-        Debug.Log($"Movement since last log - Virtual: {headMovement}m, Real: {realMovement}m");
+        //// Log the info
+        //Debug.Log($"=== RDW DIAGNOSTICS ===");
+        //Debug.Log($"Head Position: {headPos}");
+        //Debug.Log($"Real Position: {realPos}");
+        //Debug.Log($"Distance to Boundary: {distanceToBoundary}m");
+        //Debug.Log($"Reset Buffer: {globalConfig.RESET_TRIGGER_BUFFER}m");
+        //Debug.Log($"Will Reset When: Distance to Boundary < {globalConfig.RESET_TRIGGER_BUFFER}m");
+        //Debug.Log($"Movement since last log - Virtual: {headMovement}m, Real: {realMovement}m");
 
         // Check gains
         if (redirectionManager != null && redirectionManager.redirector != null)
         {
-            Debug.Log($"Current Gains - Translation: {redirectionManager.gt}, Rotation: {redirectionManager.gr}, Curvature: {redirectionManager.curvature}");
+            //Debug.Log($"Current Gains - Translation: {redirectionManager.gt}, Rotation: {redirectionManager.gr}, Curvature: {redirectionManager.curvature}");
         }
 
         // Draw debug lines

@@ -29,7 +29,7 @@ public class SidewalkRDWHelper : MonoBehaviour
     public float offSidewalkResetBuffer = 0.7f;  // Normal buffer off sidewalks
 
     [Header("Curvature Detection")]
-    public LayerMask sidewalkLayer; // Set this to   "Highway" layer
+    public LayerMask sidewalkLayer; // Set this to   "sidewalk" layer
     public float checkRadius = 0.5f; // How far to check for sidewalk
 
     // Internal tracking
@@ -50,7 +50,7 @@ public class SidewalkRDWHelper : MonoBehaviour
         globalConfig = FindObjectOfType<GlobalConfiguration>();
 
         // Set up the layer mask for the "Highway" layer
-        sidewalkLayer = LayerMask.GetMask("Highway");
+        sidewalkLayer = LayerMask.GetMask("sidewalk");
 
         // Store original values to restore later
         if (globalConfig != null)
@@ -65,8 +65,10 @@ public class SidewalkRDWHelper : MonoBehaviour
             offSidewalkResetBuffer = originalResetBuffer;
         }
 
-        Debug.Log("SidewalkRDWHelper initialized with Highway layer mask");
+        Debug.Log("SidewalkRDWHelper initialized with sidewalk layer mask");
     }
+
+
 
     void Update()
     {

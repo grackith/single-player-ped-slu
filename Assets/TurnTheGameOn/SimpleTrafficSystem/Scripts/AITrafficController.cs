@@ -276,6 +276,13 @@
         #endregion
 
         #region Get Array Data
+
+        public bool GetIsDriving(int _index)
+        {
+            if (_index < 0 || _index >= isDrivingNL.Length)
+                return false;
+            return isDrivingNL[_index];
+        }
         public int GetCurrentRoutePointIndex(int carIndex)
         {
             // Validate index

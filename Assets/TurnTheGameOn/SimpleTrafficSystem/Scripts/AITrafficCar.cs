@@ -113,7 +113,7 @@
                 {
                     isTurning = true;
                     turningStartTime = Time.time; // Record when we started turning
-                    Debug.Log($"Car {name}: STARTED turning (angle: {turnAngle:F1}°)");
+                    //Debug.Log($"Car {name}: STARTED turning (angle: {turnAngle:F1}°)");
                 }
                 // Only stop turning after minimum duration AND angle is reasonable
                 else if (isTurning)
@@ -123,14 +123,14 @@
                     if (timeTurning >= minimumTurningDuration && turnAngle < 20f)
                     {
                         isTurning = false;
-                        Debug.Log($"Car {name}: FINISHED turning after {timeTurning:F1}s (angle: {turnAngle:F1}°)");
+                        //Debug.Log($"Car {name}: FINISHED turning after {timeTurning:F1}s (angle: {turnAngle:F1}°)");
                     }
                     else
                     {
                         // Still turning - log occasionally for debugging
                         if (Time.frameCount % 60 == 0) // Every ~1 second at 60fps
                         {
-                            Debug.Log($"Car {name}: Still turning... {timeTurning:F1}s (angle: {turnAngle:F1}°)");
+                            //Debug.Log($"Car {name}: Still turning... {timeTurning:F1}s (angle: {turnAngle:F1}°)");
                         }
                     }
                 }
@@ -139,7 +139,7 @@
             {
                 if (isTurning)
                 {
-                    Debug.Log($"Car {name}: No valid route data, setting isTurning to false");
+                    //Debug.Log($"Car {name}: No valid route data, setting isTurning to false");
                 }
                 isTurning = false;
             }
@@ -167,7 +167,7 @@
                 }
 
                 currentWaypointIndex = closestIndex;
-                Debug.Log($"Car {name}: Reinitialized turning detection, closest waypoint index: {closestIndex}");
+                //Debug.Log($"Car {name}: Reinitialized turning detection, closest waypoint index: {closestIndex}");
             }
         }
 
@@ -189,7 +189,7 @@
                     AITrafficController.Instance.Set_CanProcess(assignedIndex, true);
                 }
 
-                Debug.Log($"Car {name} released from strict route following");
+                //Debug.Log($"Car {name} released from strict route following");
             }
         }
         public float AccelerationInput()
@@ -306,7 +306,7 @@
 
             // CRITICAL: Ensure drive target is properly positioned
             EnsureDriveTargetPosition();
-            Debug.Log($"Car {name} started driving on route {waypointRoute.name}");
+            //Debug.Log($"Car {name} started driving on route {waypointRoute.name}");
         }
 
         private int FindNearestWaypointIndex()
@@ -361,7 +361,7 @@
             // Safety check
             if (AITrafficController.Instance == null || assignedIndex < 0 || waypointRoute == null)
             {
-                Debug.LogWarning($"Car {name}: Cannot synchronize traffic light awareness - invalid references");
+                //Debug.LogWarning($"Car {name}: Cannot synchronize traffic light awareness - invalid references");
                 return;
             }
 
@@ -377,7 +377,7 @@
                 // If route has traffic lights, log that information
                 if (waypointRoute.routeInfo.stopForTrafficLight)
                 {
-                    Debug.Log($"Car {name}: Route {waypointRoute.name} is configured to stop for traffic lights");
+                    //Debug.Log($"Car {name}: Route {waypointRoute.name} is configured to stop for traffic lights");
                 }
             }
             else
@@ -454,7 +454,7 @@
                 }
 
                 startRoute = route;
-                Debug.Log($"Car {name} registered with controller, assigned index: {assignedIndex}");
+                //Debug.Log($"Car {name} registered with controller, assigned index: {assignedIndex}");
             }
             catch (System.Exception ex)
             {
@@ -529,7 +529,7 @@
         {
             if (waypointRoute == null || !waypointRoute.isRegistered)
             {
-                Debug.LogError($"Car {name} (ID: {assignedIndex}): Cannot position drive target - invalid route");
+                //Debug.LogError($"Car {name} (ID: {assignedIndex}): Cannot position drive target - invalid route");
                 return;
             }
 
@@ -610,7 +610,7 @@
                     // Update route point position
                     AITrafficController.Instance.Set_RoutePointPositionArray(assignedIndex);
 
-                    Debug.Log($"Car {name} (ID: {assignedIndex}): Positioned drive target at waypoint {nextWaypointIndex}");
+                    //Debug.Log($"Car {name} (ID: {assignedIndex}): Positioned drive target at waypoint {nextWaypointIndex}");
                 }
             }
             else
@@ -679,7 +679,7 @@
         {
             try
             {
-                Debug.Log($"[WAYPOINT] Car {name} reached waypoint {onReachWaypointSettings.waypointIndexnumber} on route {onReachWaypointSettings.parentRoute.name}");
+                //Debug.Log($"[WAYPOINT] Car {name} reached waypoint {onReachWaypointSettings.waypointIndexnumber} on route {onReachWaypointSettings.parentRoute.name}");
 
                 // Always update route info to maintain traffic light awareness
                 if (onReachWaypointSettings.parentRoute != null && AITrafficController.Instance != null)
@@ -696,7 +696,7 @@
                     AITrafficWaypoint currentWaypoint = onReachWaypointSettings.waypoint;
                     if (currentWaypoint != null && currentWaypoint.isTrafficLightWaypoint)
                     {
-                        Debug.Log($"[WAYPOINT] Car {name} reached traffic light waypoint {currentWaypoint.name}");
+                        //Debug.Log($"[WAYPOINT] Car {name} reached traffic light waypoint {currentWaypoint.name}");
 
                         // Check traffic light state
                         bool shouldStopForLight = false;
@@ -712,13 +712,13 @@
                         if (shouldStopForLight)
                         {
                             // Car reached a RED traffic light waypoint - this shouldn't happen with our new system
-                            Debug.LogWarning($"[WAYPOINT] Car {name} reached RED traffic light waypoint {currentWaypoint.name} - this should have been caught earlier!");
+                            //Debug.LogWarning($"[WAYPOINT] Car {name} reached RED traffic light waypoint {currentWaypoint.name} - this should have been caught earlier!");
                             StopDriving();
                             return;
                         }
                         else
                         {
-                            Debug.Log($"Car {name} passed through GREEN traffic light waypoint {currentWaypoint.name}");
+                            //Debug.Log($"Car {name} passed through GREEN traffic light waypoint {currentWaypoint.name}");
                         }
                     }
 
@@ -828,7 +828,7 @@
                         }
                         else
                         {
-                            Debug.Log($"{name} reached final stop at {onReachWaypointSettings.parentRoute.name}");
+                            //Debug.Log($"{name} reached final stop at {onReachWaypointSettings.parentRoute.name}");
                         }
                     }
                 }
@@ -849,7 +849,7 @@
                     // If we can't even access the route name, just use the default
                 }
 
-                Debug.LogError($"Car {name}: Exception in OnReachedWaypoint: {ex.Message}");
+                //Debug.LogError($"Car {name}: Exception in OnReachedWaypoint: {ex.Message}");
             }
         }
 
@@ -870,13 +870,13 @@
                 // Position drive target at the NEXT waypoint
                 Vector3 nextWaypointPos = currentWaypointSettings.parentRoute.waypointDataList[nextWaypointIndex]._transform.position;
                 driveTarget.position = nextWaypointPos;
-                Debug.Log($"Car {name}: Drive target positioned AHEAD at waypoint {nextWaypointIndex + 1}");
+                //Debug.Log($"Car {name}: Drive target positioned AHEAD at waypoint {nextWaypointIndex + 1}");
             }
             else
             {
                 // At end of route, position ahead of car
                 driveTarget.position = transform.position + transform.forward * 10f;
-                Debug.Log($"Car {name}: Drive target positioned ahead (end of route)");
+                //Debug.Log($"Car {name}: Drive target positioned ahead (end of route)");
             }
         }
 
@@ -975,15 +975,15 @@
             // Update local route reference
             waypointRoute = onReachWaypointSettings.parentRoute;
 
-            Debug.Log($"Car {name} (type {vehicleType}) changed to route {onReachWaypointSettings.parentRoute.name}");
+            //Debug.Log($"Car {name} (type {vehicleType}) changed to route {onReachWaypointSettings.parentRoute.name}");
         }
         void Update()
         {
             UpdateTurningState();
         }
 
-        // Add to   AITrafficCar.cs
-        // Add to   AITrafficCar.cs
+        
+
         public void ForceWaypointPathUpdate()
         {
             if (waypointRoute == null)
@@ -1037,12 +1037,12 @@
                     // Ensure isDriving flag is set
                     isDriving = true;
 
-                    Debug.Log($"Forced path update for {name}: Reset to first waypoint on route {waypointRoute.name}");
+                    //Debug.Log($"Forced path update for {name}: Reset to first waypoint on route {waypointRoute.name}");
                 }
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"Error in ForceWaypointPathUpdate for {name}: {ex.Message}");
+                //Debug.LogError($"Error in ForceWaypointPathUpdate for {name}: {ex.Message}");
             }
         }
 
@@ -1061,7 +1061,7 @@
             {
                 driveTarget = new GameObject("DriveTarget").transform;
                 driveTarget.SetParent(transform);
-                Debug.Log($"Created new DriveTarget for {name}");
+                //Debug.Log($"Created new DriveTarget for {name}");
             }
 
             // Calculate closest waypoint first
@@ -1086,7 +1086,7 @@
             {
                 // Car is far from route, place it directly on the route
                 transform.position = waypointRoute.waypointDataList[closestWaypointIndex]._transform.position;
-                Debug.Log($"Car {name} was far from route ({closestDistance}m) - repositioned to route");
+                //Debug.Log($"Car {name} was far from route ({closestDistance}m) - repositioned to route");
             }
 
             // Always set current waypoint in controller
@@ -1118,14 +1118,14 @@
                     if (newWaypoint != null && newWaypoint.transform != null)
                     {
                         driveTarget.position = newWaypoint.transform.position;
-                        Debug.Log($"Car {name} at end of route - targeting connected route's first waypoint");
+                        //Debug.Log($"Car {name} at end of route - targeting connected route's first waypoint");
                     }
                 }
                 else
                 {
                     // No connected routes, create an artificial target ahead
                     driveTarget.position = transform.position + transform.forward * 10f;
-                    Debug.Log($"Car {name} at end of route with no connections - using artificial target");
+                    //Debug.Log($"Car {name} at end of route with no connections - using artificial target");
                 }
             }
             else
@@ -1139,7 +1139,7 @@
                     AITrafficController.Instance.Set_RoutePointPositionArray(assignedIndex);
                 }
 
-                Debug.Log($"Car {name} drive target set to waypoint {targetWaypointIndex}");
+                //Debug.Log($"Car {name} drive target set to waypoint {targetWaypointIndex}");
             }
 
             // Make car face the drive target
@@ -1166,7 +1166,7 @@
             if (waypointRoute == null || !waypointRoute.isRegistered ||
                 waypointRoute.waypointDataList == null || waypointRoute.waypointDataList.Count == 0)
             {
-                Debug.LogError($"Car {name} has no valid route for hard reset");
+                //Debug.LogError($"Car {name} has no valid route for hard reset");
                 return false;
             }
 
@@ -1177,7 +1177,7 @@
             Transform oldDriveTarget = transform.Find("DriveTarget");
             if (oldDriveTarget != null)
             {
-                Debug.Log($"Destroying old drive target for {name}");
+                //Debug.Log($"Destroying old drive target for {name}");
                 DestroyImmediate(oldDriveTarget.gameObject);
             }
 
@@ -1209,7 +1209,7 @@
             // If car is too far from route, place it on the route
             if (closestDistance > 20f)
             {
-                Debug.Log($"Car {name} is {closestDistance}m from route - teleporting to waypoint {waypointIndex}");
+                //Debug.Log($"Car {name} is {closestDistance}m from route - teleporting to waypoint {waypointIndex}");
                 transform.position = waypointPosition;
             }
 
@@ -1229,7 +1229,7 @@
             {
                 // At end of route or invalid next waypoint, create an artificial target
                 newDriveTarget.position = transform.position + transform.forward * 10f;
-                Debug.Log($"Car {name} hard reset - using artificial target (at end of route)");
+                //Debug.Log($"Car {name} hard reset - using artificial target (at end of route)");
             }
 
             // Force-update the controller's reference

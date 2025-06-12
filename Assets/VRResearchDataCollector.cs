@@ -90,12 +90,14 @@ public class VRResearchDataCollector : MonoBehaviour
     public bool useRealEyeTracking = true; // Toggle between real and simulated eye tracking
 
 
+    // Also make sure your VehicleTrackingData class has the lastPosition field:
     [System.Serializable]
     public class VehicleTrackingData
     {
         public string vehicleID;
         public Transform vehicleTransform;
         public Rigidbody vehicleRigidbody;
+        public Vector3 lastPosition = Vector3.zero; // ADD THIS if not already there
     }
 
     void Awake()
@@ -393,41 +395,144 @@ public class VRResearchDataCollector : MonoBehaviour
     }
 
 
+    // Update your SetupVehicleTracking to properly initialize lastPosition:
+
+    // Replace your SetupVehicleTracking method with this version that finds ACTIVE instances:
+
     void SetupVehicleTracking()
     {
         vehicleTrackingList.Clear();
 
+        DebugLog("Setting up vehicle tracking - looking for active instances...");
+
+        // Method 1: Don't use trackableVehicles array - it likely contains prefabs, not instances
+        // Instead, find all active vehicles in the scene by name
+
         if (trackableVehicles != null && trackableVehicles.Length > 0)
         {
+            DebugLog("Trackable vehicles array has vehicles, but checking if they're active instances...");
+
+            // Get the names from the assigned vehicles
+            List<string> vehicleNames = new List<string>();
             foreach (var vehicle in trackableVehicles)
             {
                 if (vehicle != null)
                 {
+                    vehicleNames.Add(vehicle.name);
+                }
+            }
+
+            // Now find ACTIVE instances in the scene with those names
+            GameObject[] allObjects = FindObjectsOfType<GameObject>();
+            foreach (GameObject obj in allObjects)
+            {
+                if (vehicleNames.Contains(obj.name) && obj.activeInHierarchy)
+                {
+                    Vector3 pos = obj.transform.position;
+
+                    // Only add if it's not at origin (0,0,0) or if it's actually supposed to be there
+                    if (pos != Vector3.zero || obj.name.ToLower().Contains("stationary"))
+                    {
+                        var data = new VehicleTrackingData
+                        {
+                            vehicleID = obj.name,
+                            vehicleTransform = obj.transform,
+                            vehicleRigidbody = obj.GetComponent<Rigidbody>(),
+                            lastPosition = pos
+                        };
+                        vehicleTrackingList.Add(data);
+                        DebugLog($"Added ACTIVE vehicle instance: {obj.name} at {pos}");
+                    }
+                    else
+                    {
+                        DebugLog($"Skipping vehicle at origin: {obj.name} (likely inactive or prefab)");
+                    }
+                }
+            }
+        }
+
+        // Method 2: If we still don't have vehicles, search by tag
+        if (vehicleTrackingList.Count == 0)
+        {
+            DebugLog("No active vehicle instances found from assigned list, searching by tag...");
+            GameObject[] taggedVehicles = GameObject.FindGameObjectsWithTag("vehicle");
+
+            foreach (var vehicle in taggedVehicles)
+            {
+                if (vehicle.activeInHierarchy)
+                {
+                    Vector3 pos = vehicle.transform.position;
+
                     var data = new VehicleTrackingData
                     {
                         vehicleID = vehicle.name,
                         vehicleTransform = vehicle.transform,
-                        vehicleRigidbody = vehicle.GetComponent<Rigidbody>()
+                        vehicleRigidbody = vehicle.GetComponent<Rigidbody>(),
+                        lastPosition = pos
                     };
                     vehicleTrackingList.Add(data);
+                    DebugLog($"Found tagged active vehicle: {vehicle.name} at {pos}");
+                }
+                else
+                {
+                    DebugLog($"Found tagged vehicle but it's inactive: {vehicle.name}");
                 }
             }
         }
-        else
-        {
-            GameObject[] taggedVehicles = GameObject.FindGameObjectsWithTag("vehicle");
-            foreach (var vehicle in taggedVehicles)
-            {
-                var data = new VehicleTrackingData
-                {
-                    vehicleID = vehicle.name,
-                    vehicleTransform = vehicle.transform,
-                    vehicleRigidbody = vehicle.GetComponent<Rigidbody>()
-                };
-                vehicleTrackingList.Add(data);
-            }
 
-            DebugLog($"Auto-found {vehicleTrackingList.Count} vehicles for tracking");
+        // Method 3: Search for any objects with vehicle-like names that are active
+        if (vehicleTrackingList.Count == 0)
+        {
+            DebugLog("Still no vehicles found, searching for any active objects with vehicle names...");
+            string[] vehicleNames = { "Car", "Vehicle", "Traffic", "Automobile", "Truck", "Bus", "Jeep", "Sedan", "SportCar" };
+
+            GameObject[] allObjects = FindObjectsOfType<GameObject>();
+            foreach (GameObject obj in allObjects)
+            {
+                if (!obj.activeInHierarchy) continue;
+
+                foreach (string name in vehicleNames)
+                {
+                    if (obj.name.Contains(name))
+                    {
+                        Vector3 pos = obj.transform.position;
+
+                        var data = new VehicleTrackingData
+                        {
+                            vehicleID = obj.name,
+                            vehicleTransform = obj.transform,
+                            vehicleRigidbody = obj.GetComponent<Rigidbody>(),
+                            lastPosition = pos
+                        };
+                        vehicleTrackingList.Add(data);
+                        DebugLog($"Found vehicle by name pattern: {obj.name} at {pos}");
+                        break;
+                    }
+                }
+            }
+        }
+
+        DebugLog($"Vehicle tracking setup complete. Found {vehicleTrackingList.Count} ACTIVE vehicles:");
+        foreach (var vehicle in vehicleTrackingList)
+        {
+            DebugLog($"- {vehicle.vehicleID} at {vehicle.vehicleTransform.position} (Active: {vehicle.vehicleTransform.gameObject.activeInHierarchy})");
+        }
+
+        if (vehicleTrackingList.Count == 0)
+        {
+            DebugLog("WARNING: No ACTIVE vehicles found! Check if vehicles are spawned and active in the scene.");
+
+            // Debug: List all objects in scene
+            DebugLog("=== ALL ACTIVE GAMEOBJECTS IN SCENE ===");
+            GameObject[] allObjects = FindObjectsOfType<GameObject>();
+            foreach (GameObject obj in allObjects)
+            {
+                if (obj.activeInHierarchy && (obj.name.ToLower().Contains("car") || obj.name.ToLower().Contains("vehicle")))
+                {
+                    DebugLog($"Found potential vehicle: {obj.name} at {obj.transform.position}");
+                }
+            }
+            DebugLog("=== END DEBUG LIST ===");
         }
     }
 
@@ -556,47 +661,111 @@ public class VRResearchDataCollector : MonoBehaviour
         participantDataBuilder.AppendLine(line.ToString());
     }
 
+    // Replace your RecordVehicleData method with this fixed version:
+
     void RecordVehicleData()
     {
         float timestamp = Time.time;
 
-        // REMOVED PROBLEMATIC LINE:
-        // if (Time.frameCount % 300 == 0)
-        // {
-        //     SetupVehicleTracking(); // This was causing issues every 5 seconds!
-        // }
-
-        // Only rebuild vehicle tracking if we have no vehicles or on scene changes
+        // Only rebuild vehicle tracking if we have no vehicles
         if (vehicleTrackingList.Count == 0)
         {
+            DebugLog("No vehicles in tracking list, attempting to find vehicles...");
             SetupVehicleTracking();
+        }
+
+        if (vehicleTrackingList.Count == 0)
+        {
+            // Still no vehicles found - log this periodically
+            if (Time.frameCount % 600 == 0) // Every 10 seconds
+            {
+                DebugLog("Still no vehicles found for tracking. Check scene setup.");
+            }
+            return;
         }
 
         foreach (var vehicle in vehicleTrackingList)
         {
-            if (vehicle.vehicleTransform != null)
+            if (vehicle.vehicleTransform == null)
             {
-                Vector3 position = vehicle.vehicleTransform.position;
-                Vector3 rotation = vehicle.vehicleTransform.eulerAngles;
-                Vector3 velocity = Vector3.zero;
-                float speed = 0f;
-
-                if (vehicle.vehicleRigidbody != null)
-                {
-                    velocity = vehicle.vehicleRigidbody.velocity;
-                    speed = velocity.magnitude;
-                }
-
-                string line = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12}",
-                    timestamp.ToString("F4"), currentScenarioIndex + 1, vehicle.vehicleID,
-                    position.x.ToString("F4"), position.y.ToString("F4"), position.z.ToString("F4"),
-                    rotation.x.ToString("F4"), rotation.y.ToString("F4"), rotation.z.ToString("F4"),
-                    velocity.x.ToString("F4"), velocity.y.ToString("F4"), velocity.z.ToString("F4"), speed.ToString("F4"));
-
-                vehicleDataBuilder.AppendLine(line);
+                DebugLog($"Vehicle transform is null for: {vehicle.vehicleID}");
+                continue;
             }
+
+            Vector3 position = vehicle.vehicleTransform.position;
+            Vector3 rotation = vehicle.vehicleTransform.eulerAngles;
+            Vector3 velocity = Vector3.zero;
+            float speed = 0f;
+
+            // Method 1: Try to get velocity from Rigidbody (if it exists)
+            if (vehicle.vehicleRigidbody != null)
+            {
+                velocity = vehicle.vehicleRigidbody.velocity;
+                speed = velocity.magnitude;
+
+                if (enableDebugLogging && Time.frameCount % 300 == 0)
+                {
+                    DebugLog($"Vehicle {vehicle.vehicleID} using Rigidbody velocity: {velocity}");
+                }
+            }
+            else
+            {
+                // Method 2: Calculate velocity from position change (THIS WAS MISSING!)
+                if (vehicle.lastPosition != Vector3.zero)
+                {
+                    float deltaTime = Time.deltaTime;
+                    if (deltaTime > 0.001f) // Avoid division by very small numbers
+                    {
+                        velocity = (position - vehicle.lastPosition) / deltaTime;
+                        speed = velocity.magnitude;
+
+                        if (enableDebugLogging && Time.frameCount % 300 == 0)
+                        {
+                            DebugLog($"Vehicle {vehicle.vehicleID} calculated velocity: {velocity} (speed: {speed:F2})");
+                            DebugLog($"  Current pos: {position}, Last pos: {vehicle.lastPosition}, Delta: {deltaTime:F4}");
+                        }
+                    }
+                }
+                else
+                {
+                    // First frame - initialize last position
+                    vehicle.lastPosition = position;
+                    if (enableDebugLogging)
+                    {
+                        DebugLog($"Initializing last position for vehicle {vehicle.vehicleID}: {position}");
+                    }
+                }
+            }
+
+            // ALWAYS update last position for next frame (even if using Rigidbody)
+            vehicle.lastPosition = position;
+
+            // Log detailed vehicle info periodically for debugging
+            if (enableDebugLogging && Time.frameCount % 600 == 0) // Every 10 seconds
+            {
+                DebugLog($"Vehicle {vehicle.vehicleID}: Pos={position}, Vel={velocity}, Speed={speed:F2}, HasRB={vehicle.vehicleRigidbody != null}");
+            }
+
+            string line = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12}",
+                timestamp.ToString("F4"),
+                currentScenarioIndex + 1,
+                vehicle.vehicleID,
+                position.x.ToString("F4"),
+                position.y.ToString("F4"),
+                position.z.ToString("F4"),
+                rotation.x.ToString("F4"),
+                rotation.y.ToString("F4"),
+                rotation.z.ToString("F4"),
+                velocity.x.ToString("F4"),
+                velocity.y.ToString("F4"),
+                velocity.z.ToString("F4"),
+                speed.ToString("F4"));
+
+            vehicleDataBuilder.AppendLine(line);
         }
     }
+
+    
 
     void RecordEyeTrackingData()
     {

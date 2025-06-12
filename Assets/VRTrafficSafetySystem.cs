@@ -1,6 +1,4 @@
-// OPTION 1: CONSOLIDATED SOLUTION
-// I recommend using this consolidated script that combines the best of both approaches
-
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TurnTheGameOn.SimpleTrafficSystem;
@@ -8,8 +6,8 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// Comprehensive VR traffic safety system that protects VR players and NPCs from AI traffic
-/// Combines features from both AITrafficVRPlayerDetection and PedestrianDetection
+/// VR Traffic Safety System - Protects VR players from AI traffic
+/// Cars slow down when player is on road, stop when too close, and resume when player is safe
 /// </summary>
 public class VRTrafficSafetySystem : MonoBehaviour
 {
@@ -17,74 +15,64 @@ public class VRTrafficSafetySystem : MonoBehaviour
     [Tooltip("Reference to the XR Origin representing the player")]
     public Transform xrOrigin;
 
-    [Header("Road Detection")]
-    [Tooltip("Layer mask for road detection")]
-    public LayerMask roadLayer;
-    [Tooltip("Distance to raycast down to check for road")]
-    public float raycastDistance = 1f;
-
-    [Header("Road Safety (When not at crosswalk)")]
-    [Tooltip("Radius to slow down cars when player is on road")]
-    public float roadSlowdownRadius = 8f;
-    [Tooltip("How much to slow down cars when player is on road")]
+    [Header("Safety Distances")]
+    [Tooltip("Distance at which cars will completely stop")]
+    public float emergencyStopDistance = 8f;
+    [Tooltip("Distance at which cars will start slowing down")]
+    public float slowdownDistance = 15f;
+    [Tooltip("How much to slow down cars (0.1 = very slow, 0.9 = barely slower)")]
     [Range(0.1f, 0.9f)]
-    public float roadSlowdownFactor = 0.7f;
-    [Tooltip("Distance at which cars will completely stop (ft)")]
-    public float emergencyStopDistance = 10f; // 10 feet (~3 meters)
+    public float slowdownFactor = 0.3f;
 
-    [Header("Crosswalk Safety")]
-    [Tooltip("Range around crosswalks to detect pedestrians")]
-    [Range(1f, 20f)]
-    public float pedestrianDetectionRange = 5f;
-    [Tooltip("Range to look for cars that should yield at crosswalks")]
-    [Range(5f, 50f)]
-    public float carDetectionRange = 20f;
-    [Tooltip("Minimum angle (degrees) between pedestrian forward and crosswalk direction to consider as 'crossing'")]
-    [Range(0f, 90f)]
-    public float crossingAngleThreshold = 45f;
+    [Header("Directional Safety Distances")]
+    [Tooltip("Distance at which cars stop when player is IN FRONT of them")]
+    public float frontStopDistance = 8f;
+    [Tooltip("Distance at which cars resume when player was IN FRONT (should be > frontStopDistance)")]
+    public float frontResumeDistance = 12f;
 
-    [Header("NPC Detection")]
-    [Tooltip("Tags for NPCs to detect (usually 'NPC' or similar)")]
-    public string[] npcTags = { "NPC", "Pedestrian" };
-    [Tooltip("How often to scan for NPCs (in seconds)")]
-    [Range(0.2f, 2f)]
-    public float npcScanInterval = 0.5f;
+    [Tooltip("Distance at which cars stop when player is to SIDE/BEHIND them")]
+    public float sideStopDistance = 2.5f;
+    [Tooltip("Distance at which cars resume when player was to SIDE/BEHIND")]
+    public float sideResumeDistance = 8f;
+
+    [Header("Layer Detection")]
+    [Tooltip("Layer mask for road detection (usually 'Landscape')")]
+    public LayerMask roadLayer = 1 << 15; // Layer 15 (Landscape)
+    [Tooltip("Layer mask for sidewalk detection (anything but road layer)")]
+    public LayerMask sidewalkLayer;
+    [Tooltip("Distance to raycast down to check what surface player is on")]
+    public float surfaceCheckDistance = 2f;
 
     [Header("Performance Settings")]
     [Tooltip("How often to update the car cache (in seconds)")]
-    [Range(0.5f, 5f)]
-    public float carCacheUpdateInterval = 1.0f;
-    [Tooltip("How often to check for player on road (in seconds)")]
-    [Range(0.1f, 1f)]
-    public float roadCheckInterval = 0.2f;
+    [Range(0.1f, 2f)]
+    public float carCacheUpdateInterval = 0.5f;
+    [Tooltip("How often to check car distances (in seconds)")]
+    [Range(0.05f, 0.5f)]
+    public float safetyCheckInterval = 0.1f;
+    [Tooltip("How often to check player surface (in seconds)")]
+    [Range(0.05f, 0.5f)]
+    public float surfaceCheckInterval = 0.2f;
 
     [Header("System Control")]
-    [Tooltip("Enable/disable the pedestrian safety system")]
+    [Tooltip("Enable/disable the safety system")]
     public bool enableSafetySystem = true;
-    [Tooltip("Enable debug visualization")]
+    [Tooltip("Enable debug logging")]
     public bool showDebug = false;
 
-    // Cached crosswalk data
-    private List<Vector3> crosswalkPositions = new List<Vector3>();
-    private Dictionary<Vector3, Vector3> crosswalkDirections = new Dictionary<Vector3, Vector3>();
-
-    // Cached cars
+    // Cached cars and their original speeds
     private List<AITrafficCar> cachedTrafficCars = new List<AITrafficCar>();
-
-    // Cached NPCs
-    private List<Transform> cachedNPCs = new List<Transform>();
-
-    // Car state tracking
-    private Dictionary<AITrafficCar, bool> yieldingCars = new Dictionary<AITrafficCar, bool>();
     private Dictionary<AITrafficCar, float> originalCarSpeeds = new Dictionary<AITrafficCar, float>();
+    private Dictionary<AITrafficCar, bool> stoppedCars = new Dictionary<AITrafficCar, bool>();
 
     // Player state
     private bool playerOnRoad = false;
+    private bool playerOnSidewalk = false;
 
     // Timers
-    private float npcScanTimer = 0f;
     private float cacheUpdateTimer = 0f;
-    private float roadCheckTimer = 0f;
+    private float safetyCheckTimer = 0f;
+    private float surfaceCheckTimer = 0f;
 
     void Start()
     {
@@ -96,45 +84,62 @@ public class VRTrafficSafetySystem : MonoBehaviour
                 xrOrigin = xrOriginObj.transform;
             else
             {
-                xrOrigin = Camera.main?.transform;
-                if (xrOrigin == null)
-                {
-                    Debug.LogWarning("VRTrafficSafetySystem: No XR Origin or Main Camera found. VR pedestrian detection will rely only on NPCs.");
-                }
+                // Try to find by tag
+                GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+                if (playerObj != null)
+                    xrOrigin = playerObj.transform;
                 else
                 {
-                    Debug.Log("VRTrafficSafetySystem: Using Main Camera as player reference");
+                    xrOrigin = Camera.main?.transform;
+                    Debug.LogWarning("VRTrafficSafetySystemFinal: Using Main Camera as player reference");
                 }
             }
         }
 
-        // Set default road layer if not set
-        if (roadLayer.value == 0)
+        if (xrOrigin == null)
         {
-            roadLayer = LayerMask.GetMask("Terrain");
-            Debug.LogWarning("VRTrafficSafetySystem: Road layer not set, using Terrain layer");
+            Debug.LogError("VRTrafficSafetySystemFinal: No player reference found! Please assign xrOrigin manually.");
+            return;
         }
 
-        // Convert feet to meters for the emergency stop distance
-        emergencyStopDistance = emergencyStopDistance * 0.3048f;
-
-        // Find all crosswalk positions in the scene
-        FindCrosswalks();
-
-        // Initialize caches
+        // Initialize car cache
         UpdateCarCache();
-        UpdateNPCCache();
 
-        // Log initial setup completion
-        Debug.Log($"VRTrafficSafetySystem initialized with {crosswalkPositions.Count} crosswalks, {cachedTrafficCars.Count} cars, {cachedNPCs.Count} NPCs");
+        Debug.Log($"VRTrafficSafetySystemFinal initialized with {cachedTrafficCars.Count} cars found");
+        // Add layer mask validation
+        if (showDebug)
+        {
+            Debug.Log("=== LAYER MASK VALIDATION ===");
+            Debug.Log($"Road layer mask value: {roadLayer.value} (binary: {System.Convert.ToString(roadLayer.value, 2)})");
+            Debug.Log($"Expected for layer 15: {1 << 15} (binary: {System.Convert.ToString(1 << 15, 2)})");
+            Debug.Log($"Sidewalk layer mask value: {sidewalkLayer.value} (binary: {System.Convert.ToString(sidewalkLayer.value, 2)})");
+            Debug.Log($"Expected for layer 24: {1 << 24} (binary: {System.Convert.ToString(1 << 24, 2)})");
+
+            // Test if masks are correct
+            if (roadLayer.value == (1 << 15))
+                Debug.Log("✓ Road layer mask is CORRECT for layer 15");
+            else
+                Debug.LogError("✗ Road layer mask is WRONG! Should be " + (1 << 15) + " for layer 15");
+
+            if (sidewalkLayer.value == (1 << 24))
+                Debug.Log("✓ Sidewalk layer mask is CORRECT for layer 24");
+            else
+                Debug.LogError("✗ Sidewalk layer mask is WRONG! Should be " + (1 << 24) + " for layer 24");
+        }
     }
 
     void Update()
     {
-        if (!enableSafetySystem)
+        if (!enableSafetySystem || xrOrigin == null)
             return;
 
-        // Update the car cache periodically
+        // Check player surface EVERY FRAME for instant response
+        CheckPlayerSurface();
+
+        // Process car safety EVERY FRAME for instant response
+        ProcessCarSafety();
+
+        // Only update car cache periodically (this can stay slower)
         cacheUpdateTimer += Time.deltaTime;
         if (cacheUpdateTimer >= carCacheUpdateInterval)
         {
@@ -142,726 +147,595 @@ public class VRTrafficSafetySystem : MonoBehaviour
             cacheUpdateTimer = 0f;
         }
 
-        // Update the NPC cache periodically
-        npcScanTimer += Time.deltaTime;
-        if (npcScanTimer >= npcScanInterval)
-        {
-            UpdateNPCCache();
-            npcScanTimer = 0f;
-        }
+        // Remove the old timers - we don't need them anymore since we're updating every frame
+        // surfaceCheckTimer and safetyCheckTimer are no longer used
+    }
 
-        // Check if player is on road periodically
-        roadCheckTimer += Time.deltaTime;
-        if (roadCheckTimer >= roadCheckInterval && xrOrigin != null)
-        {
-            CheckIfPlayerOnRoad();
-            roadCheckTimer = 0f;
-        }
+    /// <summary>
+    /// Check what surface the player is standing on
+    /// </summary>
+    /// <summary>
+    /// Check what surface the player is standing on - FIXED VERSION
+    /// </summary>
+    /// <summary>
+    /// Check what surface the player is standing on - SIMPLE VERSION
+    /// </summary>
+    /// <summary>
+    /// Check what surface the player is standing on - FIXED to ignore player colliders
+    /// </summary>
+    private void CheckPlayerSurface()
+    {
+        Vector3 rayStart = xrOrigin.position + Vector3.up * 0.1f;
 
-        // STEP 1: Check for pedestrians at crosswalks (highest priority)
-        bool pedestrianCrossing = false;
-        Vector3 nearestCrosswalkPos = Vector3.zero;
-        CheckPedestriansAtCrosswalks(ref pedestrianCrossing, ref nearestCrosswalkPos);
+        // Reset states
+        playerOnRoad = false;
+        playerOnSidewalk = false;
 
-        // STEP 2: If a pedestrian is crossing, make cars yield
-        if (pedestrianCrossing)
-        {
-            MakeCarsYield(nearestCrosswalkPos);
-        }
-        // STEP 3: If player is on road but not at crosswalk, slow down nearby cars
-        else if (playerOnRoad && xrOrigin != null)
-        {
-            SlowDownCarsNearPlayer();
-        }
-        // STEP 4: Otherwise, resume normal driving for all cars
-        else
-        {
-            ResumeCars();
-        }
-
-        // Show debug visualization if enabled
         if (showDebug)
         {
-            DrawDebugVisualization(pedestrianCrossing, nearestCrosswalkPos);
+            //Debug.Log($"=== SURFACE CHECK: Player at {xrOrigin.position} ===");
         }
-    }
 
-    /// <summary>
-    /// Check if any pedestrian (player or NPC) is near a crosswalk and oriented to cross
-    /// </summary>
-    private void CheckPedestriansAtCrosswalks(ref bool pedestrianCrossing, ref Vector3 nearestCrosswalkPos)
-    {
-        float nearestDistance = float.MaxValue;
+        // Get ALL hits, not just the first one
+        RaycastHit[] hits = Physics.RaycastAll(rayStart, Vector3.down, surfaceCheckDistance);
 
-        // First check the VR player
-        if (xrOrigin != null)
+        if (showDebug)
         {
-            Vector3 playerPosition = xrOrigin.position;
-            Vector3 playerForward = xrOrigin.forward;
+            Debug.Log($"Found {hits.Length} raycast hits");
+        }
 
-            foreach (var crosswalkPos in crosswalkPositions)
+        // Look through all hits to find ground (ignore player colliders)
+        RaycastHit groundHit = default;
+        bool foundGround = false;
+
+        foreach (var hit in hits)
+        {
+            int hitLayer = hit.collider.gameObject.layer;
+            string layerName = LayerMask.LayerToName(hitLayer);
+
+            if (showDebug)
             {
-                float distance = Vector3.Distance(playerPosition, crosswalkPos);
-                if (distance <= pedestrianDetectionRange && distance < nearestDistance)
-                {
-                    // Check if player is oriented toward crossing
-                    if (IsPedestrianOrientedToCross(playerPosition, playerForward, crosswalkPos))
-                    {
-                        pedestrianCrossing = true;
-                        nearestCrosswalkPos = crosswalkPos;
-                        nearestDistance = distance;
-
-                        if (showDebug)
-                        {
-                            Debug.Log("VR Player is crossing at crosswalk");
-                        }
-                    }
-                }
+                Debug.Log($"Hit: {hit.collider.name}, Layer: {hitLayer} ({layerName}), Distance: {hit.distance:F2}m");
             }
-        }
 
-        // Then check NPCs if player isn't already crossing
-        if (!pedestrianCrossing)
-        {
-            foreach (var npc in cachedNPCs)
+            // Skip player-related objects (common names and layer 0)
+            string objName = hit.collider.name.ToLower();
+            if (objName.Contains("player") ||
+                objName.Contains("xr") ||
+                objName.Contains("head") ||
+                objName.Contains("controller") ||
+                objName.Contains("hand") ||
+                objName.Contains("sphere") ||
+                hitLayer == 0) // Skip default layer objects near player
             {
-                if (npc == null) continue;
-
-                Vector3 npcPosition = npc.position;
-                Vector3 npcForward = npc.forward;
-
-                foreach (var crosswalkPos in crosswalkPositions)
-                {
-                    float distance = Vector3.Distance(npcPosition, crosswalkPos);
-                    if (distance <= pedestrianDetectionRange && distance < nearestDistance)
-                    {
-                        // Check if NPC is oriented toward crossing
-                        if (IsPedestrianOrientedToCross(npcPosition, npcForward, crosswalkPos))
-                        {
-                            pedestrianCrossing = true;
-                            nearestCrosswalkPos = crosswalkPos;
-                            nearestDistance = distance;
-
-                            if (showDebug)
-                            {
-                                Debug.Log($"NPC {npc.name} is crossing at crosswalk");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Check if the player is on the road using a raycast
-    /// </summary>
-    private void CheckIfPlayerOnRoad()
-    {
-        if (xrOrigin == null) return;
-
-        try
-        {
-            // Cast a ray downward from the player to check what they're standing on
-            RaycastHit hit;
-            Vector3 rayStart = xrOrigin.position + Vector3.up * 0.1f; // Start slightly above player position
-
-            // Check if player is on the road
-            if (Physics.Raycast(rayStart, Vector3.down, out hit, raycastDistance, roadLayer))
-            {
-                // Player is on the road
-                playerOnRoad = true;
-
-                // Optional debugging
                 if (showDebug)
                 {
-                    Debug.DrawLine(rayStart, hit.point, Color.green, roadCheckInterval);
+                    Debug.Log($"  → Skipping player-related object: {hit.collider.name}");
+                }
+                continue;
+            }
+
+            // This looks like ground - use it
+            groundHit = hit;
+            foundGround = true;
+            break;
+        }
+
+        if (foundGround)
+        {
+            int hitLayer = groundHit.collider.gameObject.layer;
+            string layerName = LayerMask.LayerToName(hitLayer);
+
+            if (showDebug)
+            {
+                Debug.Log($"Using ground hit: {groundHit.collider.name}, Layer: {hitLayer} ({layerName})");
+            }
+
+            // Simple layer checks
+            if (hitLayer == 15) // Landscape layer
+            {
+                playerOnRoad = true;
+                if (showDebug)
+                {
+                    Debug.DrawLine(rayStart, groundHit.point, Color.red, surfaceCheckInterval);
+                    Debug.Log($"✓ SURFACE: Player is on ROAD (layer 15 - {layerName})");
+                }
+            }
+            else if (hitLayer != 15) // Sidewalk layer
+            {
+                playerOnSidewalk = true;
+                if (showDebug)
+                {
+                    Debug.DrawLine(rayStart, groundHit.point, Color.blue, surfaceCheckInterval);
+                    Debug.Log($"✓ SURFACE: Player is on not on road (layer 15 - {layerName})");
                 }
             }
             else
             {
-                // Player is not on the road
-                playerOnRoad = false;
-
-                // Optional debugging
                 if (showDebug)
                 {
-                    Debug.DrawRay(rayStart, Vector3.down * raycastDistance, Color.red, roadCheckInterval);
+                    Debug.DrawLine(rayStart, groundHit.point, Color.yellow, surfaceCheckInterval);
+                    Debug.Log($"✗ SURFACE: Player is on OTHER surface (layer {hitLayer} - {layerName})");
+                    Debug.Log($"Expected: layer 15 (Landscape) or layer 24 (sidewalk)");
                 }
             }
-        }
-        catch
-        {
-            // Silently fail if there's an error
-            playerOnRoad = false;
-        }
-    }
-
-    /// <summary>
-    /// Slow down or stop cars near the player when on the road (not at crosswalk)
-    /// </summary>
-    private void SlowDownCarsNearPlayer()
-    {
-        Vector3 playerPosition = xrOrigin.position;
-
-        foreach (var car in cachedTrafficCars)
-        {
-            if (car == null || !car.isActiveAndEnabled) continue;
-
-            // Calculate distance to player
-            float distance = Vector3.Distance(playerPosition, car.transform.position);
-
-            // Only process cars within the road slowdown radius
-            if (distance <= roadSlowdownRadius)
-            {
-                // Store original speed if not already stored
-                if (!originalCarSpeeds.ContainsKey(car))
-                {
-                    originalCarSpeeds[car] = car.topSpeed;
-                }
-
-                // EMERGENCY STOP: If car is very close to player (within emergency stop distance), stop it completely
-                if (distance < emergencyStopDistance)
-                {
-                    try
-                    {
-                        // Only stop the car if it's already driving
-                        if (car.isDriving)
-                        {
-                            car.StopDriving();
-
-                            // Apply immediate braking force for safety
-                            Rigidbody rb = car.GetComponent<Rigidbody>();
-                            if (rb != null)
-                            {
-                                rb.velocity = Vector3.zero;
-                                rb.drag = 100; // High drag to ensure it stops quickly
-                            }
-
-                            // Mark as yielding
-                            yieldingCars[car] = true;
-
-                            if (showDebug)
-                            {
-                                Debug.Log($"Emergency stopping car {car.name} - too close to player");
-                            }
-                        }
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogWarning($"Error stopping car: {ex.Message}");
-                    }
-                }
-                // SLOW DOWN: Otherwise, slow down based on distance
-                else
-                {
-                    // Calculate factor based on distance (closer = slower)
-                    float factor = Mathf.Clamp01(distance / roadSlowdownRadius);
-                    float targetSpeed = originalCarSpeeds[car] * (roadSlowdownFactor + (factor * (1 - roadSlowdownFactor)));
-
-                    // Try to slow down the car safely
-                    try
-                    {
-                        car.SetTopSpeed(targetSpeed);
-
-                        // Mark as not fully yielding, just slowing
-                        if (!yieldingCars.ContainsKey(car))
-                        {
-                            yieldingCars[car] = false;
-                        }
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogWarning($"Error setting car speed: {ex.Message}");
-                    }
-                }
-            }
-            // Car is outside detection radius - reset if it was previously affected
-            else if (originalCarSpeeds.ContainsKey(car) && !yieldingCars.ContainsKey(car))
-            {
-                try
-                {
-                    car.SetTopSpeed(originalCarSpeeds[car]); // Reset to original speed
-                }
-                catch
-                {
-                    // Silently fail
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Make cars yield to pedestrians at crosswalks
-    /// </summary>
-    private void MakeCarsYield(Vector3 crosswalkPosition)
-    {
-        // Find cars that should yield - check if they're approaching the crosswalk
-        foreach (var car in cachedTrafficCars)
-        {
-            if (car == null || !car.isActiveAndEnabled) continue;
-
-            // Calculate distance to the crosswalk
-            float distance = Vector3.Distance(car.transform.position, crosswalkPosition);
-
-            // Only consider cars within detection range
-            if (distance < carDetectionRange && IsCarApproachingCrosswalk(car, crosswalkPosition))
-            {
-                // Store original speed if not already stored
-                if (!originalCarSpeeds.ContainsKey(car))
-                {
-                    originalCarSpeeds[car] = car.topSpeed;
-                }
-
-                // If car wasn't yielding before, make it yield
-                if (!yieldingCars.ContainsKey(car) || !yieldingCars[car])
-                {
-                    try
-                    {
-                        car.StopDriving();
-
-                        // Apply immediate braking force for safety
-                        Rigidbody rb = car.GetComponent<Rigidbody>();
-                        if (rb != null)
-                        {
-                            rb.velocity = Vector3.zero;
-                            rb.angularVelocity = Vector3.zero;
-                            rb.drag = 100; // High drag to ensure it stops quickly
-                        }
-
-                        yieldingCars[car] = true;
-
-                        if (showDebug)
-                        {
-                            Debug.Log($"Car {car.name} yielding to pedestrian at crosswalk");
-                        }
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogWarning($"Error stopping car: {ex.Message}");
-                    }
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Resume normal driving for all affected cars
-    /// </summary>
-    private void ResumeCars()
-    {
-        // Get a copy of the keys to avoid collection modified during iteration
-        var affectedCars = new List<AITrafficCar>();
-
-        foreach (var car in yieldingCars.Keys)
-        {
-            if (car != null && car.isActiveAndEnabled)
-            {
-                affectedCars.Add(car);
-            }
-        }
-
-        // No pedestrian at crosswalk and not on road, resume any affected cars
-        foreach (var car in affectedCars)
-        {
-            try
-            {
-                // Reset physics properties first
-                Rigidbody rb = car.GetComponent<Rigidbody>();
-                if (rb != null)
-                {
-                    rb.drag = car.minDrag; // Reset to default drag
-                    rb.angularDrag = car.minAngularDrag;
-                }
-
-                // Resume driving if it was fully stopped
-                if (yieldingCars[car])
-                {
-                    // Check if the car has a valid route before starting
-                    if (car.waypointRoute != null &&
-                        car.waypointRoute.waypointDataList != null &&
-                        car.waypointRoute.waypointDataList.Count > 0)
-                    {
-                        car.StartDriving();
-                    }
-                    else
-                    {
-                        TryToFixCarRoute(car);
-                    }
-                }
-
-                // Reset to original speed
-                if (originalCarSpeeds.ContainsKey(car))
-                {
-                    car.SetTopSpeed(originalCarSpeeds[car]);
-                }
-
-                yieldingCars[car] = false;
-
-                if (showDebug)
-                {
-                    Debug.Log($"Car {car.name} resuming driving");
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"Error resuming car: {ex.Message}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Attempt to fix a car with an invalid route
-    /// </summary>
-    private void TryToFixCarRoute(AITrafficCar car)
-    {
-        if (car == null) return;
-
-        // Find a valid route in the scene
-        var routes = FindObjectsOfType<AITrafficWaypointRoute>();
-        if (routes == null || routes.Length == 0) return;
-
-        // Find a compatible route
-        foreach (var route in routes)
-        {
-            if (route == null ||
-                route.waypointDataList == null ||
-                route.waypointDataList.Count == 0)
-            {
-                continue;
-            }
-
-            // Check if this route supports this vehicle type
-            bool isCompatible = false;
-            foreach (var vehicleType in route.vehicleTypes)
-            {
-                if (vehicleType == car.vehicleType)
-                {
-                    isCompatible = true;
-                    break;
-                }
-            }
-
-            if (isCompatible)
-            {
-                // Found a compatible route, assign it to the car
-                Debug.Log($"Fixing car {car.name} by assigning valid route {route.name}");
-
-                // First stop the car if it's trying to drive
-                car.StopDriving();
-
-                // Assign the new route
-                car.waypointRoute = route;
-
-                // Re-register with traffic controller
-                if (AITrafficController.Instance != null)
-                {
-                    try
-                    {
-                        // Re-initialize the car with the route
-                        car.RegisterCar(route);
-                        car.StartDriving();
-                        return; // Successfully fixed
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogError($"Failed to register car with new route: {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        // If we get here, we couldn't fix the car
-        Debug.LogWarning($"Couldn't find a compatible route for car {car.name}");
-    }
-
-    /// <summary>
-    /// Check if a car is approaching a crosswalk
-    /// </summary>
-    private bool IsCarApproachingCrosswalk(AITrafficCar car, Vector3 crosswalkPosition)
-    {
-        // Get direction from car to crosswalk
-        Vector3 toCrosswalk = crosswalkPosition - car.transform.position;
-        toCrosswalk.y = 0; // Ignore height difference
-
-        // Check if car is facing toward the crosswalk
-        float dotProduct = Vector3.Dot(car.transform.forward, toCrosswalk.normalized);
-
-        // Car is approaching if it's pointing toward the crosswalk (dot > 0)
-        return dotProduct > 0.5f; // Car needs to be pointing somewhat toward the crosswalk
-    }
-
-    /// <summary>
-    /// Check if a pedestrian is oriented to cross the street at a crosswalk
-    /// </summary>
-    private bool IsPedestrianOrientedToCross(Vector3 pedestrianPosition, Vector3 pedestrianForward, Vector3 crosswalkPosition)
-    {
-        // Get the crosswalk direction vector (if we have it)
-        Vector3 crosswalkDirection = Vector3.zero;
-        if (crosswalkDirections.TryGetValue(crosswalkPosition, out crosswalkDirection))
-        {
-            // Direction from pedestrian to crosswalk center
-            Vector3 toCrosswalk = crosswalkPosition - pedestrianPosition;
-            toCrosswalk.y = 0; // Ignore height difference
-
-            // Normalize vectors for angle calculation
-            pedestrianForward.y = 0; // Ignore vertical orientation
-            pedestrianForward.Normalize();
-            toCrosswalk.Normalize();
-
-            // Check if pedestrian is facing relatively toward the crosswalk
-            float facingDot = Vector3.Dot(pedestrianForward, toCrosswalk);
-            bool isFacingCrosswalk = facingDot > 0.3f; // About 70 degrees or less
-
-            // Check alignment with crosswalk direction
-            // We check if pedestrian's forward direction is somewhat perpendicular to crosswalk direction
-            float alignmentDot = Mathf.Abs(Vector3.Dot(pedestrianForward, crosswalkDirection));
-            bool isAlignedWithCrossing = alignmentDot < Mathf.Cos(crossingAngleThreshold * Mathf.Deg2Rad);
-
-            // Pedestrian must be facing toward crosswalk AND be aligned perpendicular to crosswalk direction
-            return isFacingCrosswalk && isAlignedWithCrossing;
         }
         else
         {
-            // If we don't have crosswalk direction data, fall back to simpler check
-            // Just check if pedestrian is facing toward the crosswalk
-            Vector3 toCrosswalk = crosswalkPosition - pedestrianPosition;
-            toCrosswalk.y = 0; // Ignore height difference
-            pedestrianForward.y = 0; // Ignore vertical orientation
+            if (showDebug)
+            {
+                Debug.DrawRay(rayStart, Vector3.down * surfaceCheckDistance, Color.green, surfaceCheckInterval);
+                Debug.Log($"✗ SURFACE: No ground detected within {surfaceCheckDistance}m (only found player objects)");
+            }
+        }
 
-            // Normalize vectors
-            if (toCrosswalk.magnitude < 0.001f) return false; // Too close to calculate direction
-            toCrosswalk.Normalize();
-            pedestrianForward.Normalize();
+        if (showDebug)
+        {
+            Debug.Log($"=== SURFACE RESULT: Road = {playerOnRoad}, Sidewalk = {playerOnSidewalk} ===");
+        }
+    }
+    /// <summary>
+    /// SIMPLE DIRECT APPROACH - Just call StopDriving/StartDriving directly on each car
+    /// </summary>
+    /// <summary>
+    /// SMART VR SAFETY - Directional detection with different stop/resume distances
+    /// </summary>
+    private void ProcessCarSafety()
+    {
+        Vector3 playerPosition = xrOrigin.position;
+        int carsProcessed = 0;
+        int carsStopped = 0;
+        int carsResumed = 0;
 
-            // Check dot product - positive means facing toward crosswalk
-            float dotProduct = Vector3.Dot(pedestrianForward, toCrosswalk);
-            return dotProduct > 0.3f; // Roughly 70 degrees or less
+        if (showDebug)
+        {
+            Debug.Log($"=== SMART VR SAFETY - Player on Road: {playerOnRoad}, on Sidewalk: {playerOnSidewalk} ===");
+        }
+
+        // Get ALL cars in scene
+        var allCars = FindObjectsOfType<AITrafficCar>();
+
+        foreach (var car in allCars)
+        {
+            if (car == null || !car.gameObject.activeInHierarchy)
+                continue;
+
+            float distance = Vector3.Distance(playerPosition, car.transform.position);
+            carsProcessed++;
+
+            // Check if player is in front of the car (in its path)
+            bool playerInFrontOfCar = IsPlayerInFrontOfCar(car, playerPosition);
+
+            // Determine stopping logic based on player location and position relative to car
+            bool shouldStop = false;
+
+            if (playerOnRoad) // Only consider stopping if player is actually on the road
+            {
+                if (playerInFrontOfCar)
+                {
+                    // Player is in front of car - use front stopping distance
+                    shouldStop = distance <= frontStopDistance;
+                }
+                else
+                {
+                    // Player is to the side or behind car - use side stopping distance
+                    shouldStop = distance <= sideStopDistance;
+                }
+            }
+            // If player is on sidewalk, never stop (shouldStop remains false)
+
+            // Use different resume distances (hysteresis to prevent flickering)
+            bool shouldResume = false;
+            if (!playerOnRoad || playerOnSidewalk)
+            {
+                // Player is off road or on sidewalk - always resume
+                shouldResume = true;
+            }
+            else if (playerInFrontOfCar)
+            {
+                // Player in front - resume at front resume distance
+                shouldResume = distance > frontResumeDistance;
+            }
+            else
+            {
+                // Player to side/behind - resume at side resume distance
+                shouldResume = distance > sideResumeDistance;
+            }
+
+            if (showDebug)
+            {
+                string stopDist = playerInFrontOfCar ? $"{frontStopDistance}f" : $"{sideStopDistance}f";
+                string resumeDist = playerInFrontOfCar ? $"{frontResumeDistance}f" : $"{sideResumeDistance}f";
+                //Debug.Log($"Car {car.name}: Dist={distance:F1}m, InFront={playerInFrontOfCar}, StopAt={stopDist}, ResumeAt={resumeDist}, ShouldStop={shouldStop}, ShouldResume={shouldResume}");
+            }
+
+            // Apply the logic
+            if (shouldStop && car.isDriving)
+            {
+                // STOP the car
+                car.StopDriving();
+                carsStopped++;
+
+                // Force physics stop for immediate effect
+                Rigidbody rb = car.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.velocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
+
+                if (showDebug)
+                {
+                    string reason = playerInFrontOfCar ? "in front" : "to side/behind";
+                    Debug.Log($"🛑 SMART STOP: {car.name} - Player {reason} at {distance:F1}m");
+                }
+            }
+            else if (shouldResume && !car.isDriving)
+            {
+                // RESUME the car
+                car.StartDriving();
+                carsResumed++;
+
+                if (showDebug)
+                {
+                    Debug.Log($"✅ SMART RESUME: {car.name} - Player safe distance or off road");
+                }
+            }
+        }
+
+        if (showDebug)
+        {
+            Debug.Log($"=== SMART SUMMARY: Processed {carsProcessed}, Stopped {carsStopped}, Resumed {carsResumed} ===");
         }
     }
 
     /// <summary>
-    /// Updates the cached list of traffic cars
+    /// Check if the player is in front of the car (in its driving path)
+    /// </summary>
+    private bool IsPlayerInFrontOfCar(AITrafficCar car, Vector3 playerPosition)
+    {
+        // Get vector from car to player
+        Vector3 carToPlayer = playerPosition - car.transform.position;
+
+        // Get car's forward direction
+        Vector3 carForward = car.transform.forward;
+
+        // Calculate dot product to see if player is in front
+        float dotProduct = Vector3.Dot(carForward.normalized, carToPlayer.normalized);
+
+        // Also check if player is within a reasonable angle (not way off to the side)
+        float angle = Vector3.Angle(carForward, carToPlayer);
+
+        // Player is "in front" if:
+        // 1. Dot product > 0 (in front, not behind)
+        // 2. Angle < 90 degrees (within the front hemisphere)
+        // 3. For extra safety, use < 60 degrees (within a reasonable cone in front)
+        bool inFront = dotProduct > 0 && angle < 25f;
+
+        if (showDebug && Vector3.Distance(car.transform.position, playerPosition) < slowdownDistance)
+        {
+            //Debug.Log($"  {car.name} direction check: Dot={dotProduct:F2}, Angle={angle:F1}°, InFront={inFront}");
+        }
+
+        return inFront;
+    }
+
+    /// <summary>
+    /// Completely stop a car using traffic controller methods
+    /// </summary>
+    private void StopCarCompletely(AITrafficCar car)
+    {
+        try
+        {
+            // Stop the car's driving behavior
+            if (car.isDriving)
+            {
+                car.StopDriving();
+            }
+
+            // Stop via traffic controller if available
+            if (AITrafficController.Instance != null && car.assignedIndex >= 0)
+            {
+                AITrafficController.Instance.Set_IsDrivingArray(car.assignedIndex, false);
+                AITrafficController.Instance.Set_CanProcess(car.assignedIndex, false);
+            }
+
+            // Apply immediate physics stop
+            Rigidbody rb = car.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.velocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.drag = 100f; // High drag to prevent movement
+            }
+
+            // Set speed to zero
+            car.SetTopSpeed(0f);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error stopping car {car.name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Slow down a car to target speed
+    /// </summary>
+    private void SlowDownCar(AITrafficCar car, float targetSpeed)
+    {
+        try
+        {
+            // Make sure car is driving
+            if (!car.isDriving)
+            {
+                car.StartDriving();
+
+                if (AITrafficController.Instance != null && car.assignedIndex >= 0)
+                {
+                    AITrafficController.Instance.Set_IsDrivingArray(car.assignedIndex, true);
+                    AITrafficController.Instance.Set_CanProcess(car.assignedIndex, true);
+                }
+            }
+
+            // Set the target speed
+            car.SetTopSpeed(targetSpeed);
+
+            // Reduce drag to allow movement
+            Rigidbody rb = car.GetComponent<Rigidbody>();
+            if (rb != null && rb.drag > 10f)
+            {
+                rb.drag = car.minDrag;
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error slowing car {car.name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Resume a car to normal speed - simplified version
+    /// </summary>
+    private void ResumeCar(AITrafficCar car)
+    {
+        if (car == null || car.assignedIndex < 0)
+            return;
+
+        try
+        {
+            // Restore original speed
+            if (originalCarSpeeds.ContainsKey(car))
+            {
+                car.SetTopSpeed(originalCarSpeeds[car]);
+            }
+            else
+            {
+                car.SetTopSpeed(car.topSpeed);
+            }
+
+            // Make sure car is driving
+            if (!car.isDriving && AITrafficController.Instance != null)
+            {
+                AITrafficController.Instance.Set_IsDrivingArray(car.assignedIndex, true);
+                AITrafficController.Instance.Set_CanProcess(car.assignedIndex, true);
+                car.StartDriving();
+            }
+
+            // Reset physics - but don't change rotation or position
+            Rigidbody rb = car.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.drag = car.minDrag;
+                rb.angularDrag = car.minAngularDrag;
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error resuming car {car.name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Aggressive car resumption with smart distance based on player location
+    /// </summary>
+    //private void ResumeAllCarsAggressively()
+    //{
+    //    Vector3 playerPosition = xrOrigin.position;
+
+    //    // Get ALL cars directly (not just cached ones)
+    //    var allCars = FindObjectsOfType<AITrafficCar>();
+    //    int carsResumed = 0;
+
+    //    if (showDebug)
+    //    {
+    //        Debug.Log($"=== RESUME CHECK: Found {allCars.Length} cars, Player on sidewalk: {playerOnSidewalk} ===");
+    //    }
+
+    //    foreach (var car in allCars)
+    //    {
+    //        if (car == null || !car.gameObject.activeInHierarchy) continue;
+
+    //        float distance = Vector3.Distance(car.transform.position, playerPosition);
+
+    //        // SMART RESUME DISTANCE based on player location:
+    //        float resumeDistance;
+    //        if (playerOnSidewalk)
+    //        {
+    //            // Player on sidewalk - cars can resume immediately regardless of distance
+    //            resumeDistance = 0f; // Resume all cars when on sidewalk!
+    //        }
+    //        else if (playerOnRoad)
+    //        {
+    //            // Player on road - cars need more distance
+    //            resumeDistance = emergencyStopDistance;
+    //        }
+    //        else
+    //        {
+    //            // Player on other surface - cars can resume at medium distance
+    //            resumeDistance = emergencyStopDistance + 2f;
+    //        }
+
+    //        if (showDebug && playerOnSidewalk)
+    //        {
+    //            Debug.Log($"SIDEWALK MODE: Car {car.name} - Distance: {distance:F1}m, Resume distance: {resumeDistance:F1}m, isDriving: {car.isDriving}");
+    //        }
+
+    //        // Resume cars based on distance OR if player is on sidewalk
+    //        if (distance > resumeDistance || playerOnSidewalk)
+    //        {
+    //            // Check if car needs resuming
+    //            bool shouldResume = false;
+    //            string resumeReason = "";
+
+    //            if (!car.isDriving)
+    //            {
+    //                // Car is completely stopped
+    //                shouldResume = true;
+    //                resumeReason = "not driving";
+    //            }
+    //            else if (originalCarSpeeds.ContainsKey(car) && car.topSpeed < originalCarSpeeds[car] * 0.95f)
+    //            {
+    //                // Car is significantly slowed down (less than 95% of original speed)
+    //                shouldResume = true;
+    //                resumeReason = $"slowed (current: {car.topSpeed:F1}, original: {originalCarSpeeds[car]:F1})";
+    //            }
+
+    //            if (shouldResume)
+    //            {
+    //                if (showDebug)
+    //                {
+    //                    Debug.Log($"RESUMING: {car.name} - Reason: {resumeReason}, Distance: {distance:F1}m, On sidewalk: {playerOnSidewalk}");
+    //                }
+
+    //                // Use the resume method
+    //                ResumeCar(car);
+    //                carsResumed++;
+    //            }
+    //            else if (showDebug && playerOnSidewalk)
+    //            {
+    //                Debug.Log($"NO RESUME NEEDED: {car.name} - isDriving: {car.isDriving}, speed: {car.topSpeed:F1}");
+    //            }
+    //        }
+    //        else if (showDebug)
+    //        {
+    //            Debug.Log($"DISTANCE TOO CLOSE: {car.name} - Distance: {distance:F1}m, Resume distance: {resumeDistance:F1}m");
+    //        }
+    //    }
+
+    //    // Clear our tracking for cars when player is on sidewalk OR they're far away
+    //    if (playerOnSidewalk)
+    //    {
+    //        if (showDebug)
+    //        {
+    //            Debug.Log($"CLEARING TRACKING: Player on sidewalk - clearing {stoppedCars.Count} stopped cars, {originalCarSpeeds.Count} speed records");
+    //        }
+    //        stoppedCars.Clear();
+    //        originalCarSpeeds.Clear();
+    //    }
+
+    //    if (showDebug)
+    //    {
+    //        Debug.Log($"=== RESUME SUMMARY: Resumed {carsResumed} cars, Player on sidewalk: {playerOnSidewalk} ===");
+    //    }
+    //}
+
+    /// <summary>
+    /// Update the cache of all traffic cars
     /// </summary>
     private void UpdateCarCache()
     {
         cachedTrafficCars.Clear();
-        var allCars = FindObjectsOfType<AITrafficCar>();
-        foreach (var car in allCars)
-        {
-            if (car != null && car.isActiveAndEnabled)
-            {
-                cachedTrafficCars.Add(car);
-            }
-        }
-    }
 
-    /// <summary>
-    /// Updates the cached list of NPCs
-    /// </summary>
-    private void UpdateNPCCache()
-    {
-        cachedNPCs.Clear();
-
-        foreach (string tag in npcTags)
+        // Method 1: Try to get cars from traffic controller
+        if (AITrafficController.Instance != null)
         {
-            try
+            var controllerCars = AITrafficController.Instance.GetTrafficCars();
+            if (controllerCars != null)
             {
-                GameObject[] npcs = GameObject.FindGameObjectsWithTag(tag);
-                foreach (var npc in npcs)
+                foreach (var car in controllerCars)
                 {
-                    // Verify it has a NavMeshAgent (to ensure it's really a pedestrian NPC)
-                    if (npc.GetComponent<NavMeshAgent>() != null)
+                    if (car != null && car.gameObject.activeInHierarchy)
                     {
-                        cachedNPCs.Add(npc.transform);
+                        cachedTrafficCars.Add(car);
                     }
                 }
             }
-            catch (UnityException)
-            {
-                Debug.LogWarning($"VRTrafficSafetySystem: '{tag}' tag is not defined in the Tag Manager.");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Find all crosswalks in the scene
-    /// </summary>
-    private void FindCrosswalks()
-    {
-        // Clear existing lists
-        crosswalkPositions.Clear();
-        crosswalkDirections.Clear();
-
-        // First try with the CrosswalkInfo component
-        var crosswalkInfos = FindObjectsOfType<CrosswalkInfo>();
-        foreach (var info in crosswalkInfos)
-        {
-            crosswalkPositions.Add(info.transform.position);
-            crosswalkDirections[info.transform.position] = info.roadDirection.normalized;
         }
 
-        // Then try with tag
-        try
+        // Method 2: Fallback to FindObjectsOfType if controller method didn't work
+        if (cachedTrafficCars.Count == 0)
         {
-            var taggedCrosswalks = GameObject.FindGameObjectsWithTag("crosswalk");
-            foreach (var crosswalk in taggedCrosswalks)
+            var allCars = FindObjectsOfType<AITrafficCar>();
+            foreach (var car in allCars)
             {
-                if (!crosswalkPositions.Contains(crosswalk.transform.position))
+                if (car != null && car.gameObject.activeInHierarchy)
                 {
-                    crosswalkPositions.Add(crosswalk.transform.position);
-                    DetermineCrosswalkDirection(crosswalk.transform);
+                    cachedTrafficCars.Add(car);
                 }
             }
         }
-        catch (UnityException)
+
+        if (showDebug)
         {
-            Debug.LogWarning("VRTrafficSafetySystem: 'crosswalk' tag is not defined.");
+            Debug.Log($"Updated car cache: Found {cachedTrafficCars.Count} active cars");
         }
-
-        // Finally try with name
-        var namedCrosswalks = FindObjectsOfType<Transform>()
-            .Where(t => (t.name.ToLower().Contains("crosswalk") ||
-                         t.name.ToLower().Contains("cross walk")) &&
-                         !crosswalkPositions.Contains(t.position))
-            .ToArray();
-
-        foreach (var crosswalk in namedCrosswalks)
-        {
-            crosswalkPositions.Add(crosswalk.position);
-            DetermineCrosswalkDirection(crosswalk);
-        }
-
-        Debug.Log($"VRTrafficSafetySystem: Found {crosswalkPositions.Count} crosswalks in the scene");
     }
 
     /// <summary>
-    /// Determine the direction of a crosswalk (usually the road direction)
+    /// Draw debug visualization in scene view
     /// </summary>
-    private void DetermineCrosswalkDirection(Transform crosswalkTransform)
+    private void OnDrawGizmos()
     {
-        Vector3 crosswalkPos = crosswalkTransform.position;
+        if (!showDebug || xrOrigin == null) return;
 
-        // First check if it has a CrosswalkInfo component
-        var crosswalkInfo = crosswalkTransform.GetComponent<CrosswalkInfo>();
-        if (crosswalkInfo != null && crosswalkInfo.roadDirection != Vector3.zero)
+        // Draw emergency stop radius in red
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(xrOrigin.position, emergencyStopDistance);
+
+        // Draw slowdown radius in yellow  
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(xrOrigin.position, slowdownDistance);
+
+        // Draw resume distance based on player surface
+        float resumeDistance = playerOnSidewalk ? emergencyStopDistance + 2f : emergencyStopDistance + 3f;
+        Gizmos.color = playerOnSidewalk ? Color.blue : Color.green;
+        Gizmos.DrawWireSphere(xrOrigin.position, resumeDistance);
+
+        // Draw lines to nearby cars
+        foreach (var car in cachedTrafficCars)
         {
-            crosswalkDirections[crosswalkPos] = crosswalkInfo.roadDirection.normalized;
-            return;
-        }
-
-        // Try to determine direction from the transform or by raycasting
-        Vector3 direction = crosswalkTransform.right; // Assume crosswalk's right vector is along road
-
-        // Cast rays to find nearby roads
-        RaycastHit hit;
-        if (Physics.Raycast(crosswalkPos + Vector3.up, Vector3.right, out hit, 10f, roadLayer))
-        {
-            direction = Vector3.right;
-        }
-        else if (Physics.Raycast(crosswalkPos + Vector3.up, Vector3.forward, out hit, 10f, roadLayer))
-        {
-            direction = Vector3.forward;
-        }
-
-        // Normalize and store the direction
-        direction.y = 0; // Ensure it's flat along ground plane
-        direction.Normalize();
-        crosswalkDirections[crosswalkPos] = direction;
-    }
-
-    /// <summary>
-    /// Draw debug visualization
-    /// </summary>
-    private void DrawDebugVisualization(bool pedestrianCrossing, Vector3 nearestCrosswalk)
-    {
-        // Only draw if debugging is enabled
-        if (!showDebug) return;
-
-        // Draw spheres at all crosswalk positions
-        foreach (var crosswalk in crosswalkPositions)
-        {
-            // Draw in green if pedestrian is at this crosswalk, otherwise in white
-            Color sphereColor = (pedestrianCrossing && crosswalk == nearestCrosswalk) ? Color.green : Color.white;
-            Debug.DrawLine(crosswalk + Vector3.up * 0.1f, crosswalk + Vector3.up * 0.1f + Vector3.forward * 0.01f, sphereColor);
-
-            // Draw circle representing detection radius
-            DrawCircle(crosswalk, pedestrianDetectionRange, sphereColor, 16);
-
-            // Draw crosswalk direction arrows
-            if (crosswalkDirections.TryGetValue(crosswalk, out Vector3 direction))
+            if (car != null)
             {
-                Debug.DrawLine(crosswalk, crosswalk + direction * 3f, Color.blue);
+                float distance = Vector3.Distance(xrOrigin.position, car.transform.position);
+                if (distance <= slowdownDistance)
+                {
+                    // Color based on what action we're taking
+                    if (distance <= emergencyStopDistance)
+                        Gizmos.color = Color.red;
+                    else
+                        Gizmos.color = Color.yellow;
 
-                // Draw arrowhead
-                Vector3 right = Vector3.Cross(Vector3.up, direction).normalized;
-                Debug.DrawLine(crosswalk + direction * 3f, crosswalk + direction * 2.5f + right * 0.5f, Color.blue);
-                Debug.DrawLine(crosswalk + direction * 3f, crosswalk + direction * 2.5f - right * 0.5f, Color.blue);
-            }
-        }
-
-        // Draw player position and road detection
-        if (xrOrigin != null)
-        {
-            // Draw player forward direction
-            Debug.DrawRay(xrOrigin.position, xrOrigin.forward * 2f, Color.yellow);
-
-            // Draw circle for road slowdown radius if player is on road
-            if (playerOnRoad)
-            {
-                DrawCircle(xrOrigin.position, roadSlowdownRadius, Color.yellow, 16);
-                DrawCircle(xrOrigin.position, emergencyStopDistance, Color.red, 16);
-            }
-        }
-
-        // Draw lines to yielding cars
-        foreach (var carEntry in yieldingCars)
-        {
-            if (carEntry.Key != null && carEntry.Value)
-            {
-                Debug.DrawLine(pedestrianCrossing ? nearestCrosswalk : xrOrigin.position,
-                              carEntry.Key.transform.position,
-                              Color.red);
-            }
-        }
-
-        // Draw NPC orientations
-        foreach (var npc in cachedNPCs)
-        {
-            if (npc != null)
-            {
-                Debug.DrawRay(npc.position, npc.forward * 2f, Color.magenta);
+                    Gizmos.DrawLine(xrOrigin.position, car.transform.position);
+                }
             }
         }
     }
 
     /// <summary>
-    /// Helper method to draw a circle in the scene for visualization
-    /// </summary>
-    private void DrawCircle(Vector3 center, float radius, Color color, int segments)
-    {
-        if (segments < 3) segments = 3;
-
-        float angleStep = 360f / segments;
-        Vector3 prevPoint = center + new Vector3(radius, 0.1f, 0);
-
-        for (int i = 1; i <= segments; i++)
-        {
-            float angle = i * angleStep * Mathf.Deg2Rad;
-            Vector3 nextPoint = center + new Vector3(Mathf.Cos(angle) * radius, 0.1f, Mathf.Sin(angle) * radius);
-            Debug.DrawLine(prevPoint, nextPoint, color);
-            prevPoint = nextPoint;
-        }
-    }
-
-    /// <summary>
-    /// Clean up when disabled or destroyed
+    /// Clean up when disabled
     /// </summary>
     private void OnDisable()
     {
-        // Resume all cars when script is disabled
-        ResumeCars();
-        yieldingCars.Clear();
+        // Resume all cars when the script is disabled
+        foreach (var car in cachedTrafficCars)
+        {
+            if (car != null)
+            {
+                ResumeCar(car);
+            }
+        }
+
+        stoppedCars.Clear();
         originalCarSpeeds.Clear();
     }
 }

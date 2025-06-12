@@ -511,7 +511,7 @@ public class VisualizationManager : MonoBehaviour
             // If still not found, create fallback structure
             if (redirectionManager.simulatedHead == null)
             {
-                Debug.LogWarning("Creating fallback simulatedHead structure");
+                //Debug.LogWarning("Creating fallback simulatedHead structure");
                 CreateFallbackSimulatedHead();
             }
         }

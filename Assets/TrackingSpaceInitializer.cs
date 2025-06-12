@@ -170,7 +170,7 @@ public class TrackingSpaceInitializer : MonoBehaviour
             persistentRDW.AlignTrackingSpaceWithRoad(
                 new Vector3(headPos.x, 0, headPos.z),
                 headForward,
-                8.4f,  // Width
+                8.2f,  // Width
                 14f  // Length
             );
 

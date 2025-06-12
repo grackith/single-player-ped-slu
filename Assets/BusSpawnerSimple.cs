@@ -115,11 +115,68 @@ public class BusSpawnerSimple : MonoBehaviour
         Debug.Log($"BusSpawnerSimple: Bus spawn triggered, will spawn in {timer} seconds (unless button is pressed first)");
     }
 
-    private IEnumerator DelayedRigidbodyWakeup(Rigidbody rb)
+    private IEnumerator DelayedBusPhysicsSetup(Rigidbody rb, AITrafficCar busCar)
     {
+        // Initial setup - make sure bus is stable
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        rb.isKinematic = true; // Temporarily disable physics
+
+        // Wait for position to settle
         yield return new WaitForFixedUpdate();
-        yield return new WaitForFixedUpdate(); // Wait 2 physics frames
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate(); // Extra frames for buses
+
+        // Ensure proper ground contact
+        Vector3 groundCheckPos = busCar.transform.position;
+        RaycastHit groundHit;
+        if (Physics.Raycast(groundCheckPos + Vector3.up * 2f, Vector3.down, out groundHit, 5f))
+        {
+            Vector3 correctedPos = busCar.transform.position;
+            correctedPos.y = groundHit.point.y + 0.1f;
+            busCar.transform.position = correctedPos;
+        }
+
+        // Re-enable physics gradually
+        rb.isKinematic = false;
         rb.WakeUp();
+
+        // Apply slight downward force to ensure ground contact
+        yield return new WaitForFixedUpdate();
+        rb.AddForce(Vector3.down * 50f, ForceMode.Force);
+    }
+    private void ConfigureBusPhysicsForSpawn(AITrafficCar busCar, Vector3 spawnPosition)
+    {
+        Rigidbody busRb = busCar.GetComponent<Rigidbody>();
+        if (busRb != null)
+        {
+            // Bus-specific physics settings for stable spawning
+            busRb.velocity = Vector3.zero;
+            busRb.angularVelocity = Vector3.zero;
+
+            // Temporarily increase drag for stability during spawn
+            float originalDrag = busRb.drag;
+            float originalAngularDrag = busRb.angularDrag;
+
+            busRb.drag = Mathf.Max(originalDrag, 2.0f);
+            busRb.angularDrag = Mathf.Max(originalAngularDrag, 5.0f);
+
+            // Use the enhanced physics setup
+            StartCoroutine(DelayedBusPhysicsSetup(busRb, busCar));
+
+            // Restore original drag values after a delay
+            StartCoroutine(RestoreOriginalDrag(busRb, originalDrag, originalAngularDrag, 3.0f));
+        }
+    }
+
+    private IEnumerator RestoreOriginalDrag(Rigidbody rb, float originalDrag, float originalAngularDrag, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (rb != null)
+        {
+            rb.drag = originalDrag;
+            rb.angularDrag = originalAngularDrag;
+        }
     }
 
 
@@ -142,9 +199,17 @@ public class BusSpawnerSimple : MonoBehaviour
         // Get spawn position at the start of the route with proper offset
         Vector3 spawnPosition = initialRoute.waypointDataList[0]._transform.position;
         RaycastHit hit;
-        if (Physics.Raycast(spawnPosition + Vector3.up * 5f, Vector3.down, out hit, 10f))
+        Bounds busBounds = busPrefab.GetComponent<Collider>().bounds;
+        float busHeight = busBounds.size.y;
+        if (Physics.Raycast(spawnPosition + Vector3.up * 10f, Vector3.down, out hit, 20f, LayerMask.GetMask("Ground", "Default")))
         {
-            spawnPosition.y = hit.point.y + 0.1f; // Small offset above ground
+            // Position bus properly on ground with clearance for its height
+            spawnPosition.y = hit.point.y + (busHeight * 0.5f) + 0.2f; // Half height + small buffer
+        }
+        else
+        {
+            // Fallback: just raise it higher
+            spawnPosition.y += 2.0f; // Increase from 0.1f to 2.0f for buses
         }
         // Check if spawn area is clear
         if (!IsSpawnAreaClear(spawnPosition, clearanceRadius))
@@ -198,14 +263,7 @@ public class BusSpawnerSimple : MonoBehaviour
             return;
         }
 
-        Rigidbody busRb = busCar.GetComponent<Rigidbody>();
-        if (busRb != null)
-        {
-            busRb.velocity = Vector3.zero;
-            busRb.angularVelocity = Vector3.zero;
-            // Remove WakeUp() or delay it
-            StartCoroutine(DelayedRigidbodyWakeup(busRb));
-        }
+        ConfigureBusPhysicsForSpawn(busCar, spawnPosition);
 
         // Important: Create the DriveTarget before registering with controller
         Transform driveTarget = new GameObject("DriveTarget").transform;
