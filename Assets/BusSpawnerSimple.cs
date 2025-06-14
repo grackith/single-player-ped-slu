@@ -32,8 +32,94 @@ public class BusSpawnerSimple : MonoBehaviour
     private float timer;
     private AITrafficCar spawnedBus;
 
+
+
+    [ContextMenu("FORCE STOP BUS NOW")]
+    public void ForceStopBusNow()
+    {
+        if (spawnedBus == null)
+        {
+            Debug.LogError("No bus to stop!");
+            return;
+        }
+
+        Debug.Log($"🛑 FORCING BUS TO STOP (BUT STAY VISIBLE): {spawnedBus.name}");
+
+        // Step 1: Stop the bus driving
+        spawnedBus.StopDriving();
+
+        // Step 2: CRITICAL - Disable processing in the controller but keep it active
+        if (spawnedBus.assignedIndex >= 0 && AITrafficController.Instance != null)
+        {
+            var controller = AITrafficController.Instance;
+
+            // This stops the controller from processing this car but keeps it visible
+            controller.Set_IsDrivingArray(spawnedBus.assignedIndex, false);
+            controller.Set_CanProcess(spawnedBus.assignedIndex, false);
+
+            // CRITICAL: Set the drive target to the bus's current position
+            // This prevents it from trying to go anywhere
+            Transform driveTarget = spawnedBus.transform.Find("DriveTarget");
+            if (driveTarget != null)
+            {
+                driveTarget.position = spawnedBus.transform.position;
+                Debug.Log("🎯 Set drive target to bus current position");
+            }
+        }
+
+        // Step 3: Stop all physics movement
+        Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
+        if (busRb != null)
+        {
+            busRb.velocity = Vector3.zero;
+            busRb.angularVelocity = Vector3.zero;
+            busRb.drag = 999f; // Very high drag to prevent any movement
+            busRb.angularDrag = 999f;
+            // DON'T set isKinematic - that might interfere with the traffic system
+        }
+
+        // Step 4: Clear the route so it can't pathfind
+        // But don't set to null - that might cause errors
+        // Instead, we'll override the UpdateDriveTarget method behavior
+
+        Debug.Log($"✅ Bus stopped but still visible. isDriving: {spawnedBus.isDriving}");
+    }
+
+    // ADD this method to continuously prevent the drive target from moving:
+    private bool busIsPermanentlyStopped = false;
+
+    public void MarkBusAsPermanentlyStopped()
+    {
+        busIsPermanentlyStopped = true;
+        ForceStopBusNow();
+    }
+
+    public void CheckIfBusReachedFinalWaypoint()
+    {
+        if (spawnedBus == null || busStopRoute == null)
+            return;
+
+        // Get the final waypoint position
+        int finalWaypointIndex = busStopRoute.waypointDataList.Count - 1;
+        Vector3 finalWaypointPos = busStopRoute.waypointDataList[finalWaypointIndex]._transform.position;
+
+        // Check if bus is close to final waypoint
+        float distanceToFinal = Vector3.Distance(spawnedBus.transform.position, finalWaypointPos);
+
+        if (distanceToFinal < 3f && spawnedBus.isDriving) // Within 3 meters
+        {
+            Debug.Log($"🎯 Bus reached final waypoint! Distance: {distanceToFinal:F2}m - PERMANENTLY STOPPING BUS");
+
+            // Mark as permanently stopped so it won't try to move again
+            MarkBusAsPermanentlyStopped();
+        }
+    }
+
     void Start()
     {
+        // CRITICAL: Reset the permanent stop flag at start
+        busIsPermanentlyStopped = false;
+
         // Initialize route connections on start
         if (initialRoute != null && intersectionRoute != null && busStopRoute != null)
         {
@@ -46,9 +132,9 @@ public class BusSpawnerSimple : MonoBehaviour
         }
     }
 
-    void Update()
+    private void Update()
     {
-        // Only process timer if spawn wasn't triggered by button
+        // Handle timer-based spawning (existing logic)
         if (!hasSpawned && !spawnTriggeredByButton && timer > 0)
         {
             timer -= Time.deltaTime;
@@ -57,6 +143,52 @@ public class BusSpawnerSimple : MonoBehaviour
                 Debug.Log("Timer expired - spawning bus via timer fallback");
                 SpawnBus();
             }
+        }
+
+        // Only check every second to avoid performance issues
+        if (Time.frameCount % 60 == 0) // Every ~1 second at 60fps
+        {
+            if (spawnedBus != null && hasSpawned)
+            {
+                // If bus is permanently stopped, keep overriding the drive target
+                if (busIsPermanentlyStopped)
+                {
+                    KeepBusStoppedAtPosition();
+                }
+                else if (spawnedBus.isDriving)
+                {
+                    CheckIfBusReachedFinalWaypoint();
+                }
+            }
+        }
+    }
+
+    private void KeepBusStoppedAtPosition()
+    {
+        if (spawnedBus == null) return;
+
+        // Continuously override the drive target position
+        Transform driveTarget = spawnedBus.transform.Find("DriveTarget");
+        if (driveTarget != null)
+        {
+            // Keep setting drive target to current bus position
+            driveTarget.position = spawnedBus.transform.position;
+        }
+
+        // Keep physics stopped
+        Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
+        if (busRb != null && busRb.velocity.magnitude > 0.1f)
+        {
+            busRb.velocity = Vector3.zero;
+            busRb.angularVelocity = Vector3.zero;
+        }
+
+        // Ensure controller flags stay disabled
+        if (spawnedBus.assignedIndex >= 0 && AITrafficController.Instance != null)
+        {
+            var controller = AITrafficController.Instance;
+            controller.Set_IsDrivingArray(spawnedBus.assignedIndex, false);
+            controller.Set_CanProcess(spawnedBus.assignedIndex, false);
         }
     }
 
@@ -188,6 +320,10 @@ public class BusSpawnerSimple : MonoBehaviour
             Debug.Log("Bus already spawned");
             return;
         }
+
+        // CRITICAL: Reset the permanent stop flag when spawning a new bus
+        busIsPermanentlyStopped = false;
+        Debug.Log("🚌 Starting fresh bus spawn - reset permanent stop flag");
 
         // Validate required references
         if (initialRoute == null || busPrefab == null || AITrafficController.Instance == null)
@@ -326,6 +462,11 @@ public class BusSpawnerSimple : MonoBehaviour
         {
             Debug.LogError($"Error during bus registration: {ex.Message}");
             Destroy(busObject);
+        }
+        if (spawnedBus != null)
+        {
+            hasSpawned = true;
+            Debug.Log($"✅ Bus spawned successfully: {spawnedBus.name}, permanentStop: {busIsPermanentlyStopped}");
         }
     }
 
@@ -472,23 +613,96 @@ public class BusSpawnerSimple : MonoBehaviour
     }
 
     // Setup route connections
+    public void EnsureBusStopsAtFinalWaypoint()
+    {
+        if (busStopRoute == null || busStopRoute.waypointDataList.Count == 0)
+        {
+            Debug.LogError("Bus stop route is not properly configured!");
+            return;
+        }
+
+        // Get the final waypoint
+        int finalIndex = busStopRoute.waypointDataList.Count - 1;
+        AITrafficWaypoint finalWaypoint = busStopRoute.waypointDataList[finalIndex]._waypoint;
+
+        if (finalWaypoint != null)
+        {
+            Debug.Log($"Verifying final waypoint: {finalWaypoint.name}");
+            Debug.Log($"  - Stop driving: {finalWaypoint.onReachWaypointSettings.stopDriving}");
+            Debug.Log($"  - Route connections: {finalWaypoint.onReachWaypointSettings.newRoutePoints?.Length ?? 0}");
+
+            // Force correct settings
+            finalWaypoint.onReachWaypointSettings.stopDriving = true;
+            finalWaypoint.onReachWaypointSettings.newRoutePoints = new AITrafficWaypoint[0]; // No connections = stop
+
+            Debug.Log("Final waypoint configured to stop the bus");
+        }
+    }
+
+    public bool IsBusAtFinalStop()
+    {
+        if (spawnedBus == null || !hasSpawned)
+        {
+            return false;
+        }
+
+        // First check if bus manually stopped
+        CheckIfBusReachedFinalWaypoint();
+
+        // Check if bus has stopped driving OR is permanently stopped
+        bool busStoppedDriving = !spawnedBus.isDriving || busIsPermanentlyStopped;
+
+        // Also check if we're near the final waypoint
+        bool nearFinalWaypoint = false;
+        if (busStopRoute != null && busStopRoute.waypointDataList.Count > 0)
+        {
+            int finalIndex = busStopRoute.waypointDataList.Count - 1;
+            Vector3 finalWaypointPos = busStopRoute.waypointDataList[finalIndex]._transform.position;
+            float distanceToFinal = Vector3.Distance(spawnedBus.transform.position, finalWaypointPos);
+            nearFinalWaypoint = distanceToFinal < 5f; // Within 5 meters
+        }
+
+        bool isAtFinalStop = busStoppedDriving && nearFinalWaypoint;
+
+        if (isAtFinalStop)
+        {
+            Debug.Log($"✅ Bus is at final stop: isDriving={spawnedBus.isDriving}, nearFinal={nearFinalWaypoint}, permanentStop={busIsPermanentlyStopped}");
+        }
+
+        return isAtFinalStop;
+    }
+    // IMPROVED: Setup method that calls the verification
     public void SetupBusRoutes(AITrafficWaypointRoute initialRoute, AITrafficWaypointRoute intersectionRoute, AITrafficWaypointRoute busStopRoute)
     {
-        if (initialRoute == null || intersectionRoute == null || busStopRoute == null) return;
+        if (initialRoute == null || intersectionRoute == null || busStopRoute == null)
+        {
+            Debug.LogError("Cannot setup bus routes - one or more routes are null!");
+            return;
+        }
+
+        // Store references
+        this.initialRoute = initialRoute;
+        this.intersectionRoute = intersectionRoute;
+        this.busStopRoute = busStopRoute;
+
+        Debug.Log("=== SETTING UP BUS ROUTES ===");
 
         // 1. Make sure all routes accept MicroBus type
         EnsureRouteHasVehicleType(initialRoute, busType);
         EnsureRouteHasVehicleType(intersectionRoute, busType);
         EnsureRouteHasVehicleType(busStopRoute, busType);
 
-        // 2. Connect initialRoute → intersectionRoute
-        ConnectTwoRoutes(initialRoute, intersectionRoute, false); // Don't stop at intersection entry
+        // 2. Connect routes
+        ConnectTwoRoutes(initialRoute, intersectionRoute, false);
+        ConnectTwoRoutes(intersectionRoute, busStopRoute, false);
 
-        // 3. Connect intersectionRoute → busStopRoute
-        ConnectTwoRoutes(intersectionRoute, busStopRoute, false); // Don't stop at bus stop entry
-
-        // 4. Set the last waypoint of bus stop route to stop the bus
+        // 3. CRITICAL: Configure final waypoint to stop the bus
         SetFinalStopWaypoint(busStopRoute);
+
+        // 4. Verify the configuration
+        VerifyFinalWaypointConfiguration();
+
+        Debug.Log("=== BUS ROUTES SETUP COMPLETE ===");
     }
 
     // Helper method to connect two routes
@@ -502,28 +716,37 @@ public class BusSpawnerSimple : MonoBehaviour
 
             if (lastWaypoint != null && firstTargetWaypoint != null)
             {
-                // CRITICAL CHANGE: Preserve existing connections
-                List<AITrafficWaypoint> existingConnections = new List<AITrafficWaypoint>();
-
-                // Add existing connections first
-                if (lastWaypoint.onReachWaypointSettings.newRoutePoints != null)
+                // IMPORTANT: For the final connection to bus stop, be more careful
+                if (toRoute == busStopRoute)
                 {
-                    existingConnections.AddRange(lastWaypoint.onReachWaypointSettings.newRoutePoints);
-                }
+                    // This is the connection TO the bus stop route
+                    lastWaypoint.onReachWaypointSettings.newRoutePoints = new AITrafficWaypoint[] { firstTargetWaypoint };
+                    lastWaypoint.onReachWaypointSettings.stopDriving = false; // Don't stop here, continue to bus stop
+                    lastWaypoint.onReachWaypointSettings.parentRoute = fromRoute;
 
-                // Add the target waypoint if it doesn't already exist
-                if (!existingConnections.Contains(firstTargetWaypoint))
+                    Debug.Log($"Connected {fromRoute.name} → {toRoute.name} (final approach to bus stop)");
+                }
+                else
                 {
-                    existingConnections.Add(firstTargetWaypoint);
+                    // Regular connection - preserve existing logic
+                    List<AITrafficWaypoint> existingConnections = new List<AITrafficWaypoint>();
+
+                    if (lastWaypoint.onReachWaypointSettings.newRoutePoints != null)
+                    {
+                        existingConnections.AddRange(lastWaypoint.onReachWaypointSettings.newRoutePoints);
+                    }
+
+                    if (!existingConnections.Contains(firstTargetWaypoint))
+                    {
+                        existingConnections.Add(firstTargetWaypoint);
+                    }
+
+                    lastWaypoint.onReachWaypointSettings.newRoutePoints = existingConnections.ToArray();
+                    lastWaypoint.onReachWaypointSettings.stopDriving = shouldStop;
+                    lastWaypoint.onReachWaypointSettings.parentRoute = fromRoute;
+
+                    Debug.Log($"Connected {fromRoute.name} → {toRoute.name}");
                 }
-
-                // Update connections
-                lastWaypoint.onReachWaypointSettings.newRoutePoints = existingConnections.ToArray();
-                lastWaypoint.onReachWaypointSettings.stopDriving = shouldStop;
-                lastWaypoint.onReachWaypointSettings.parentRoute = fromRoute;
-
-                // Log connection
-                Debug.Log($"Connected {fromRoute.name} → {toRoute.name}");
 
                 // Set up vehicle filtering for bus-only routes
                 AITrafficWaypointVehicleFilter filter = lastWaypoint.GetComponent<AITrafficWaypointVehicleFilter>();
@@ -540,17 +763,97 @@ public class BusSpawnerSimple : MonoBehaviour
     // Helper method to set the final stop waypoint
     private void SetFinalStopWaypoint(AITrafficWaypointRoute busStopRoute)
     {
-        int lastBusStopIndex = busStopRoute.waypointDataList.Count - 1;
-        if (lastBusStopIndex >= 0)
+        if (busStopRoute == null || busStopRoute.waypointDataList == null || busStopRoute.waypointDataList.Count == 0)
         {
-            AITrafficWaypoint lastBusStopWaypoint = busStopRoute.waypointDataList[lastBusStopIndex]._waypoint;
-            if (lastBusStopWaypoint != null)
-            {
-                lastBusStopWaypoint.onReachWaypointSettings.stopDriving = true;
-                Debug.Log("Set last bus stop waypoint to stop the bus");
-            }
+            Debug.LogError("Cannot set final stop waypoint - invalid bus stop route!");
+            return;
+        }
+
+        int lastBusStopIndex = busStopRoute.waypointDataList.Count - 1;
+        AITrafficWaypoint lastBusStopWaypoint = busStopRoute.waypointDataList[lastBusStopIndex]._waypoint;
+
+        if (lastBusStopWaypoint != null)
+        {
+            Debug.Log($"=== CONFIGURING FINAL STOP WAYPOINT: {lastBusStopWaypoint.name} ===");
+
+            // CRITICAL: These settings ensure StopDriving() gets called
+            lastBusStopWaypoint.onReachWaypointSettings.stopDriving = true;
+            lastBusStopWaypoint.onReachWaypointSettings.newRoutePoints = new AITrafficWaypoint[0]; // No connections
+            lastBusStopWaypoint.onReachWaypointSettings.parentRoute = busStopRoute;
+            lastBusStopWaypoint.onReachWaypointSettings.stopTime = 0f; // Don't resume driving
+
+            Debug.Log($"Final waypoint configured:");
+            Debug.Log($"  - stopDriving: {lastBusStopWaypoint.onReachWaypointSettings.stopDriving}");
+            Debug.Log($"  - newRoutePoints count: {lastBusStopWaypoint.onReachWaypointSettings.newRoutePoints.Length}");
+            Debug.Log($"  - stopTime: {lastBusStopWaypoint.onReachWaypointSettings.stopTime}");
+            Debug.Log($"Bus will call StopDriving() when reaching this waypoint");
+        }
+        else
+        {
+            Debug.LogError($"Final waypoint is null in bus stop route {busStopRoute.name}!");
         }
     }
+    public void VerifyFinalWaypointConfiguration()
+    {
+        if (busStopRoute == null)
+        {
+            Debug.LogError("No bus stop route assigned for verification!");
+            return;
+        }
+
+        Debug.Log("=== VERIFYING FINAL WAYPOINT CONFIGURATION ===");
+        Debug.Log($"Bus stop route: {busStopRoute.name}");
+        Debug.Log($"Waypoint count: {busStopRoute.waypointDataList.Count}");
+
+        if (busStopRoute.waypointDataList.Count > 0)
+        {
+            int lastIndex = busStopRoute.waypointDataList.Count - 1;
+            AITrafficWaypoint finalWaypoint = busStopRoute.waypointDataList[lastIndex]._waypoint;
+
+            if (finalWaypoint != null)
+            {
+                Debug.Log($"Final waypoint: {finalWaypoint.name}");
+                Debug.Log($"  - Position: {finalWaypoint.transform.position}");
+                Debug.Log($"  - stopDriving: {finalWaypoint.onReachWaypointSettings.stopDriving}");
+                Debug.Log($"  - stopTime: {finalWaypoint.onReachWaypointSettings.stopTime}");
+                Debug.Log($"  - newRoutePoints: {finalWaypoint.onReachWaypointSettings.newRoutePoints?.Length ?? 0}");
+
+                if (finalWaypoint.onReachWaypointSettings.newRoutePoints != null &&
+                    finalWaypoint.onReachWaypointSettings.newRoutePoints.Length > 0)
+                {
+                    Debug.LogWarning("PROBLEM: Final waypoint has route connections - bus won't stop!");
+                    foreach (var connection in finalWaypoint.onReachWaypointSettings.newRoutePoints)
+                    {
+                        if (connection != null)
+                        {
+                            Debug.Log($"    - Connected to: {connection.name}");
+                        }
+                    }
+                }
+
+                if (!finalWaypoint.onReachWaypointSettings.stopDriving)
+                {
+                    Debug.LogWarning("PROBLEM: Final waypoint stopDriving is FALSE - bus won't stop!");
+                }
+
+                if (finalWaypoint.onReachWaypointSettings.stopDriving &&
+                    (finalWaypoint.onReachWaypointSettings.newRoutePoints == null ||
+                     finalWaypoint.onReachWaypointSettings.newRoutePoints.Length == 0))
+                {
+                    Debug.Log("✅ Final waypoint correctly configured - bus will stop!");
+                }
+            }
+            else
+            {
+                Debug.LogError("Final waypoint is NULL!");
+            }
+        }
+
+        Debug.Log("=== END VERIFICATION ===");
+    }
+
+
+
 
     private void EnsureRouteHasVehicleType(AITrafficWaypointRoute route, AITrafficVehicleType vehicleType)
     {
@@ -663,15 +966,24 @@ public class BusSpawnerSimple : MonoBehaviour
             Debug.Log("Emergency fix applied - bus should now be driving");
         }
     }
+    public AITrafficCar GetSpawnedBus()
+    {
+        return spawnedBus;
+    }
 
 
 
     // Reset method called by ScenarioManager's EndCurrentScenario
     public void Reset()
     {
+        Debug.Log("🔄 Resetting BusSpawnerSimple");
+
+        // CRITICAL: Reset the permanent stop flag FIRST
+        busIsPermanentlyStopped = false;
+
         if (spawnedBus != null)
         {
-            // CRITICAL: Check if traffic controller and car list are valid
+            // Check if traffic controller and car list are valid
             if (AITrafficController.Instance != null &&
                 AITrafficController.Instance.GetCarList().Count > 0 &&
                 spawnedBus.assignedIndex >= 0 &&
@@ -703,6 +1015,6 @@ public class BusSpawnerSimple : MonoBehaviour
             button.ResetForNewScenario();
         }
 
-        Debug.Log("BusSpawnerSimple: Reset and ready for next spawn");
+        Debug.Log($"BusSpawnerSimple: Reset complete. permanentStop: {busIsPermanentlyStopped}");
     }
 }

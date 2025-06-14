@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.XR.Interaction.Toolkit;
 
@@ -6,6 +6,13 @@ public class SimpleTeleportButton : MonoBehaviour
 {
     [SerializeField]
     public UnityEvent onButtonPressed;
+    public enum ButtonFunction
+    {
+        QuitApplication,
+        SpawnBus,
+        Both, // For testing
+        SmartBusButton // NEW: Dynamic behavior based on bus state
+    }
 
     [SerializeField]
     private ScenarioManager scenarioManager;
@@ -15,12 +22,6 @@ public class SimpleTeleportButton : MonoBehaviour
     [SerializeField] public ButtonFunction buttonFunction = ButtonFunction.QuitApplication;
     [SerializeField] private BusSpawnerSimple busSpawner;
 
-    public enum ButtonFunction
-    {
-        QuitApplication,
-        SpawnBus,
-        Both // For testing - probably not needed in production
-    }
 
     // Add visual feedback elements
     [SerializeField] private Material defaultMaterial;
@@ -99,9 +100,10 @@ public class SimpleTeleportButton : MonoBehaviour
             }
         }
 
-        // Find ScenarioManager from any scene (DontDestroyOnLoad objects included)
+        // Find ScenarioManager - be more thorough for persistent buttons
         if (scenarioManager == null)
         {
+            // Look in all scenes including DontDestroyOnLoad
             scenarioManager = FindObjectOfType<ScenarioManager>(true);
             if (scenarioManager == null)
             {
@@ -110,16 +112,20 @@ public class SimpleTeleportButton : MonoBehaviour
             }
         }
 
-        // AUTO-DETECT button function based on name or tag if not set
+        // AUTO-DETECT smart bus button function based on name if not already set
         if (buttonFunction == ButtonFunction.QuitApplication &&
-            (gameObject.name.ToLower().Contains("bus") || gameObject.name.ToLower().Contains("stop")))
+            (gameObject.name.ToLower().Contains("bus") ||
+             gameObject.name.ToLower().Contains("stop") ||
+             gameObject.name.ToLower().Contains("smart")))
         {
-            buttonFunction = ButtonFunction.SpawnBus;
-            Debug.Log($"Auto-detected bus button function for {gameObject.name}");
+            buttonFunction = ButtonFunction.SmartBusButton;
+            Debug.Log($"Auto-detected smart bus button function for {gameObject.name}");
         }
 
-        // NEW: Find BusSpawnerSimple if this is a bus button
-        if (buttonFunction == ButtonFunction.SpawnBus || buttonFunction == ButtonFunction.Both)
+        // Find BusSpawnerSimple if this is any type of bus button
+        if (buttonFunction == ButtonFunction.SpawnBus ||
+            buttonFunction == ButtonFunction.Both ||
+            buttonFunction == ButtonFunction.SmartBusButton)
         {
             if (busSpawner == null)
             {
@@ -186,7 +192,7 @@ public class SimpleTeleportButton : MonoBehaviour
             pressedTextPosition = originalTextPosition - (transform.forward * pressDistance);
         }
 
-        // NEW: Set up audio source
+        // Set up audio source
         if (audioSource == null)
         {
             audioSource = GetComponent<AudioSource>();
@@ -283,10 +289,8 @@ public class SimpleTeleportButton : MonoBehaviour
 
     public void OnButtonSelected(SelectEnterEventArgs args)
     {
-        // NEW: Check if button is enabled
         if (!buttonEnabled)
         {
-            // Play error sound and return
             if (audioSource != null && errorSound != null)
             {
                 audioSource.PlayOneShot(errorSound);
@@ -300,7 +304,6 @@ public class SimpleTeleportButton : MonoBehaviour
             controllerInteractor.SendHapticImpulse(0.5f, 0.1f);
         }
 
-        // NEW: Handle different button functions
         bool actionSuccessful = false;
 
         switch (buttonFunction)
@@ -314,10 +317,13 @@ public class SimpleTeleportButton : MonoBehaviour
                 break;
 
             case ButtonFunction.Both:
-                // Handle bus spawning first, then quit
                 bool busSpawned = HandleBusSpawning();
                 bool appQuit = HandleQuitApplication();
                 actionSuccessful = busSpawned || appQuit;
+                break;
+
+            case ButtonFunction.SmartBusButton: // NEW
+                actionSuccessful = HandleSmartBusButton();
                 break;
         }
 
@@ -337,9 +343,122 @@ public class SimpleTeleportButton : MonoBehaviour
             }
         }
 
-        // Invoke any other events
         onButtonPressed.Invoke();
         StartCoroutine(ButtonPressVisualFeedback());
+    }
+    private bool HandleSmartBusButton()
+    {
+        Debug.Log("Smart bus button pressed - checking bus state...");
+
+        if (busSpawner == null)
+        {
+            Debug.LogError("No BusSpawnerSimple assigned to smart bus button!");
+            return false;
+        }
+
+        // Check if bus has spawned
+        if (!busSpawner.hasSpawned)
+        {
+            // Bus hasn't spawned yet - spawn it
+            Debug.Log("Bus not spawned yet - triggering spawn");
+            return HandleBusSpawning();
+        }
+        else
+        {
+            // Bus has spawned - check if it has reached final destination
+            if (IsBusAtFinalDestination())
+            {
+                Debug.Log("Bus at final destination - quitting application");
+                return HandleQuitApplication();
+            }
+            else
+            {
+                Debug.Log("Bus still traveling - cannot quit yet");
+                // Optional: Show message to user
+                ShowBusStillTravelingMessage();
+                return false;
+            }
+        }
+    }
+    private void ShowBusStillTravelingMessage()
+    {
+        // You could implement visual feedback here
+        // For now, just log and maybe change button color temporarily
+        Debug.Log("Bus is still traveling to destination...");
+
+        // Optional: Flash the button or change its color temporarily
+        StartCoroutine(FlashBusStillTravelingFeedback());
+    }
+
+    // REPLACE the IsBusAtFinalDestination method in SimpleTeleportButton.cs with this:
+
+    private bool IsBusAtFinalDestination()
+    {
+        if (busSpawner == null || !busSpawner.hasSpawned)
+        {
+            Debug.Log("Bus spawner is null or bus hasn't spawned yet");
+            return false;
+        }
+
+        // Use the new method to check if bus is properly stopped
+        bool busAtFinalStop = busSpawner.IsBusAtFinalStop();
+
+        if (busAtFinalStop)
+        {
+            Debug.Log("✅ Bus has reached final destination and stopped - ready to quit");
+        }
+        else
+        {
+            Debug.Log("🚌 Bus is still traveling or hasn't reached final stop yet");
+
+            // Optional: Debug current bus state
+            var spawnedBus = busSpawner.GetSpawnedBus();
+            if (spawnedBus != null)
+            {
+                Debug.Log($"Bus isDriving: {spawnedBus.isDriving}");
+            }
+        }
+
+        return busAtFinalStop;
+    }
+
+    private System.Collections.IEnumerator FlashBusStillTravelingFeedback()
+    {
+        // Flash the button to indicate bus is still traveling
+        Material originalMaterial = meshRenderer != null ? meshRenderer.material : null;
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (meshRenderer != null && hoveredMaterial != null)
+            {
+                meshRenderer.material = hoveredMaterial;
+            }
+            yield return new WaitForSeconds(0.2f);
+
+            if (meshRenderer != null && originalMaterial != null)
+            {
+                meshRenderer.material = originalMaterial;
+            }
+            yield return new WaitForSeconds(0.2f);
+        }
+    }
+
+    // NEW: Method to setup as smart bus button
+    public void SetupAsSmartBusButton()
+    {
+        buttonFunction = ButtonFunction.SmartBusButton;
+
+        // Force find the bus spawner
+        if (busSpawner == null)
+        {
+            busSpawner = FindObjectOfType<BusSpawnerSimple>();
+        }
+
+        // Force setup
+        isSetup = false;
+        SetupButton();
+
+        Debug.Log($"Button {gameObject.name} configured as smart bus button");
     }
 
     // NEW: Handle bus spawning logic
@@ -434,8 +553,16 @@ public class SimpleTeleportButton : MonoBehaviour
     // NEW: Reset button for new scenario
     public void ResetForNewScenario()
     {
+        // Reset button state
         SetButtonEnabled(true);
-        Debug.Log($"Button {gameObject.name} reset for new scenario");
+
+        // Clear any runtime-found references that might be stale
+        ClearRuntimeAssignments();
+
+        // Force re-setup for new scenario
+        isSetup = false;
+
+        Debug.Log($"Smart bus button {gameObject.name} reset for new scenario");
     }
 
     private System.Collections.IEnumerator ButtonPressVisualFeedback()
@@ -537,17 +664,27 @@ public class SimpleTeleportButton : MonoBehaviour
     // NEW: Method to clear runtime assignments when scene changes
     public void ClearRuntimeAssignments()
     {
-        // Keep the serialized fields but clear runtime-found references
-        if (busSpawner != null && FindObjectOfType<BusSpawnerSimple>() != busSpawner)
+        // Check if current references are still valid
+        if (busSpawner != null)
         {
-            busSpawner = null;
-            isSetup = false; // Force re-setup
+            BusSpawnerSimple currentSpawner = FindObjectOfType<BusSpawnerSimple>();
+            if (currentSpawner != busSpawner)
+            {
+                busSpawner = null;
+                isSetup = false;
+                Debug.Log("Cleared stale bus spawner reference");
+            }
         }
 
-        if (scenarioManager != null && FindObjectOfType<ScenarioManager>() != scenarioManager)
+        if (scenarioManager != null)
         {
-            scenarioManager = null;
-            isSetup = false; // Force re-setup
+            ScenarioManager currentManager = FindObjectOfType<ScenarioManager>();
+            if (currentManager != scenarioManager)
+            {
+                scenarioManager = null;
+                isSetup = false;
+                Debug.Log("Cleared stale scenario manager reference");
+            }
         }
     }
 

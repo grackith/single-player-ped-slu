@@ -31,6 +31,7 @@ public class Scenario
     public float busSpawnDelay = 30f;
     [Tooltip("Optional specific route for the bus in this scenario")]
     public AITrafficWaypointRoute scenarioBusRoute;
+
 }
 
 /// <summary>
@@ -1071,11 +1072,30 @@ public class ScenarioManager : MonoBehaviour
             BusSpawnerSimple.Reset();
         }
 
+        // Reset persistent bus button for next scenario
+        ResetPersistentBusButton();
+
         // Trigger the scenario ended event
         onScenarioEnded.Invoke();
 
         // Unload current scenario and show researcher UI
         StartCoroutine(UnloadCurrentScenario());
+    }
+
+    // NEW: Reset persistent bus button
+    private void ResetPersistentBusButton()
+    {
+        SimpleTeleportButton[] allButtons = FindObjectsOfType<SimpleTeleportButton>(true);
+
+        foreach (var button in allButtons)
+        {
+            if (button != null && button.buttonFunction == SimpleTeleportButton.ButtonFunction.SmartBusButton)
+            {
+                button.ResetForNewScenario();
+                Debug.Log($"Reset persistent bus button: {button.gameObject.name}");
+                break;
+            }
+        }
     }
 
     /// <summary>
@@ -1802,8 +1822,103 @@ public class ScenarioManager : MonoBehaviour
 
     private void SetupBusButtonsForScenario(Scenario scenario)
     {
-        // Wait a frame for scene to fully load
-        StartCoroutine(SetupBusButtonsDelayed(scenario));
+        // For Option A, we want to find the persistent bus button and configure it
+        StartCoroutine(SetupPersistentBusButton(scenario));
+    }
+
+    private IEnumerator SetupPersistentBusButton(Scenario scenario)
+    {
+        yield return new WaitForEndOfFrame();
+
+        // Find the persistent bus button (should be in the researcher scene or DontDestroyOnLoad)
+        SimpleTeleportButton persistentBusButton = null;
+
+        // First, look for a button specifically marked as persistent
+        SimpleTeleportButton[] allButtons = FindObjectsOfType<SimpleTeleportButton>(true);
+
+        foreach (var button in allButtons)
+        {
+            if (button == null) continue;
+
+            // Check if this is the persistent bus button
+            string buttonName = button.gameObject.name.ToLower();
+            Scene buttonScene = button.gameObject.scene;
+
+            // Look for persistent bus button (in researcher scene or DontDestroyOnLoad)
+            if ((buttonName.Contains("bus") || buttonName.Contains("stop") || buttonName.Contains("smart")) &&
+                (buttonScene.name == "s.researcher" || buttonScene.name == "DontDestroyOnLoad"))
+            {
+                persistentBusButton = button;
+                break;
+            }
+        }
+
+        // If no persistent button found, look for any bus button and make it persistent
+        if (persistentBusButton == null)
+        {
+            foreach (var button in allButtons)
+            {
+                if (button == null) continue;
+
+                string buttonName = button.gameObject.name.ToLower();
+                if (buttonName.Contains("bus") || buttonName.Contains("stop"))
+                {
+                    persistentBusButton = button;
+
+                    // Make it persistent by moving to DontDestroyOnLoad
+                    DontDestroyOnLoad(button.gameObject);
+                    Debug.Log($"Made button {button.gameObject.name} persistent across scenarios");
+                    break;
+                }
+            }
+        }
+
+        if (persistentBusButton != null)
+        {
+            // Configure as smart bus button
+            persistentBusButton.SetupAsSmartBusButton();
+
+            // Enable/disable based on scenario settings
+            persistentBusButton.SetButtonEnabled(scenario.spawnBus && enableBusStopButtons);
+
+            // Make sure it's visible and positioned correctly
+            if (scenario.spawnBus)
+            {
+                persistentBusButton.gameObject.SetActive(true);
+                PositionBusButtonForScenario(persistentBusButton, scenario);
+            }
+            else
+            {
+                persistentBusButton.gameObject.SetActive(false);
+            }
+
+            Debug.Log($"Configured persistent smart bus button for scenario: {scenario.scenarioName}");
+        }
+        else
+        {
+            Debug.LogWarning("No bus button found to configure as persistent smart button");
+        }
+    }
+    private void PositionBusButtonForScenario(SimpleTeleportButton busButton, Scenario scenario)
+    {
+        // You can customize this based on your needs
+        // For now, just ensure it's active and visible
+
+        if (busButton.gameObject.activeSelf == false)
+        {
+            busButton.gameObject.SetActive(true);
+        }
+
+        // Optional: Move button to a specific location for each scenario
+        // This depends on your scene layout
+        /*
+        if (scenario.playerStartPosition != null)
+        {
+            // Position button relative to player start position
+            Vector3 buttonPosition = scenario.playerStartPosition.position + Vector3.forward * 2f + Vector3.up * 1f;
+            busButton.transform.position = buttonPosition;
+        }
+        */
     }
 
     private IEnumerator SetupBusButtonsDelayed(Scenario scenario)

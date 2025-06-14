@@ -121,10 +121,7 @@ public class VRTrafficSafetySystem : MonoBehaviour
             else
                 Debug.LogError("✗ Road layer mask is WRONG! Should be " + (1 << 15) + " for layer 15");
 
-            if (sidewalkLayer.value == (1 << 24))
-                Debug.Log("✓ Sidewalk layer mask is CORRECT for layer 24");
-            else
-                Debug.LogError("✗ Sidewalk layer mask is WRONG! Should be " + (1 << 24) + " for layer 24");
+            
         }
     }
 
