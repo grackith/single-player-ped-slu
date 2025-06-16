@@ -28,7 +28,7 @@ public class PersistentRDW : MonoBehaviour
     [Tooltip("Direction player faces in physical space at start")]
 
     public Vector3 physicalReferenceDirection = Vector3.forward; // (0,0,1)
-    public float physicalWidth = 8.2f;  //   exact width 
+    public float physicalWidth = 8f;  //   exact width 
     public float physicalLength = 14.0f; //   exact length
     private Vector3 lastHeadPosition;
     private float driftCheckInterval = 3.0f; // Check every 3 seconds

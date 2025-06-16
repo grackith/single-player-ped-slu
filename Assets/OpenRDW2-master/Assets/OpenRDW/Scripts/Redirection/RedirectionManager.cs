@@ -12,7 +12,7 @@ public class RedirectionManager : MonoBehaviour
     public enum ResetterChoice { None, TwoOneTurn, FreezeTurn, MR2C, R2G, SFR2G, SeparateSpace };
 
     [Header("Physical Space Settings")]
-    public float physicalWidth = 8.2f;  //  exact width 
+    public float physicalWidth = 8f;  //  exact width 
     public float physicalLength = 14.0f; //  exact length
 
     [HideInInspector]
@@ -34,7 +34,7 @@ public class RedirectionManager : MonoBehaviour
     [Tooltip("Subtle Redirection Controller")]
     public RedirectorChoice redirectorChoice;
 
-    [Tooltip("Overt Redirection Controller")]
+    [Tooltip("Overt Redirection C222222222222222222222222222222222111ontroller")]
     public ResetterChoice resetterChoice;
 
     // Experiment Variables

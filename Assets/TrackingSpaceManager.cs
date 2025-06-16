@@ -8,7 +8,7 @@ using UnityEngine;
 public class TrackingSpaceManager : MonoBehaviour
 {
     [Header("Physical Space Settings")]
-    public float physicalWidth = 8.2f;
+    public float physicalWidth = 8f;
     public float physicalLength = 14.0f;
 
     [Header("References")]
