@@ -679,8 +679,6 @@
         {
             try
             {
-                //Debug.Log($"[WAYPOINT] Car {name} reached waypoint {onReachWaypointSettings.waypointIndexnumber} on route {onReachWaypointSettings.parentRoute.name}");
-
                 // Always update route info to maintain traffic light awareness
                 if (onReachWaypointSettings.parentRoute != null && AITrafficController.Instance != null)
                 {
@@ -691,36 +689,6 @@
                 {
                     // CRITICAL: Update route info first to maintain traffic light awareness
                     AITrafficController.Instance.Set_RouteInfo(assignedIndex, onReachWaypointSettings.parentRoute.routeInfo);
-
-                    // MODIFIED: Traffic light check - only for GREEN lights
-                    AITrafficWaypoint currentWaypoint = onReachWaypointSettings.waypoint;
-                    if (currentWaypoint != null && currentWaypoint.isTrafficLightWaypoint)
-                    {
-                        //Debug.Log($"[WAYPOINT] Car {name} reached traffic light waypoint {currentWaypoint.name}");
-
-                        // Check traffic light state
-                        bool shouldStopForLight = false;
-                        if (onReachWaypointSettings.parentRoute.routeInfo != null)
-                        {
-                            shouldStopForLight = onReachWaypointSettings.parentRoute.routeInfo.stopForTrafficLight;
-                        }
-                        else
-                        {
-                            shouldStopForLight = onReachWaypointSettings.parentRoute.stopForTrafficLight;
-                        }
-
-                        if (shouldStopForLight)
-                        {
-                            // Car reached a RED traffic light waypoint - this shouldn't happen with our new system
-                            //Debug.LogWarning($"[WAYPOINT] Car {name} reached RED traffic light waypoint {currentWaypoint.name} - this should have been caught earlier!");
-                            StopDriving();
-                            return;
-                        }
-                        else
-                        {
-                            //Debug.Log($"Car {name} passed through GREEN traffic light waypoint {currentWaypoint.name}");
-                        }
-                    }
 
                     // Always position drive target ahead when reaching any waypoint
                     PositionDriveTargetAhead(onReachWaypointSettings);
@@ -734,7 +702,33 @@
                     // Track locally for validation purposes
                     currentWaypointIndex = onReachWaypointSettings.waypointIndexnumber - 1;
 
-                    // Handle route connections and transitions
+                    // CRITICAL: Check for stopDriving BEFORE processing route connections
+                    if (onReachWaypointSettings.stopDriving)
+                    {
+                        Debug.Log($"[STOP DRIVING] Car {name} reached stopDriving waypoint - stopping permanently");
+                        StopDriving();
+
+                        // CRITICAL: Disable AI processing to prevent controller from moving the bus
+                        if (assignedIndex >= 0 && AITrafficController.Instance != null)
+                        {
+                            AITrafficController.Instance.Set_CanProcess(assignedIndex, false);
+                        }
+
+                        if (onReachWaypointSettings.stopTime > 0)
+                        {
+                            StopCoroutine("ResumeDrivingTimer");
+                            StartCoroutine(ResumeDrivingTimer(onReachWaypointSettings.stopTime));
+                        }
+                        else
+                        {
+                            Debug.Log($"{name} reached final stop at {onReachWaypointSettings.parentRoute.name}");
+                        }
+
+                        // CRITICAL: EXIT EARLY - don't process any more waypoint logic
+                        return;
+                    }
+
+                    // Handle route connections and transitions (ONLY if not stopping)
                     if (onReachWaypointSettings.newRoutePoints.Length > 0)
                     {
                         newRoutePointsMatchingType.Clear();
@@ -817,20 +811,6 @@
                     }
 
                     AITrafficController.Instance.Set_RoutePointPositionArray(assignedIndex);
-
-                    if (onReachWaypointSettings.stopDriving)
-                    {
-                        StopDriving();
-                        if (onReachWaypointSettings.stopTime > 0)
-                        {
-                            StopCoroutine("ResumeDrivingTimer");
-                            StartCoroutine(ResumeDrivingTimer(onReachWaypointSettings.stopTime));
-                        }
-                        else
-                        {
-                            //Debug.Log($"{name} reached final stop at {onReachWaypointSettings.parentRoute.name}");
-                        }
-                    }
                 }
             }
             catch (System.Exception ex)

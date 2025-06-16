@@ -1147,7 +1147,28 @@ public class ScenarioManager : MonoBehaviour
             }
         }
     }
+    public void ProtectBusesFromTrafficController()
+    {
+        if (AITrafficController.Instance == null) return;
 
+        // Find all buses and mark them as protected
+        var allCars = AITrafficController.Instance.GetTrafficCars();
+
+        foreach (var car in allCars)
+        {
+            if (car != null &&
+                (car.vehicleType == AITrafficVehicleType.MicroBus ||
+                 car.name.ToLower().Contains("bus")))
+            {
+                // Disable traffic light processing for buses
+                if (car.assignedIndex >= 0)
+                {
+                    // Set bus to ignore traffic light waypoints
+                    Debug.Log($"Protecting bus {car.name} from traffic controller interference");
+                }
+            }
+        }
+    }
     // Modify   TransitionToScenario method
     private IEnumerator TransitionToScenario(Scenario scenario, int index)
     {
@@ -1236,7 +1257,6 @@ public class ScenarioManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         // 6. UPDATED: Handle player positioning using the new RedirectionManager method
-        // 6. UPDATED: Handle player positioning using the new RedirectionManager method
         if (scenario.playerStartPosition != null)
         {
             // CRITICAL: Use the new UpdateVirtualPositionForScenario method
@@ -1311,6 +1331,9 @@ public class ScenarioManager : MonoBehaviour
             BusSpawnerSimple.Reset();
             BusSpawnerSimple.TriggerBusSpawn(scenario.busSpawnDelay);
 
+            // CRITICAL: Protect buses from traffic controller interference
+            StartCoroutine(ProtectBusesAfterSpawn(scenario.busSpawnDelay + 2f));
+
             // Update all SkyLandmarks with the new timer
             SkyLandmark[] skyLandmarks = FindObjectsOfType<SkyLandmark>();
             foreach (var landmark in skyLandmarks)
@@ -1340,6 +1363,11 @@ public class ScenarioManager : MonoBehaviour
         DebugTrafficSystem();
     }
 
+    private IEnumerator ProtectBusesAfterSpawn(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        ProtectBusesFromTrafficController();
+    }
     private IEnumerator SetupVisualizationManagerOnly()
     {
         Debug.Log("Setting up VisualizationManager-only visualization");

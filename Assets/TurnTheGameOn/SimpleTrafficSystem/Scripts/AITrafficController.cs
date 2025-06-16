@@ -123,25 +123,7 @@
                     brakeTorqueNL[_index] = -1;
                     moveHandBrakeNL[_index] = 1;
 
-                    // ORIGINAL PROBLEMATIC CODE - COMMENT THIS OUT:
-                    /*
-                    for (int j = 0; j < 4; j++) // move
-                    {
-                        if (j == 0)
-                        {
-                            currentWheelCollider = frontRightWheelColliderList[_index];
-                            currentWheelCollider.steerAngle = steerAngleNL[_index];
-                            currentWheelCollider.GetWorldPose(out wheelPosition_Cached, out wheelQuaternion_Cached);
-                            FRwheelPositionNL[_index] = wheelPosition_Cached;
-                            FRwheelRotationNL[_index] = wheelQuaternion_Cached;
-                        }
-                        // ... etc for other wheels
-                        currentWheelCollider.motorTorque = motorTorqueNL[_index];
-                        currentWheelCollider.brakeTorque = brakeTorqueNL[_index];
-                    }
-                    */
-
-                    // FIXED CODE - Only set wheel collider properties, don't override mesh positions/rotations:
+                    // Simple wheel processing - no complex position/rotation overrides
                     for (int j = 0; j < 4; j++)
                     {
                         WheelCollider wheelCollider = null;
@@ -153,13 +135,14 @@
 
                         if (wheelCollider != null)
                         {
-                            // Only set physics properties, don't get poses when stopping
-                            if (j == 0 || j == 1) // Front wheels only
-                            {
-                                wheelCollider.steerAngle = 0; // Reset steering when stopped
-                            }
                             wheelCollider.motorTorque = motorTorqueNL[_index];
                             wheelCollider.brakeTorque = brakeTorqueNL[_index];
+
+                            // Only reset steering for front wheels
+                            if (j == 0 || j == 1)
+                            {
+                                wheelCollider.steerAngle = 0;
+                            }
                         }
                     }
                 }
@@ -1037,7 +1020,7 @@
                 }
             }
 
-            Debug.Log($"Successfully initialized {trafficSpawnPoints.Count} spawn points with {availableSpawnPoints.Count} available for spawning");
+            //Debug.Log($"Successfully initialized {trafficSpawnPoints.Count} spawn points with {availableSpawnPoints.Count} available for spawning");
         }
 
         #endregion
@@ -2074,12 +2057,10 @@
             {
                 for (int i = 0; i < carCount; i++)
                 {
-                    // ADD: Safety check before accessing arrays
-                    if (i >= yieldForCrossTrafficNL.Length ||
-                        i >= isTrafficLightWaypointNL.Length ||
-                        i >= currentWaypointList.Count)
+                    // CRITICAL: Skip processing for permanently stopped vehicles
+                    if (i >= canProcessNL.Length || !canProcessNL[i])
                     {
-                        continue;
+                        continue; // Skip this car entirely
                     }
 
                     yieldForCrossTrafficNL[i] = false;
@@ -2285,10 +2266,11 @@
             handle = BoxcastCommand.ScheduleBatch(rightBoxcastCommands, rightBoxcastResults, 1, default);
             handle.Complete();
 
-            // Process sensor results
+
+
             for (int i = 0; i < carCount; i++) // operate on results
             {
-                // Process front sensor results with improved traffic light detection
+                // Process front sensor results
                 bool hitDetected = frontBoxcastResults[i].collider != null;
 
                 if (hitDetected)
@@ -2298,7 +2280,7 @@
                     // Check if we should ignore this collision BEFORE setting frontHitNL
                     bool shouldIgnoreHit = false;
 
-                    // Check for traffic light waypoints in front sensor
+                    // REMOVE ALL BUS-SPECIFIC CODE HERE - Just keep basic traffic light detection
                     AITrafficWaypoint hitWaypoint = frontHitTransform[i].GetComponent<AITrafficWaypoint>();
                     if (hitWaypoint != null && hitWaypoint.isTrafficLightWaypoint)
                     {
@@ -2330,20 +2312,7 @@
                         }
                     }
 
-                    // Turning collision filtering (  existing logic)
-                    if (i < carList.Count && carList[i] != null && carList[i].isTurning && frontHitTransform[i] != null)
-                    {
-                        if (frontHitTransform[i].CompareTag("vehicle"))
-                        {
-                            shouldIgnoreHit = true;
-                            Debug.Log($"Car {carList[i].name} is turning - IGNORING vehicle collision with {frontHitTransform[i].name} at distance {frontBoxcastResults[i].distance:F1}");
-                        }
-                        else if (frontHitTransform[i].CompareTag("Player"))
-                        {
-                            shouldIgnoreHit = false;
-                            Debug.Log($"Car {carList[i].name} is turning - BUT STILL detecting player {frontHitTransform[i].name}");
-                        }
-                    }
+                    // REMOVE THE TURNING COLLISION FILTERING CODE - buses should detect all collisions normally
 
                     if (shouldIgnoreHit)
                     {
@@ -2366,6 +2335,7 @@
                     frontHitDistanceNL[i] = frontSensorLengthNL[i];
                 }
 
+                // Keep your existing left and right sensor processing as-is:
                 // Process left sensor results
                 leftHitNL[i] = leftBoxcastResults[i].collider == null ? false : true;
                 if (leftHitNL[i])
@@ -2390,7 +2360,6 @@
                     rightHitDistanceNL[i] = sideSensorLengthNL[i];
                 }
             }
-
             // Process car control logic (lane changing, physics, etc.)
             for (int i = 0; i < carCount; i++) // operate on results
             {
@@ -2872,9 +2841,6 @@
         }
 
 
-        // Add this supporting method for checking upcoming traffic lights
-        // Add this supporting method for checking upcoming traffic lights
-        // Add this supporting method for checking upcoming traffic lights
         private void CheckForUpcomingTrafficLights()
         {
             for (int i = 0; i < carCount; i++)
@@ -2966,21 +2932,25 @@
                 }
 
                 // CRITICAL: If no red light found nearby and car is not driving, restart it
+                // BUT ONLY if the car's AI processing is still enabled
                 if (!foundRedLight && !isDrivingNL[i])
                 {
-                    // Check if we were previously stopped for a traffic light
-                    // We'll restart the car if it's not driving and there's no red light ahead
                     bool shouldRestart = true;
 
+                    // NEW: Check if AI processing is disabled (this means car was intentionally stopped)
+                    if (i < canProcessNL.Length && !canProcessNL[i])
+                    {
+                        shouldRestart = false; // Don't restart cars with disabled AI processing
+                                               // Debug.Log($"Car {carList[i].name} has AI processing disabled - not restarting");
+                    }
                     // Additional check: make sure we're not stopped for other reasons
-                    if (overrideInputNL[i] && frontHitNL[i])
+                    else if (overrideInputNL[i] && frontHitNL[i])
                     {
                         // Car is stopped due to obstacle, not traffic light
                         shouldRestart = false;
                     }
-
-                    // CRITICAL: Don't restart if car is supposed to stop at end of route (like buses)
-                    if (currentIndex >= route.waypointDataList.Count - 1)
+                    // Check if any car is supposed to stop at end of route
+                    else if (currentIndex >= route.waypointDataList.Count - 1)
                     {
                         var lastWaypoint = route.waypointDataList[route.waypointDataList.Count - 1];
                         if (lastWaypoint._waypoint != null && lastWaypoint._waypoint.onReachWaypointSettings.stopDriving)
@@ -3783,7 +3753,13 @@
             Debug.LogWarning($"No car found in pool for route with vehicle types: {string.Join(", ", parentRoute.vehicleTypes)}");
             return null;
         }
+        public bool GetCanProcess(int _index)
+        {
+            if (_index < 0 || _index >= canProcessNL.Length)
+                return true; // Default to allowing processing if index is invalid
 
+            return canProcessNL[_index];
+        }
         public void RebuildInternalDataStructures()
         {
             Debug.Log("Rebuilding all internal data structures for traffic controller");

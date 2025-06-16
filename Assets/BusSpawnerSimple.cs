@@ -29,10 +29,17 @@ public class BusSpawnerSimple : MonoBehaviour
     public bool allowButtonSpawning = true;
     private bool spawnTriggeredByButton = false;
 
+    [Header("Bus Stop Detection")]
+    [Tooltip("Distance from final waypoint to consider bus as 'arrived'")]
+    public float arrivalThreshold = 2f;
+    [Tooltip("Check for arrival every X seconds")]
+    public float arrivalCheckInterval = 0.5f;
+
     private float timer;
     private AITrafficCar spawnedBus;
-
-
+    private bool busIsPermanentlyStopped = false;
+    private Vector3 finalWaypointPosition;
+    private bool finalWaypointConfigured = false;
 
     [ContextMenu("FORCE STOP BUS NOW")]
     public void ForceStopBusNow()
@@ -45,48 +52,81 @@ public class BusSpawnerSimple : MonoBehaviour
 
         Debug.Log($"🛑 FORCING BUS TO STOP (BUT STAY VISIBLE): {spawnedBus.name}");
 
-        // Step 1: Stop the bus driving
-        spawnedBus.StopDriving();
-
-        // Step 2: CRITICAL - Disable processing in the controller but keep it active
-        if (spawnedBus.assignedIndex >= 0 && AITrafficController.Instance != null)
+        // STEP 1: Let the traffic system stop it naturally first
+        // Only call StopDriving if the bus is still driving
+        if (spawnedBus.isDriving)
         {
-            var controller = AITrafficController.Instance;
-
-            // This stops the controller from processing this car but keeps it visible
-            controller.Set_IsDrivingArray(spawnedBus.assignedIndex, false);
-            controller.Set_CanProcess(spawnedBus.assignedIndex, false);
-
-            // CRITICAL: Set the drive target to the bus's current position
-            // This prevents it from trying to go anywhere
-            Transform driveTarget = spawnedBus.transform.Find("DriveTarget");
-            if (driveTarget != null)
-            {
-                driveTarget.position = spawnedBus.transform.position;
-                Debug.Log("🎯 Set drive target to bus current position");
-            }
+            spawnedBus.StopDriving();
+            Debug.Log("Called StopDriving() on bus");
         }
 
-        // Step 3: Stop all physics movement
-        Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
-        if (busRb != null)
-        {
-            busRb.velocity = Vector3.zero;
-            busRb.angularVelocity = Vector3.zero;
-            busRb.drag = 999f; // Very high drag to prevent any movement
-            busRb.angularDrag = 999f;
-            // DON'T set isKinematic - that might interfere with the traffic system
-        }
-
-        // Step 4: Clear the route so it can't pathfind
-        // But don't set to null - that might cause errors
-        // Instead, we'll override the UpdateDriveTarget method behavior
-
-        Debug.Log($"✅ Bus stopped but still visible. isDriving: {spawnedBus.isDriving}");
+        // STEP 2: Use a delayed coroutine to disable AI processing after a short delay
+        StartCoroutine(DelayedAIDisable());
     }
 
-    // ADD this method to continuously prevent the drive target from moving:
-    private bool busIsPermanentlyStopped = false;
+    private IEnumerator DelayedAIDisable()
+    {
+        // Wait a short time to let the traffic system process the stop
+        yield return new WaitForSeconds(0.5f);
+
+        if (spawnedBus != null)
+        {
+            // Now disable AI processing to prevent restart
+            spawnedBus.DisableAIProcessing();
+            Debug.Log("Disabled AI processing after delay");
+
+            // Apply physics constraints
+            Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
+            if (busRb != null)
+            {
+                busRb.velocity = Vector3.zero;
+                busRb.angularVelocity = Vector3.zero;
+                busRb.drag = 999f;
+                busRb.angularDrag = 999f;
+            }
+
+            Debug.Log($"✅ Bus completely stopped at {spawnedBus.transform.position}");
+        }
+    }
+
+    private void DebugBusState()
+    {
+        if (spawnedBus == null) return;
+
+        Transform driveTarget = spawnedBus.transform.Find("DriveTarget");
+
+        Debug.Log($"[FRAME {Time.frameCount}] BUS DEBUG:");
+        Debug.Log($"  - Position: {spawnedBus.transform.position}");
+        Debug.Log($"  - isDriving: {spawnedBus.isDriving}");
+        Debug.Log($"  - assignedIndex: {spawnedBus.assignedIndex}");
+        Debug.Log($"  - permanentlyStopped: {busIsPermanentlyStopped}");
+
+        if (driveTarget != null)
+        {
+            Debug.Log($"  - DriveTarget position: {driveTarget.position}");
+            Debug.Log($"  - Distance to drive target: {Vector3.Distance(spawnedBus.transform.position, driveTarget.position):F2}m");
+        }
+        else
+        {
+            Debug.Log($"  - DriveTarget: NULL");
+        }
+
+        if (AITrafficController.Instance != null && spawnedBus.assignedIndex >= 0)
+        {
+            bool canProcess = AITrafficController.Instance.GetCanProcess(spawnedBus.assignedIndex);
+            bool isDrivingInController = AITrafficController.Instance.GetIsDriving(spawnedBus.assignedIndex);
+
+            Debug.Log($"  - Controller canProcess: {canProcess}");
+            Debug.Log($"  - Controller isDriving: {isDrivingInController}");
+        }
+
+        Rigidbody rb = spawnedBus.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            Debug.Log($"  - Velocity: {rb.velocity}");
+            Debug.Log($"  - isKinematic: {rb.isKinematic}");
+        }
+    }
 
     public void MarkBusAsPermanentlyStopped()
     {
@@ -96,29 +136,67 @@ public class BusSpawnerSimple : MonoBehaviour
 
     public void CheckIfBusReachedFinalWaypoint()
     {
-        if (spawnedBus == null || busStopRoute == null)
+        if (spawnedBus == null || busStopRoute == null || busIsPermanentlyStopped)
             return;
 
-        // Get the final waypoint position
-        int finalWaypointIndex = busStopRoute.waypointDataList.Count - 1;
-        Vector3 finalWaypointPos = busStopRoute.waypointDataList[finalWaypointIndex]._transform.position;
+        // Make sure we have the final waypoint position cached
+        if (!finalWaypointConfigured)
+        {
+            CacheFinalWaypointPosition();
+        }
+
+        if (!finalWaypointConfigured)
+        {
+            Debug.LogError("Final waypoint not properly configured!");
+            return;
+        }
 
         // Check if bus is close to final waypoint
-        float distanceToFinal = Vector3.Distance(spawnedBus.transform.position, finalWaypointPos);
+        float distanceToFinal = Vector3.Distance(spawnedBus.transform.position, finalWaypointPosition);
 
-        if (distanceToFinal < 3f && spawnedBus.isDriving) // Within 3 meters
+        // NEW: Check if the final waypoint is configured to stop driving
+        if (busStopRoute.waypointDataList.Count > 0)
         {
-            Debug.Log($"🎯 Bus reached final waypoint! Distance: {distanceToFinal:F2}m - PERMANENTLY STOPPING BUS");
-
-            // Mark as permanently stopped so it won't try to move again
-            MarkBusAsPermanentlyStopped();
+            var finalWaypoint = busStopRoute.waypointDataList[busStopRoute.waypointDataList.Count - 1]._waypoint;
+            if (finalWaypoint != null && finalWaypoint.onReachWaypointSettings.stopDriving)
+            {
+                // This waypoint should stop the bus - let the waypoint system handle it
+                if (distanceToFinal < arrivalThreshold && !spawnedBus.isDriving)
+                {
+                    Debug.Log($"🎯 Bus reached final stop waypoint and stopped driving! Distance: {distanceToFinal:F2}m");
+                    MarkBusAsPermanentlyStopped();
+                }
+                return; // Don't interfere with waypoint-controlled stopping
+            }
         }
+        // OR if the bus is very close but still driving, just mark it (don't force stop yet)
+        else if (distanceToFinal < arrivalThreshold * 0.5f && spawnedBus.isDriving)
+        {
+            Debug.Log($"🚌 Bus very close to final stop ({distanceToFinal:F2}m) - waiting for natural waypoint trigger");
+            // Don't call MarkBusAsPermanentlyStopped() yet - let the waypoint system handle it
+        }
+    }
+
+    private void CacheFinalWaypointPosition()
+    {
+        if (busStopRoute == null || busStopRoute.waypointDataList == null || busStopRoute.waypointDataList.Count == 0)
+        {
+            Debug.LogError("Bus stop route is not properly configured!");
+            return;
+        }
+
+        int finalWaypointIndex = busStopRoute.waypointDataList.Count - 1;
+        finalWaypointPosition = busStopRoute.waypointDataList[finalWaypointIndex]._transform.position;
+        finalWaypointConfigured = true;
+
+        Debug.Log($"✅ Cached final waypoint position: {finalWaypointPosition}");
     }
 
     void Start()
     {
         // CRITICAL: Reset the permanent stop flag at start
         busIsPermanentlyStopped = false;
+        finalWaypointConfigured = false;
 
         // Initialize route connections on start
         if (initialRoute != null && intersectionRoute != null && busStopRoute != null)
@@ -130,6 +208,9 @@ public class BusSpawnerSimple : MonoBehaviour
         {
             timer = spawnDelay;
         }
+
+        // Start the arrival checking coroutine
+        StartCoroutine(CheckBusArrivalRoutine());
     }
 
     private void Update()
@@ -145,20 +226,52 @@ public class BusSpawnerSimple : MonoBehaviour
             }
         }
 
-        // Only check every second to avoid performance issues
-        if (Time.frameCount % 60 == 0) // Every ~1 second at 60fps
+        // Keep bus stopped if permanently stopped
+        if (busIsPermanentlyStopped && spawnedBus != null)
         {
-            if (spawnedBus != null && hasSpawned)
+            KeepBusStoppedAtPosition();
+
+            // DEBUG: Log every 60 frames (once per second at 60fps)
+            if (Time.frameCount % 60 == 0)
             {
-                // If bus is permanently stopped, keep overriding the drive target
-                if (busIsPermanentlyStopped)
-                {
-                    KeepBusStoppedAtPosition();
-                }
-                else if (spawnedBus.isDriving)
-                {
-                    CheckIfBusReachedFinalWaypoint();
-                }
+                DebugBusState();
+            }
+        }
+    }
+
+    // NEW: Dedicated coroutine for checking bus arrival
+    private IEnumerator CheckBusArrivalRoutine()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(arrivalCheckInterval);
+
+            if (spawnedBus != null && hasSpawned && !busIsPermanentlyStopped)
+            {
+                CheckIfBusReachedFinalWaypoint();
+
+                // Additional check: See if the traffic system naturally stopped the bus
+                CheckIfTrafficSystemStoppedBus();
+            }
+        }
+    }
+
+    // NEW: Check if the traffic system stopped the bus at the waypoint
+    private void CheckIfTrafficSystemStoppedBus()
+    {
+        if (spawnedBus == null || busIsPermanentlyStopped)
+            return;
+
+        // If bus stopped driving and we're near the final waypoint, mark as permanently stopped
+        if (!spawnedBus.isDriving && finalWaypointConfigured)
+        {
+            float distanceToFinal = Vector3.Distance(spawnedBus.transform.position, finalWaypointPosition);
+
+            if (distanceToFinal < arrivalThreshold * 2f) // Slightly larger threshold for natural stops
+            {
+                Debug.Log($"🚏 Traffic system stopped bus near final waypoint (distance: {distanceToFinal:F2}m) - marking as permanently stopped");
+                busIsPermanentlyStopped = true;
+                // Don't call ForceStopBusNow() here since it's already stopped
             }
         }
     }
@@ -167,15 +280,7 @@ public class BusSpawnerSimple : MonoBehaviour
     {
         if (spawnedBus == null) return;
 
-        // Continuously override the drive target position
-        Transform driveTarget = spawnedBus.transform.Find("DriveTarget");
-        if (driveTarget != null)
-        {
-            // Keep setting drive target to current bus position
-            driveTarget.position = spawnedBus.transform.position;
-        }
-
-        // Keep physics stopped
+        // Since we're using DisableAIProcessing, we only need to ensure physics stay stopped
         Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
         if (busRb != null && busRb.velocity.magnitude > 0.1f)
         {
@@ -183,13 +288,8 @@ public class BusSpawnerSimple : MonoBehaviour
             busRb.angularVelocity = Vector3.zero;
         }
 
-        // Ensure controller flags stay disabled
-        if (spawnedBus.assignedIndex >= 0 && AITrafficController.Instance != null)
-        {
-            var controller = AITrafficController.Instance;
-            controller.Set_IsDrivingArray(spawnedBus.assignedIndex, false);
-            controller.Set_CanProcess(spawnedBus.assignedIndex, false);
-        }
+        // No need to manipulate controller arrays since AI processing is disabled
+        Debug.Log($"Bus {spawnedBus.name} AI processing disabled - staying at position {spawnedBus.transform.position}");
     }
 
     public void SpawnBusImmediately()
@@ -277,6 +377,7 @@ public class BusSpawnerSimple : MonoBehaviour
         yield return new WaitForFixedUpdate();
         rb.AddForce(Vector3.down * 50f, ForceMode.Force);
     }
+
     private void ConfigureBusPhysicsForSpawn(AITrafficCar busCar, Vector3 spawnPosition)
     {
         Rigidbody busRb = busCar.GetComponent<Rigidbody>();
@@ -311,7 +412,6 @@ public class BusSpawnerSimple : MonoBehaviour
         }
     }
 
-
     // Core spawn method
     public void SpawnBus()
     {
@@ -323,6 +423,7 @@ public class BusSpawnerSimple : MonoBehaviour
 
         // CRITICAL: Reset the permanent stop flag when spawning a new bus
         busIsPermanentlyStopped = false;
+        finalWaypointConfigured = false;
         Debug.Log("🚌 Starting fresh bus spawn - reset permanent stop flag");
 
         // Validate required references
@@ -331,6 +432,9 @@ public class BusSpawnerSimple : MonoBehaviour
             Debug.LogError("Missing required references for bus spawning!");
             return;
         }
+
+        // Cache the final waypoint position for this spawn
+        CacheFinalWaypointPosition();
 
         // Get spawn position at the start of the route with proper offset
         Vector3 spawnPosition = initialRoute.waypointDataList[0]._transform.position;
@@ -347,6 +451,7 @@ public class BusSpawnerSimple : MonoBehaviour
             // Fallback: just raise it higher
             spawnPosition.y += 2.0f; // Increase from 0.1f to 2.0f for buses
         }
+
         // Check if spawn area is clear
         if (!IsSpawnAreaClear(spawnPosition, clearanceRadius))
         {
@@ -416,7 +521,6 @@ public class BusSpawnerSimple : MonoBehaviour
         busCar.vehicleType = busType;
         busCar.waypointRoute = initialRoute;
 
-
         AITrafficController.Instance.EnsureCapacityForNewCar();
 
         try
@@ -463,6 +567,7 @@ public class BusSpawnerSimple : MonoBehaviour
             Debug.LogError($"Error during bus registration: {ex.Message}");
             Destroy(busObject);
         }
+
         if (spawnedBus != null)
         {
             hasSpawned = true;
@@ -494,7 +599,6 @@ public class BusSpawnerSimple : MonoBehaviour
         // No blocking vehicles found
         return true;
     }
-
 
     private IEnumerator RetrySpawnAfterDelay(float delay)
     {
@@ -612,65 +716,6 @@ public class BusSpawnerSimple : MonoBehaviour
         }
     }
 
-    // Setup route connections
-    public void EnsureBusStopsAtFinalWaypoint()
-    {
-        if (busStopRoute == null || busStopRoute.waypointDataList.Count == 0)
-        {
-            Debug.LogError("Bus stop route is not properly configured!");
-            return;
-        }
-
-        // Get the final waypoint
-        int finalIndex = busStopRoute.waypointDataList.Count - 1;
-        AITrafficWaypoint finalWaypoint = busStopRoute.waypointDataList[finalIndex]._waypoint;
-
-        if (finalWaypoint != null)
-        {
-            Debug.Log($"Verifying final waypoint: {finalWaypoint.name}");
-            Debug.Log($"  - Stop driving: {finalWaypoint.onReachWaypointSettings.stopDriving}");
-            Debug.Log($"  - Route connections: {finalWaypoint.onReachWaypointSettings.newRoutePoints?.Length ?? 0}");
-
-            // Force correct settings
-            finalWaypoint.onReachWaypointSettings.stopDriving = true;
-            finalWaypoint.onReachWaypointSettings.newRoutePoints = new AITrafficWaypoint[0]; // No connections = stop
-
-            Debug.Log("Final waypoint configured to stop the bus");
-        }
-    }
-
-    public bool IsBusAtFinalStop()
-    {
-        if (spawnedBus == null || !hasSpawned)
-        {
-            return false;
-        }
-
-        // First check if bus manually stopped
-        CheckIfBusReachedFinalWaypoint();
-
-        // Check if bus has stopped driving OR is permanently stopped
-        bool busStoppedDriving = !spawnedBus.isDriving || busIsPermanentlyStopped;
-
-        // Also check if we're near the final waypoint
-        bool nearFinalWaypoint = false;
-        if (busStopRoute != null && busStopRoute.waypointDataList.Count > 0)
-        {
-            int finalIndex = busStopRoute.waypointDataList.Count - 1;
-            Vector3 finalWaypointPos = busStopRoute.waypointDataList[finalIndex]._transform.position;
-            float distanceToFinal = Vector3.Distance(spawnedBus.transform.position, finalWaypointPos);
-            nearFinalWaypoint = distanceToFinal < 5f; // Within 5 meters
-        }
-
-        bool isAtFinalStop = busStoppedDriving && nearFinalWaypoint;
-
-        if (isAtFinalStop)
-        {
-            Debug.Log($"✅ Bus is at final stop: isDriving={spawnedBus.isDriving}, nearFinal={nearFinalWaypoint}, permanentStop={busIsPermanentlyStopped}");
-        }
-
-        return isAtFinalStop;
-    }
     // IMPROVED: Setup method that calls the verification
     public void SetupBusRoutes(AITrafficWaypointRoute initialRoute, AITrafficWaypointRoute intersectionRoute, AITrafficWaypointRoute busStopRoute)
     {
@@ -685,16 +730,16 @@ public class BusSpawnerSimple : MonoBehaviour
         this.intersectionRoute = intersectionRoute;
         this.busStopRoute = busStopRoute;
 
-        Debug.Log("=== SETTING UP BUS ROUTES ===");
+        Debug.Log("=== SETTING UP BUS ROUTES (WITHOUT MODIFYING EXISTING ROUTES) ===");
 
         // 1. Make sure all routes accept MicroBus type
         EnsureRouteHasVehicleType(initialRoute, busType);
         EnsureRouteHasVehicleType(intersectionRoute, busType);
         EnsureRouteHasVehicleType(busStopRoute, busType);
 
-        // 2. Connect routes
-        ConnectTwoRoutes(initialRoute, intersectionRoute, false);
-        ConnectTwoRoutes(intersectionRoute, busStopRoute, false);
+        // 2. DON'T connect routes dynamically - routes should be pre-connected in the editor
+        // ConnectTwoRoutes(initialRoute, intersectionRoute, false); // REMOVED
+        // ConnectTwoRoutes(intersectionRoute, busStopRoute, false); // REMOVED
 
         // 3. CRITICAL: Configure final waypoint to stop the bus
         SetFinalStopWaypoint(busStopRoute);
@@ -760,7 +805,7 @@ public class BusSpawnerSimple : MonoBehaviour
         }
     }
 
-    // Helper method to set the final stop waypoint
+    // ENHANCED: Helper method to set the final stop waypoint with better validation
     private void SetFinalStopWaypoint(AITrafficWaypointRoute busStopRoute)
     {
         if (busStopRoute == null || busStopRoute.waypointDataList == null || busStopRoute.waypointDataList.Count == 0)
@@ -782,17 +827,13 @@ public class BusSpawnerSimple : MonoBehaviour
             lastBusStopWaypoint.onReachWaypointSettings.parentRoute = busStopRoute;
             lastBusStopWaypoint.onReachWaypointSettings.stopTime = 0f; // Don't resume driving
 
-            Debug.Log($"Final waypoint configured:");
-            Debug.Log($"  - stopDriving: {lastBusStopWaypoint.onReachWaypointSettings.stopDriving}");
-            Debug.Log($"  - newRoutePoints count: {lastBusStopWaypoint.onReachWaypointSettings.newRoutePoints.Length}");
-            Debug.Log($"  - stopTime: {lastBusStopWaypoint.onReachWaypointSettings.stopTime}");
-            Debug.Log($"Bus will call StopDriving() when reaching this waypoint");
-        }
-        else
-        {
-            Debug.LogError($"Final waypoint is null in bus stop route {busStopRoute.name}!");
+            // NEW: Mark this waypoint as a final bus stop
+            lastBusStopWaypoint.isTrafficLightWaypoint = false; // Ensure it's not treated as a traffic light
+
+            Debug.Log($"Final waypoint configured with stopDriving = {lastBusStopWaypoint.onReachWaypointSettings.stopDriving}");
         }
     }
+
     public void VerifyFinalWaypointConfiguration()
     {
         if (busStopRoute == null)
@@ -852,9 +893,6 @@ public class BusSpawnerSimple : MonoBehaviour
         Debug.Log("=== END VERIFICATION ===");
     }
 
-
-
-
     private void EnsureRouteHasVehicleType(AITrafficWaypointRoute route, AITrafficVehicleType vehicleType)
     {
         bool hasType = false;
@@ -910,6 +948,7 @@ public class BusSpawnerSimple : MonoBehaviour
             Debug.Log($"Bus has valid index {spawnedBus.assignedIndex} in controller");
         }
     }
+    
 
     private IEnumerator DelayedStatusCheck()
     {
@@ -940,12 +979,6 @@ public class BusSpawnerSimple : MonoBehaviour
             spawnedBus.StopDriving();
             yield return new WaitForSeconds(0.2f);
 
-            //// Force path update
-            //if (spawnedBus.waypointRoute != null)
-            //{
-            //    spawnedBus.ForceWaypointPathUpdate();
-            //}
-
             // Force drive target position
             if (driveTarget != null && spawnedBus.waypointRoute != null &&
                 spawnedBus.waypointRoute.waypointDataList.Count > 0)
@@ -966,12 +999,42 @@ public class BusSpawnerSimple : MonoBehaviour
             Debug.Log("Emergency fix applied - bus should now be driving");
         }
     }
+
     public AITrafficCar GetSpawnedBus()
     {
         return spawnedBus;
     }
 
+    public bool IsBusAtFinalStop()
+    {
+        if (spawnedBus == null || !hasSpawned)
+        {
+            return false;
+        }
 
+        // First check if bus manually stopped
+        CheckIfBusReachedFinalWaypoint();
+
+        // Check if bus has stopped driving OR is permanently stopped
+        bool busStoppedDriving = !spawnedBus.isDriving || busIsPermanentlyStopped;
+
+        // Also check if we're near the final waypoint
+        bool nearFinalWaypoint = false;
+        if (finalWaypointConfigured)
+        {
+            float distanceToFinal = Vector3.Distance(spawnedBus.transform.position, finalWaypointPosition);
+            nearFinalWaypoint = distanceToFinal < arrivalThreshold * 2f; // Use larger threshold for this check
+        }
+
+        bool isAtFinalStop = busStoppedDriving && nearFinalWaypoint;
+
+        if (isAtFinalStop)
+        {
+            Debug.Log($"✅ Bus is at final stop: isDriving={spawnedBus.isDriving}, nearFinal={nearFinalWaypoint}, permanentStop={busIsPermanentlyStopped}");
+        }
+
+        return isAtFinalStop;
+    }
 
     // Reset method called by ScenarioManager's EndCurrentScenario
     public void Reset()
@@ -980,9 +1043,13 @@ public class BusSpawnerSimple : MonoBehaviour
 
         // CRITICAL: Reset the permanent stop flag FIRST
         busIsPermanentlyStopped = false;
+        finalWaypointConfigured = false;
 
         if (spawnedBus != null)
         {
+            // NEW: Re-enable AI processing before cleanup (in case it was disabled)
+            spawnedBus.EnableAIProcessing();
+
             // Check if traffic controller and car list are valid
             if (AITrafficController.Instance != null &&
                 AITrafficController.Instance.GetCarList().Count > 0 &&

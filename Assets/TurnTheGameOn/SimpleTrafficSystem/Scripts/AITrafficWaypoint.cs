@@ -41,15 +41,17 @@ namespace TurnTheGameOn.SimpleTrafficSystem
             col.transform.SendMessage("OnReachedWaypoint", onReachWaypointSettings, SendMessageOptions.DontRequireReceiver);
 
             // ONLY check for traffic lights at specific waypoints marked as traffic light waypoints
+            // BUT NOT if this waypoint has stopDriving = true (permanent stops)
             if (isTrafficLightWaypoint &&
                 onReachWaypointSettings.parentRoute != null &&
-                onReachWaypointSettings.parentRoute.stopForTrafficLight)
+                onReachWaypointSettings.parentRoute.stopForTrafficLight &&
+                !onReachWaypointSettings.stopDriving) // <-- NEW: Don't monitor traffic lights at permanent stop waypoints
             {
                 AITrafficCar car = col.GetComponent<AITrafficCar>();
                 if (car != null)
                 {
                     car.StopDriving();
-                    //Debug.Log($"Stopping car {car.name} for traffic light at waypoint {name}");
+                    Debug.Log($"Stopping car {car.name} for traffic light at waypoint {name}");
 
                     // Add to monitored list if not already there
                     if (!carsStoppedForLight.Contains(car))
