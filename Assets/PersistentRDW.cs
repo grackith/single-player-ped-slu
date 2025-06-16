@@ -28,8 +28,8 @@ public class PersistentRDW : MonoBehaviour
     [Tooltip("Direction player faces in physical space at start")]
 
     public Vector3 physicalReferenceDirection = Vector3.forward; // (0,0,1)
-    public float physicalWidth = 8f;  //   exact width 
-    public float physicalLength = 14.0f; //   exact length
+    public float physicalWidth = 7.5f;  //   exact width 
+    public float physicalLength = 13.5f; //   exact length
     private Vector3 lastHeadPosition;
     private float driftCheckInterval = 3.0f; // Check every 3 seconds
     private float lastDriftCheckTime = 0f;
@@ -266,7 +266,7 @@ public class PersistentRDW : MonoBehaviour
 
         // Clear old corner markers and create new ones
         ClearAllCornerMarkers();
-        CreatePersistentCornerMarkers(5.0f, 13.5f);
+        CreatePersistentCornerMarkers(7.5f, 13.5f);
     }
 
 
@@ -636,7 +636,7 @@ public class PersistentRDW : MonoBehaviour
 
     public void AlignWith5x13_5Rectangle()
     {
-        Debug.Log("Aligning tracking space with standard 5.0m × 13.5m rectangle");
+        Debug.Log("Aligning tracking space with standard 7.5m × 13.5m rectangle");
 
         // Find player head position
         Camera mainCamera = Camera.main;
@@ -652,7 +652,7 @@ public class PersistentRDW : MonoBehaviour
         forward.Normalize();
 
         // Call the alignment method with the specific dimensions
-        AlignTrackingSpaceWithRoad(headPosition, forward, 5.0f, 13.5f);
+        AlignTrackingSpaceWithRoad(headPosition, forward, 7.5f, 13.5f);
     }
 
     // Optional: Method to align based on   text file
@@ -668,7 +668,7 @@ public class PersistentRDW : MonoBehaviour
         }
 
         // Parse dimensions from file
-        float width = 5.0f;  // Default fallback
+        float width = 7.5f;  // Default fallback
         float length = 13.5f; // Default fallback
 
         try
@@ -800,7 +800,7 @@ public class PersistentRDW : MonoBehaviour
         yield return null; // Wait a frame for cleanup
 
         // Get physical dimensions
-        float width = 5.0f;  // Default
+        float width = 7.5f;  // Default
         float length = 13.5f; // Default
 
         GlobalConfiguration gc = vm.generalManager;
@@ -1103,7 +1103,7 @@ public class PersistentRDW : MonoBehaviour
             vm.ChangeTrackingSpaceVisibility(true);
 
             // Get physical dimensions
-            float width = 5.0f;  // Default
+            float width = 7.5f;  // Default
             float length = 13.5f; // Default
 
             GlobalConfiguration gc = vm.generalManager;

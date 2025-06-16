@@ -1443,7 +1443,7 @@ public class VisualizationManager : MonoBehaviour
         Transform trackingSpace = redirectionManager.trackingSpace;
 
         // Get dimensions from the tracking space bounds
-        float width = 5.0f;  // Default fallback
+        float width = 7.5f;  // Default fallback
         float length = 13.5f; // Default fallback
 
         if (generalManager != null && generalManager.physicalSpaces.Count > 0)
@@ -1597,7 +1597,7 @@ public class VisualizationManager : MonoBehaviour
         Transform trackingSpace = redirectionManager.trackingSpace;
 
         // Get dimensions from the tracking space bounds
-        float width = 5.0f;  // Default fallback
+        float width = 7.5f;  // Default fallback
         float length = 13.5f; // Default fallback
 
         if (generalManager != null && generalManager.physicalSpaces.Count > 0)

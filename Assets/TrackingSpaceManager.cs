@@ -8,8 +8,8 @@ using UnityEngine;
 public class TrackingSpaceManager : MonoBehaviour
 {
     [Header("Physical Space Settings")]
-    public float physicalWidth = 8f;
-    public float physicalLength = 14.0f;
+    public float physicalWidth = 7.5f;
+    public float physicalLength = 13.5f;
 
     [Header("References")]
     public Transform xrOrigin; //   XR Origin Hands (XR Rig)

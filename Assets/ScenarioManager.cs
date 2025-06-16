@@ -246,9 +246,9 @@ public class ScenarioManager : MonoBehaviour
         else
         {
             // Set   exact physical dimensions
-            persistentRDW.physicalWidth = 8.0f;
-            persistentRDW.physicalLength = 14.0f;
-            Debug.Log("Set PersistentRDW dimensions to 8.0m × 14.0m");
+            persistentRDW.physicalWidth = 7.5f;
+            persistentRDW.physicalLength = 13.5f;
+            Debug.Log("Set PersistentRDW dimensions to 7.5m × 13.5m");
         }
 
         // Check for duplicate event systems and XR interaction managers
@@ -901,22 +901,22 @@ public class ScenarioManager : MonoBehaviour
         if (persistentRDW != null)
         {
             // Set fixed dimensions for   physical space
-            persistentRDW.physicalWidth = 8.0f;
-            persistentRDW.physicalLength = 14.0f;
+            persistentRDW.physicalWidth = 7.5f;
+            persistentRDW.physicalLength = 13.5f;
 
             // Force dimension update
-            persistentRDW.EnsurePhysicalSpaceDimensions(8.0f, 14.0f);
-            Debug.Log("Forced tracking space dimensions to 8.0m × 14.0m");
+            persistentRDW.EnsurePhysicalSpaceDimensions(7.5f, 13.5f);
+            Debug.Log("Forced tracking space dimensions to 7.5m × 13.5m");
         }
 
         // Also set in RedirectionManager if available
         RedirectionManager redirectionManager = FindObjectOfType<RedirectionManager>();
         if (redirectionManager != null)
         {
-            redirectionManager.physicalWidth = 8.0f;
-            redirectionManager.physicalLength = 14.0f;
+            redirectionManager.physicalWidth = 7.5f;
+            redirectionManager.physicalLength = 13.5f;
         }
-
+        
         // Now fix GlobalConfiguration
         GlobalConfiguration globalConfig = FindObjectOfType<GlobalConfiguration>();
         if (globalConfig != null &&
@@ -926,10 +926,10 @@ public class ScenarioManager : MonoBehaviour
             // Force dimensions in global configuration
             List<Vector2> trackingSpacePoints = new List<Vector2>
         {
-            new Vector2(8.0f/2, 14.0f/2),   // Front Right
-            new Vector2(-8.0f/2, 14.0f/2),  // Front Left
-            new Vector2(-8.0f/2, -14.0f/2), // Back Left
-            new Vector2(8.0f/2, -14.0f/2)   // Back Right
+            new Vector2(7.5f/2, 13.5f/2),   // Front Right
+            new Vector2(-7.5f/2, 13.5f/2),  // Front Left
+            new Vector2(-7.5f/2, -13.5f/2), // Back Left
+            new Vector2(7.5f/2, -13.5f/2)   // Back Right
         };
 
             globalConfig.physicalSpaces[0].trackingSpace = trackingSpacePoints;

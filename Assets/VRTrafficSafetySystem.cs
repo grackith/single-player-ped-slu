@@ -4,8 +4,8 @@ using TurnTheGameOn.SimpleTrafficSystem;
 using UnityEngine;
 
 /// <summary>
-/// VR Traffic Safety System - Properly integrates with SimpleTrafficSystem
-/// NO COROUTINES - Everything happens immediately for reliable AI processing control
+/// VR Traffic Safety System - Enhanced with reset handling
+/// Prevents cars from being affected during VR player resets
 /// </summary>
 public class VRTrafficSafetySystem : MonoBehaviour
 {
@@ -41,6 +41,16 @@ public class VRTrafficSafetySystem : MonoBehaviour
     [Range(2f, 10f)]
     public float resumeBuffer = 3f;
 
+    [Header("Reset Handling")]
+    [Tooltip("Pause safety system during resets to prevent car interference")]
+    public bool pauseDuringResets = true;
+    [Tooltip("Time to wait after reset ends before resuming safety checks")]
+    [Range(0.1f, 2f)]
+    public float postResetDelay = 0.5f;
+    [Tooltip("Maximum distance change per frame to detect rapid position changes")]
+    [Range(1f, 10f)]
+    public float maxPositionChangeThreshold = 5f;
+
     [Header("System Control")]
     [Tooltip("Enable/disable the safety system")]
     public bool enableSafetySystem = true;
@@ -65,6 +75,12 @@ public class VRTrafficSafetySystem : MonoBehaviour
     private float lastCheckTime;
     private float checkInterval;
 
+    // Reset handling
+    private bool isResetInProgress = false;
+    private float resetEndTime = 0f;
+    private Vector3 lastPlayerPosition;
+    private RedirectionManager redirectionManager;
+
     void Start()
     {
         checkInterval = 1f / checkFrequency;
@@ -88,6 +104,12 @@ public class VRTrafficSafetySystem : MonoBehaviour
 
         carList = trafficController.GetTrafficCars();
 
+        // Find the RedirectionManager for reset detection
+        FindRedirectionManager();
+
+        // Initialize last player position
+        lastPlayerPosition = GetPlayerPosition();
+
         Debug.Log($"VRTrafficSafetySystem initialized - monitoring {carList.Length} cars");
     }
 
@@ -96,11 +118,103 @@ public class VRTrafficSafetySystem : MonoBehaviour
         if (!enableSafetySystem || playerTransform == null || trafficController == null)
             return;
 
-        if (Time.time - lastCheckTime >= checkInterval)
+        // Check for reset status
+        CheckResetStatus();
+
+        // Only process cars if not in reset or paused
+        if (!IsSystemPaused() && Time.time - lastCheckTime >= checkInterval)
         {
             ProcessAllCars();
             lastCheckTime = Time.time;
         }
+
+        // Update last known position
+        lastPlayerPosition = GetPlayerPosition();
+    }
+
+    private void FindRedirectionManager()
+    {
+        // Try to find RedirectionManager in parent hierarchy
+        Transform current = playerTransform;
+        while (current != null && redirectionManager == null)
+        {
+            redirectionManager = current.GetComponent<RedirectionManager>();
+            current = current.parent;
+        }
+
+        // If not found in hierarchy, search in scene
+        if (redirectionManager == null)
+        {
+            redirectionManager = FindObjectOfType<RedirectionManager>();
+        }
+
+        if (redirectionManager != null)
+        {
+            Debug.Log($"Found RedirectionManager: {redirectionManager.name}");
+        }
+        else
+        {
+            Debug.LogWarning("RedirectionManager not found - reset detection will be limited");
+        }
+    }
+
+    private void CheckResetStatus()
+    {
+        bool wasInReset = isResetInProgress;
+
+        // Check if reset is in progress via RedirectionManager
+        if (redirectionManager != null)
+        {
+            isResetInProgress = redirectionManager.inReset;
+        }
+        else
+        {
+            // Fallback: detect rapid position changes
+            Vector3 currentPos = GetPlayerPosition();
+            float positionChange = Vector3.Distance(currentPos, lastPlayerPosition);
+
+            if (positionChange > maxPositionChangeThreshold)
+            {
+                isResetInProgress = true;
+                resetEndTime = Time.time + postResetDelay;
+                if (showDebug)
+                {
+                    Debug.Log($"Detected rapid position change: {positionChange:F2}m - assuming reset in progress");
+                }
+            }
+        }
+
+        // Handle reset end
+        if (wasInReset && !isResetInProgress)
+        {
+            resetEndTime = Time.time + postResetDelay;
+            if (showDebug)
+            {
+                Debug.Log($"Reset ended - pausing safety system for {postResetDelay}s");
+            }
+        }
+
+        // Handle reset start
+        if (!wasInReset && isResetInProgress && pauseDuringResets)
+        {
+            if (showDebug)
+            {
+                Debug.Log("Reset started - pausing safety system");
+            }
+        }
+    }
+
+    private bool IsSystemPaused()
+    {
+        if (!pauseDuringResets) return false;
+
+        // Pause during active reset
+        if (isResetInProgress) return true;
+
+        // Pause during post-reset delay
+        if (Time.time < resetEndTime) return true;
+
+        return false;
     }
 
     private void FindVRPlayer()
@@ -169,6 +283,16 @@ public class VRTrafficSafetySystem : MonoBehaviour
 
     private void ProcessAllCars()
     {
+        // Skip processing if system is paused
+        if (IsSystemPaused())
+        {
+            if (showDebug)
+            {
+                Debug.Log("Skipping car processing - system paused during reset");
+            }
+            return;
+        }
+
         // Refresh car list periodically
         if (Time.frameCount % 300 == 0)
         {
@@ -182,15 +306,13 @@ public class VRTrafficSafetySystem : MonoBehaviour
             if (car == null || !car.gameObject.activeInHierarchy)
                 continue;
 
-            // IMPORTANT: Process ALL cars we're tracking, not just driving ones
-            // Because stopped cars need to be checked for resuming!
+            // Process cars we're tracking or that are actively driving
             if (originalSpeeds.ContainsKey(car.assignedIndex))
             {
                 ProcessCarSafety(car);
             }
             else
             {
-                // Only skip untracked cars if they're not actively being processed
                 if (!trafficController.GetCanProcess(car.assignedIndex))
                     continue;
                 if (!trafficController.GetIsDriving(car.assignedIndex))
@@ -226,7 +348,7 @@ public class VRTrafficSafetySystem : MonoBehaviour
         // Debug logging for affected cars
         if (showDebug && (carStoppedByPlayer[carIndex] || carSlowedByPlayer[carIndex]))
         {
-            Debug.Log($"🔍 CHECKING {car.name}: distance={distanceToPlayer:F1}m, playerInFront={playerInFront}, stopped={carStoppedByPlayer[carIndex]}, slowed={carSlowedByPlayer[carIndex]}");
+            Debug.Log($"🔍 CHECKING {car.name}: distance={distanceToPlayer:F1}m, playerInFront={playerInFront}, stopped={carStoppedByPlayer[carIndex]}, slowed={carSlowedByPlayer[carIndex]}, resetInProgress={isResetInProgress}");
         }
 
         // Use hysteresis for stability
@@ -286,9 +408,9 @@ public class VRTrafficSafetySystem : MonoBehaviour
         bool isAhead = dotProduct > 0.5f;
         bool inForwardZone = (angle <= (detectionAngle / 2f)) && (distance <= slowdownDistance);
 
-        if (showDebug)
+        if (showDebug && IsSystemPaused())
         {
-            Debug.Log($"Car {car.name}: distance={distance:F1}, angle={angle:F1}°, dotProduct={dotProduct:F2}, inCone={inCone}, isAhead={isAhead}, inForwardZone={inForwardZone}");
+            Debug.Log($"[PAUSED] Car {car.name}: distance={distance:F1}, angle={angle:F1}°, dotProduct={dotProduct:F2}, inCone={inCone}, isAhead={isAhead}, inForwardZone={inForwardZone}");
         }
 
         return inCone && isAhead && inForwardZone;
@@ -313,12 +435,13 @@ public class VRTrafficSafetySystem : MonoBehaviour
         }
         else
         {
-            // Timeout check
-            if (Time.time - carStoppedTime[carIndex] > 10f)
+            // Timeout check (longer timeout during resets)
+            float timeoutDuration = IsSystemPaused() ? 15f : 10f;
+            if (Time.time - carStoppedTime[carIndex] > timeoutDuration)
             {
                 if (showDebug)
                 {
-                    Debug.Log($"⏰ TIMEOUT: {car.name} has been stopped for 10+ seconds, force resuming");
+                    Debug.Log($"⏰ TIMEOUT: {car.name} has been stopped for {timeoutDuration}+ seconds, force resuming");
                 }
                 ResumeCarNormal(car, carIndex);
             }
@@ -359,6 +482,7 @@ public class VRTrafficSafetySystem : MonoBehaviour
 
     /// <summary>
     /// IMMEDIATE RESUME - No coroutines, everything happens in same frame
+    /// Enhanced with reset-aware behavior
     /// </summary>
     private void ResumeCarNormal(AITrafficCar car, int carIndex)
     {
@@ -366,38 +490,34 @@ public class VRTrafficSafetySystem : MonoBehaviour
 
         if (wasAffected)
         {
-            Debug.Log($"🔄 EXECUTING IMMEDIATE RESUME for {car.name}");
+            if (showDebug)
+            {
+                Debug.Log($"🔄 EXECUTING IMMEDIATE RESUME for {car.name} (resetInProgress: {isResetInProgress})");
+            }
 
             // STEP 1: Re-enable AI processing IMMEDIATELY
             trafficController.Set_CanProcess(carIndex, true);
-            Debug.Log($"  ✅ Set_CanProcess(true) for {car.name}");
 
             // STEP 2: Restore original speed IMMEDIATELY
             if (originalSpeeds.ContainsKey(carIndex))
             {
                 trafficController.SetTopSpeed(carIndex, originalSpeeds[carIndex]);
                 car.SetTopSpeed(originalSpeeds[carIndex]);
-                Debug.Log($"  ✅ Restored speed to {originalSpeeds[carIndex]} for {car.name}");
             }
 
             // STEP 3: Force the car to restart driving IMMEDIATELY
             car.StartDriving();
-            Debug.Log($"  ✅ Called StartDriving() for {car.name}");
-
             trafficController.Set_IsDrivingArray(carIndex, true);
-            Debug.Log($"  ✅ Set_IsDrivingArray(true) for {car.name}");
 
             // STEP 4: Reset tracking states IMMEDIATELY
             carStoppedByPlayer[carIndex] = false;
             carSlowedByPlayer[carIndex] = false;
             carStoppedTime.Remove(carIndex);
-            Debug.Log($"  ✅ Reset tracking states for {car.name}");
 
-            Debug.Log($"🟢 IMMEDIATE RESUME COMPLETE for {car.name} - should be driving now!");
-        }
-        else if (showDebug)
-        {
-            Debug.Log($"⚪ RESUME SKIPPED for {car.name} - not affected by player");
+            if (showDebug)
+            {
+                Debug.Log($"🟢 IMMEDIATE RESUME COMPLETE for {car.name} - should be driving now!");
+            }
         }
     }
 
@@ -431,6 +551,16 @@ public class VRTrafficSafetySystem : MonoBehaviour
         return count;
     }
 
+    public bool IsResetInProgress()
+    {
+        return isResetInProgress;
+    }
+
+    public bool IsSystemCurrentlyPaused()
+    {
+        return IsSystemPaused();
+    }
+
     /// <summary>
     /// Force all cars affected by player to resume (debug method)
     /// </summary>
@@ -462,108 +592,22 @@ public class VRTrafficSafetySystem : MonoBehaviour
     }
 
     /// <summary>
-    /// Debug method to check car states
+    /// Debug method to check system status
     /// </summary>
-    [ContextMenu("Debug Car States")]
-    public void DebugCarStates()
+    [ContextMenu("Debug System Status")]
+    public void DebugSystemStatus()
     {
-        Debug.Log("=== CAR STATES DEBUG ===");
-
-        foreach (var kvp in originalSpeeds)
+        Debug.Log("=== TRAFFIC SAFETY SYSTEM STATUS ===");
+        Debug.Log($"Reset In Progress: {isResetInProgress}");
+        Debug.Log($"System Paused: {IsSystemPaused()}");
+        Debug.Log($"Reset End Time: {resetEndTime}");
+        Debug.Log($"Current Time: {Time.time}");
+        Debug.Log($"RedirectionManager Found: {redirectionManager != null}");
+        if (redirectionManager != null)
         {
-            int carIndex = kvp.Key;
-            if (carIndex >= 0 && carIndex < carList.Length && carList[carIndex] != null)
-            {
-                AITrafficCar car = carList[carIndex];
-                bool isDriving = trafficController.GetIsDriving(carIndex);
-                bool canProcess = trafficController.GetCanProcess(carIndex);
-                float currentSpeed = trafficController.GetCurrentSpeed(carIndex);
-                bool stoppedByPlayer = carStoppedByPlayer.ContainsKey(carIndex) && carStoppedByPlayer[carIndex];
-                bool slowedByPlayer = carSlowedByPlayer.ContainsKey(carIndex) && carSlowedByPlayer[carIndex];
-
-                string aiState = canProcess ? "✅ AI ENABLED" : "❌ AI DISABLED";
-
-                Debug.Log($"{car.name}: {aiState}, isDriving={isDriving}, speed={currentSpeed:F1}/{kvp.Value:F1}, stopped={stoppedByPlayer}, slowed={slowedByPlayer}");
-            }
+            Debug.Log($"RedirectionManager.inReset: {redirectionManager.inReset}");
         }
-
-        Debug.Log("========================");
-    }
-
-    /// <summary>
-    /// Force enable AI processing for all cars (emergency fix)
-    /// </summary>
-    [ContextMenu("Force Enable All Car AI")]
-    public void ForceEnableAllCarAI()
-    {
-        Debug.Log("🔧 FORCE ENABLING AI for all cars");
-
-        foreach (var kvp in originalSpeeds)
-        {
-            int carIndex = kvp.Key;
-            if (carIndex >= 0 && carIndex < carList.Length && carList[carIndex] != null)
-            {
-                trafficController.Set_CanProcess(carIndex, true);
-                Debug.Log($"Force enabled AI for car {carList[carIndex].name}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Check if a specific car's resume actually worked
-    /// </summary>
-    [ContextMenu("Verify Last Resume")]
-    public void VerifyLastResume()
-    {
-        Debug.Log("🔍 VERIFYING RESUME STATUS FOR ALL TRACKED CARS:");
-
-        foreach (var kvp in originalSpeeds)
-        {
-            int carIndex = kvp.Key;
-            if (carIndex >= 0 && carIndex < carList.Length && carList[carIndex] != null)
-            {
-                AITrafficCar car = carList[carIndex];
-                bool canProcess = trafficController.GetCanProcess(carIndex);
-                bool isDriving = trafficController.GetIsDriving(carIndex);
-                bool stoppedByUs = carStoppedByPlayer.ContainsKey(carIndex) && carStoppedByPlayer[carIndex];
-                bool slowedByUs = carSlowedByPlayer.ContainsKey(carIndex) && carSlowedByPlayer[carIndex];
-
-                string status = "🟢 NORMAL";
-                if (!canProcess) status = "❌ AI DISABLED";
-                else if (!isDriving) status = "⏸️ NOT DRIVING";
-                else if (stoppedByUs) status = "🛑 STOPPED BY PLAYER";
-                else if (slowedByUs) status = "🔶 SLOWED BY PLAYER";
-
-                Debug.Log($"{car.name}: {status} (canProcess={canProcess}, isDriving={isDriving})");
-            }
-        }
-    }
-
-    [ContextMenu("Debug Player Positions")]
-    public void DebugPlayerPositions()
-    {
-        Debug.Log("=== VR Player Position Debug ===");
-
-        if (playerTransform != null)
-        {
-            Debug.Log($"Original Player Transform: {playerTransform.name} at {playerTransform.position}");
-        }
-
-        if (actualPlayerTransform != null)
-        {
-            Debug.Log($"Actual Player Transform (for detection): {actualPlayerTransform.name} at {actualPlayerTransform.position}");
-        }
-
-        if (playerCharacterController != null)
-        {
-            Debug.Log($"CharacterController: {playerCharacterController.name} at {playerCharacterController.transform.position}");
-        }
-
-        Vector3 detectionPos = GetPlayerPosition();
-        Debug.Log($"Detection Position: {detectionPos}");
-
-        Debug.Log($"Using CharacterController Position: {useCharacterControllerPosition}");
-        Debug.Log("================================");
+        Debug.Log("=====================================");
     }
 
     private void OnDrawGizmos()
@@ -572,11 +616,23 @@ public class VRTrafficSafetySystem : MonoBehaviour
             return;
 
         Vector3 debugPlayerPosition = GetPlayerPosition();
-        Gizmos.color = Color.yellow;
+
+        // Change colors based on system status
+        Color slowdownColor = IsSystemPaused() ? Color.gray : Color.yellow;
+        Color emergencyColor = IsSystemPaused() ? Color.gray : Color.red;
+
+        Gizmos.color = slowdownColor;
         Gizmos.DrawWireSphere(debugPlayerPosition, slowdownDistance);
 
-        Gizmos.color = Color.red;
+        Gizmos.color = emergencyColor;
         Gizmos.DrawWireSphere(debugPlayerPosition, emergencyStopDistance);
+
+        // Draw reset status indicator
+        if (IsSystemPaused())
+        {
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawWireCube(debugPlayerPosition + Vector3.up * 3f, Vector3.one);
+        }
 
         if (trafficController != null)
         {
@@ -591,20 +647,20 @@ public class VRTrafficSafetySystem : MonoBehaviour
                 if (distance > slowdownDistance * 2f)
                     continue;
 
-                Color coneColor = Color.green;
+                Color coneColor = IsSystemPaused() ? Color.gray : Color.green;
                 int carIndex = car.assignedIndex;
 
                 if (carStoppedByPlayer.ContainsKey(carIndex) && carStoppedByPlayer[carIndex])
                 {
-                    coneColor = Color.red;
+                    coneColor = IsSystemPaused() ? Color.gray : Color.red;
                 }
                 else if (carSlowedByPlayer.ContainsKey(carIndex) && carSlowedByPlayer[carIndex])
                 {
-                    coneColor = Color.yellow;
+                    coneColor = IsSystemPaused() ? Color.gray : Color.yellow;
                 }
                 else if (distance <= slowdownDistance && IsPlayerInDetectionCone(car, debugPlayerPosition))
                 {
-                    coneColor = new Color(1f, 0.5f, 0f);
+                    coneColor = IsSystemPaused() ? Color.gray : new Color(1f, 0.5f, 0f);
                 }
 
                 DrawDetectionCone(car.transform.position, car.transform.forward, slowdownDistance, detectionAngle, coneColor);

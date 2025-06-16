@@ -170,8 +170,8 @@ public class TrackingSpaceInitializer : MonoBehaviour
             persistentRDW.AlignTrackingSpaceWithRoad(
                 new Vector3(headPos.x, 0, headPos.z),
                 headForward,
-                8.2f,  // Width
-                14f  // Length
+                7.5f,  // Width
+                13.5f  // Length
             );
 
             Debug.Log("[CRITICAL] Used centralized method to reset tracking space");
