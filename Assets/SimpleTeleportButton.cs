@@ -1,6 +1,11 @@
 ﻿using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.XR.Interaction.Toolkit;
+using System.Collections;
+
+#if UNITY_XR_MANAGEMENT
+using UnityEngine.XR.Management;
+#endif
 
 public class SimpleTeleportButton : MonoBehaviour
 {
@@ -10,37 +15,32 @@ public class SimpleTeleportButton : MonoBehaviour
     {
         QuitApplication,
         SpawnBus,
-        Both, // For testing
-        SmartBusButton // NEW: Dynamic behavior based on bus state
+        Both,
+        SmartBusButton
     }
 
     [SerializeField]
     private ScenarioManager scenarioManager;
 
-    // NEW: Bus spawning functionality
     [Header("Button Function")]
-    [SerializeField] public ButtonFunction buttonFunction = ButtonFunction.QuitApplication;
+    [SerializeField] public ButtonFunction buttonFunction = ButtonFunction.SmartBusButton;
     [SerializeField] private BusSpawnerSimple busSpawner;
 
-
-    // Add visual feedback elements
+    // Visual feedback elements
     [SerializeField] private Material defaultMaterial;
     [SerializeField] private Material pressedMaterial;
-    [SerializeField] private Material disabledMaterial; // NEW: For when bus already spawned
+    [SerializeField] private Material disabledMaterial;
+    [SerializeField] private Material hoveredMaterial;
     private MeshRenderer meshRenderer;
 
-    // Track if we've set up the button
     private bool isSetup = false;
-    private bool buttonEnabled = true; // NEW: Track if button should respond
-
+    private bool buttonEnabled = true;
     private XRSimpleInteractable interactable;
 
-    [SerializeField] private Material hoveredMaterial; // Optional
-    private Transform buttonVisual; // The part that actually moves
     [Header("Button Animation")]
     [SerializeField] private float pressDistance = 0.01f;
-    [SerializeField] private Transform pressVisual; // Reference to the "press" object
-    [SerializeField] private Transform buttonText; // Reference to the "home button text" object
+    [SerializeField] private Transform pressVisual;
+    [SerializeField] private Transform buttonText;
     private Vector3 originalPressPosition;
     private Vector3 pressedPressPosition;
     private Vector3 originalButtonPosition;
@@ -49,11 +49,14 @@ public class SimpleTeleportButton : MonoBehaviour
     private Vector3 pressedTextPosition;
     private bool isHovered = false;
 
-    // NEW: Audio feedback for bus spawning
     [Header("Audio Feedback")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip successSound;
     [SerializeField] private AudioClip errorSound;
+
+    [Header("Hand Interaction Settings")]
+    [SerializeField] private bool enableHandTracking = true;
+    [SerializeField] private float handInteractionDistance = 0.1f;
 
     void Start()
     {
@@ -62,20 +65,17 @@ public class SimpleTeleportButton : MonoBehaviour
 
     void OnEnable()
     {
-        // When the object is enabled (like when a scene is loaded),
-        // try to set up the button again
         SetupButton();
     }
 
     void Update()
     {
-        // If not set up yet, try again
         if (!isSetup)
         {
             SetupButton();
         }
 
-        // NEW: Check if we need to disable button due to bus already spawned
+        // Check if we need to disable button due to bus already spawned
         if (buttonFunction == ButtonFunction.SpawnBus && busSpawner != null && busSpawner.hasSpawned && buttonEnabled)
         {
             SetButtonEnabled(false);
@@ -84,26 +84,14 @@ public class SimpleTeleportButton : MonoBehaviour
 
     void SetupButton()
     {
-        // Don't try again if already set up
         if (isSetup) return;
 
-        // Get components
-        interactable = GetComponent<XRSimpleInteractable>();
-        if (interactable == null)
-        {
-            // Try to add the component if it's missing
-            interactable = gameObject.AddComponent<XRSimpleInteractable>();
-            if (interactable == null)
-            {
-                Debug.LogError("Could not create XRSimpleInteractable component on " + gameObject.name);
-                return;
-            }
-        }
+        // Setup XR Interactable with proper hand support
+        SetupXRInteractable();
 
-        // Find ScenarioManager - be more thorough for persistent buttons
+        // Find ScenarioManager
         if (scenarioManager == null)
         {
-            // Look in all scenes including DontDestroyOnLoad
             scenarioManager = FindObjectOfType<ScenarioManager>(true);
             if (scenarioManager == null)
             {
@@ -112,7 +100,7 @@ public class SimpleTeleportButton : MonoBehaviour
             }
         }
 
-        // AUTO-DETECT smart bus button function based on name if not already set
+        // Auto-detect smart bus button function
         if (buttonFunction == ButtonFunction.QuitApplication &&
             (gameObject.name.ToLower().Contains("bus") ||
              gameObject.name.ToLower().Contains("stop") ||
@@ -122,7 +110,7 @@ public class SimpleTeleportButton : MonoBehaviour
             Debug.Log($"Auto-detected smart bus button function for {gameObject.name}");
         }
 
-        // Find BusSpawnerSimple if this is any type of bus button
+        // Find BusSpawnerSimple for bus-related buttons
         if (buttonFunction == ButtonFunction.SpawnBus ||
             buttonFunction == ButtonFunction.Both ||
             buttonFunction == ButtonFunction.SmartBusButton)
@@ -138,42 +126,69 @@ public class SimpleTeleportButton : MonoBehaviour
             }
         }
 
-        // Get mesh renderer for visual feedback - FIXED VERSION
-        meshRenderer = GetComponent<MeshRenderer>();
-        if (meshRenderer == null)
+        SetupVisualComponents();
+        SetupAudioComponents();
+        SetupEventListeners();
+
+        isSetup = true;
+        Debug.Log($"Button setup complete on {gameObject.name} - Function: {buttonFunction}");
+    }
+
+    private void SetupXRInteractable()
+    {
+        interactable = GetComponent<XRSimpleInteractable>();
+        if (interactable == null)
         {
-            // Try to find MeshRenderer in children (like the "press" object)
-            MeshRenderer[] childRenderers = GetComponentsInChildren<MeshRenderer>();
-            if (childRenderers.Length > 0)
+            interactable = gameObject.AddComponent<XRSimpleInteractable>();
+        }
+
+        // CRITICAL: Configure for hand interaction
+        if (enableHandTracking)
+        {
+            // Ensure the interactable can work with hands
+            interactable.hoverEntered.RemoveAllListeners();
+            interactable.hoverExited.RemoveAllListeners();
+            interactable.selectEntered.RemoveAllListeners();
+
+            // Make sure collider exists for hand detection
+            Collider buttonCollider = GetComponent<Collider>();
+            if (buttonCollider == null)
             {
-                meshRenderer = childRenderers[0]; // Use the first one found
-                Debug.Log("Using child MeshRenderer from: " + meshRenderer.gameObject.name);
+                // Add a trigger collider for hand interaction
+                BoxCollider box = gameObject.AddComponent<BoxCollider>();
+                box.isTrigger = true;
+                box.size = Vector3.one * 0.1f; // Adjust size as needed
+                Debug.Log("Added trigger collider for hand interaction");
             }
             else
             {
-                //Debug.LogWarning("MeshRenderer not found on button or children - visual feedback will be limited");
+                buttonCollider.isTrigger = true;
+            }
+        }
+    }
+
+    private void SetupVisualComponents()
+    {
+        // Get mesh renderer for visual feedback
+        meshRenderer = GetComponent<MeshRenderer>();
+        if (meshRenderer == null)
+        {
+            MeshRenderer[] childRenderers = GetComponentsInChildren<MeshRenderer>();
+            if (childRenderers.Length > 0)
+            {
+                meshRenderer = childRenderers[0];
             }
         }
 
-        // Find button visuals if not assigned
+        // Find button visuals
         if (pressVisual == null)
         {
-            // Try to find the "press" object as a child
             pressVisual = transform.Find("press");
-            if (pressVisual != null)
-            {
-                Debug.Log("Found press visual: " + pressVisual.name);
-            }
         }
 
         if (buttonText == null)
         {
-            // Try to find the text object as a child
             buttonText = transform.Find("home button text");
-            if (buttonText != null)
-            {
-                Debug.Log("Found button text: " + buttonText.name);
-            }
         }
 
         // Store original positions
@@ -191,8 +206,10 @@ public class SimpleTeleportButton : MonoBehaviour
             originalTextPosition = buttonText.localPosition;
             pressedTextPosition = originalTextPosition - (transform.forward * pressDistance);
         }
+    }
 
-        // Set up audio source
+    private void SetupAudioComponents()
+    {
         if (audioSource == null)
         {
             audioSource = GetComponent<AudioSource>();
@@ -203,49 +220,27 @@ public class SimpleTeleportButton : MonoBehaviour
                 audioSource.volume = 0.5f;
             }
         }
+    }
 
-        // Remove any existing listeners to avoid duplicates
-        interactable.selectEntered.RemoveAllListeners();
-        interactable.hoverEntered.RemoveAllListeners();
-        interactable.hoverExited.RemoveAllListeners();
-
-        // Add event listeners
-        interactable.selectEntered.AddListener(OnButtonSelected);
-        interactable.hoverEntered.AddListener(OnButtonHovered);
-        interactable.hoverExited.AddListener(OnButtonHoverExit);
-
-        // Mark as set up
-        isSetup = true;
-        Debug.Log($"Button setup complete on {gameObject.name} - Function: {buttonFunction}");
+    private void SetupEventListeners()
+    {
+        if (interactable != null)
+        {
+            interactable.selectEntered.AddListener(OnButtonSelected);
+            interactable.hoverEntered.AddListener(OnButtonHovered);
+            interactable.hoverExited.AddListener(OnButtonHoverExit);
+        }
     }
 
     public void OnButtonHovered(HoverEnterEventArgs args)
     {
-        if (!buttonEnabled) return; // NEW: Don't respond if disabled
+        if (!buttonEnabled) return;
 
         if (!isHovered)
         {
             isHovered = true;
+            AnimateButton(0.3f); // 30% pressed
 
-            // Slight movement feedback (partial press)
-            float hoverAmount = 0.3f; // 30% of the way pressed
-
-            // Animate button
-            transform.localPosition = Vector3.Lerp(originalButtonPosition, pressedButtonPosition, hoverAmount);
-
-            // Animate press visual
-            if (pressVisual != null)
-            {
-                pressVisual.localPosition = Vector3.Lerp(originalPressPosition, pressedPressPosition, hoverAmount);
-            }
-
-            // Animate text
-            if (buttonText != null)
-            {
-                buttonText.localPosition = Vector3.Lerp(originalTextPosition, pressedTextPosition, hoverAmount);
-            }
-
-            // NEW: Visual feedback for hover
             if (meshRenderer != null && hoveredMaterial != null)
             {
                 meshRenderer.material = hoveredMaterial;
@@ -258,21 +253,8 @@ public class SimpleTeleportButton : MonoBehaviour
         if (isHovered)
         {
             isHovered = false;
+            AnimateButton(0f); // Reset position
 
-            // Reset positions
-            transform.localPosition = originalButtonPosition;
-
-            if (pressVisual != null)
-            {
-                pressVisual.localPosition = originalPressPosition;
-            }
-
-            if (buttonText != null)
-            {
-                buttonText.localPosition = originalTextPosition;
-            }
-
-            // NEW: Reset visual feedback
             if (meshRenderer != null)
             {
                 if (buttonEnabled)
@@ -289,16 +271,15 @@ public class SimpleTeleportButton : MonoBehaviour
 
     public void OnButtonSelected(SelectEnterEventArgs args)
     {
+        Debug.Log($"Button {gameObject.name} selected with function: {buttonFunction}");
+
         if (!buttonEnabled)
         {
-            if (audioSource != null && errorSound != null)
-            {
-                audioSource.PlayOneShot(errorSound);
-            }
+            PlayErrorSound();
             return;
         }
 
-        // Add haptic feedback
+        // Add haptic feedback for controllers
         if (args.interactorObject is XRBaseControllerInteractor controllerInteractor)
         {
             controllerInteractor.SendHapticImpulse(0.5f, 0.1f);
@@ -322,30 +303,25 @@ public class SimpleTeleportButton : MonoBehaviour
                 actionSuccessful = busSpawned || appQuit;
                 break;
 
-            case ButtonFunction.SmartBusButton: // NEW
+            case ButtonFunction.SmartBusButton:
                 actionSuccessful = HandleSmartBusButton();
                 break;
         }
 
-        // Play appropriate feedback
+        // Play feedback
         if (actionSuccessful)
         {
-            if (audioSource != null && successSound != null)
-            {
-                audioSource.PlayOneShot(successSound);
-            }
+            PlaySuccessSound();
         }
         else
         {
-            if (audioSource != null && errorSound != null)
-            {
-                audioSource.PlayOneShot(errorSound);
-            }
+            PlayErrorSound();
         }
 
         onButtonPressed.Invoke();
         StartCoroutine(ButtonPressVisualFeedback());
     }
+
     private bool HandleSmartBusButton()
     {
         Debug.Log("Smart bus button pressed - checking bus state...");
@@ -356,16 +332,14 @@ public class SimpleTeleportButton : MonoBehaviour
             return false;
         }
 
-        // Check if bus has spawned
         if (!busSpawner.hasSpawned)
         {
-            // Bus hasn't spawned yet - spawn it
             Debug.Log("Bus not spawned yet - triggering spawn");
             return HandleBusSpawning();
         }
         else
         {
-            // Bus has spawned - check if it has reached final destination
+            // Check if bus has reached final destination
             if (IsBusAtFinalDestination())
             {
                 Debug.Log("Bus at final destination - quitting application");
@@ -374,94 +348,56 @@ public class SimpleTeleportButton : MonoBehaviour
             else
             {
                 Debug.Log("Bus still traveling - cannot quit yet");
-                // Optional: Show message to user
                 ShowBusStillTravelingMessage();
                 return false;
             }
         }
     }
-    private void ShowBusStillTravelingMessage()
-    {
-        // You could implement visual feedback here
-        // For now, just log and maybe change button color temporarily
-        Debug.Log("Bus is still traveling to destination...");
-
-        // Optional: Flash the button or change its color temporarily
-        StartCoroutine(FlashBusStillTravelingFeedback());
-    }
-
-    // REPLACE the IsBusAtFinalDestination method in SimpleTeleportButton.cs with this:
 
     private bool IsBusAtFinalDestination()
     {
         if (busSpawner == null || !busSpawner.hasSpawned)
         {
-            Debug.Log("Bus spawner is null or bus hasn't spawned yet");
             return false;
         }
 
-        // Use the new method to check if bus is properly stopped
-        bool busAtFinalStop = busSpawner.IsBusAtFinalStop();
+        // Use multiple methods to check if bus is at final destination
+        bool busAtFinalStop = false;
 
-        if (busAtFinalStop)
+        // Method 1: Use BusSpawnerSimple's method if available
+        try
         {
-            Debug.Log("✅ Bus has reached final destination and stopped - ready to quit");
+            busAtFinalStop = busSpawner.IsBusAtFinalStop();
         }
-        else
+        catch (System.Exception e)
         {
-            Debug.Log("🚌 Bus is still traveling or hasn't reached final stop yet");
+            Debug.LogWarning($"BusSpawnerSimple.IsBusAtFinalStop() failed: {e.Message}");
+        }
 
-            // Optional: Debug current bus state
+        // Method 2: Direct check of spawned bus
+        if (!busAtFinalStop)
+        {
             var spawnedBus = busSpawner.GetSpawnedBus();
             if (spawnedBus != null)
             {
-                Debug.Log($"Bus isDriving: {spawnedBus.isDriving}");
+                // Check if bus is not driving (stopped)
+                busAtFinalStop = !spawnedBus.isDriving;
+
+                // Additional check: if bus has been stopped for a reasonable time
+                if (busAtFinalStop)
+                {
+                    Debug.Log("✅ Bus has stopped - ready to quit");
+                }
+                else
+                {
+                    Debug.Log("🚌 Bus is still driving");
+                }
             }
         }
 
         return busAtFinalStop;
     }
 
-    private System.Collections.IEnumerator FlashBusStillTravelingFeedback()
-    {
-        // Flash the button to indicate bus is still traveling
-        Material originalMaterial = meshRenderer != null ? meshRenderer.material : null;
-
-        for (int i = 0; i < 3; i++)
-        {
-            if (meshRenderer != null && hoveredMaterial != null)
-            {
-                meshRenderer.material = hoveredMaterial;
-            }
-            yield return new WaitForSeconds(0.2f);
-
-            if (meshRenderer != null && originalMaterial != null)
-            {
-                meshRenderer.material = originalMaterial;
-            }
-            yield return new WaitForSeconds(0.2f);
-        }
-    }
-
-    // NEW: Method to setup as smart bus button
-    public void SetupAsSmartBusButton()
-    {
-        buttonFunction = ButtonFunction.SmartBusButton;
-
-        // Force find the bus spawner
-        if (busSpawner == null)
-        {
-            busSpawner = FindObjectOfType<BusSpawnerSimple>();
-        }
-
-        // Force setup
-        isSetup = false;
-        SetupButton();
-
-        Debug.Log($"Button {gameObject.name} configured as smart bus button");
-    }
-
-    // NEW: Handle bus spawning logic
     private bool HandleBusSpawning()
     {
         if (busSpawner == null)
@@ -482,49 +418,175 @@ public class SimpleTeleportButton : MonoBehaviour
             return false;
         }
 
-        // Success! Spawn the bus immediately
         Debug.Log("Bus stop button pressed - spawning bus immediately");
         busSpawner.SpawnBusImmediately();
-
-        // Disable this button to prevent multiple presses
         SetButtonEnabled(false);
-
         return true;
     }
 
-    // EXISTING: Quit application logic (unchanged)
     private bool HandleQuitApplication()
     {
-        // Try to use the ScenarioManager's QuitApplication method as mentioned
-        if (scenarioManager != null)
-        {
-            scenarioManager.QuitApplication();
-            Debug.Log("Button pressed - quitting application via ScenarioManager");
-            return true;
-        }
-        else
-        {
-            // Fallback - quit directly if ScenarioManager isn't available
-            Debug.LogWarning("ScenarioManager not found! Quitting application directly.");
-            QuitApplication();
-            return true;
-        }
+        Debug.Log("Attempting to quit application...");
+
+        // Start quit sequence with proper XR cleanup
+        StartCoroutine(QuitApplicationSequence());
+        return true;
     }
 
-    private void QuitApplication()
+    private IEnumerator QuitApplicationSequence()
     {
-        Debug.Log("Quitting application...");
+        Debug.Log("Starting quit application sequence...");
+
+        // Step 1: Stop any ongoing XR processes
+        try
+        {
+#if UNITY_XR_MANAGEMENT
+            var xrManager = XRGeneralSettings.Instance?.Manager;
+            if (xrManager != null && xrManager.isInitializationComplete)
+            {
+                Debug.Log("Stopping XR subsystems...");
+                xrManager.StopSubsystems();
+                yield return new WaitForSeconds(0.5f);
+                
+                Debug.Log("Deinitializing XR subsystems...");
+                xrManager.DeinitializeLoader();
+                yield return new WaitForSeconds(0.5f);
+            }
+#endif
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"XR cleanup failed: {e.Message}");
+        }
+
+        // Step 2: Platform-specific quit
+        Debug.Log("Executing platform quit...");
 
 #if UNITY_EDITOR
-        // If in editor, stop play mode
         UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_ANDROID
+        // For Quest/Android VR
+        try
+        {
+            using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            {
+                AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                currentActivity.Call("finish");
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"Android quit failed, using fallback: {e.Message}");
+            Application.Quit();
+        }
 #else
-        // In build, quit the application
         Application.Quit();
 #endif
+
+        yield return null;
     }
 
-    // NEW: Enable/disable button functionality
+    private void ShowBusStillTravelingMessage()
+    {
+        Debug.Log("Bus is still traveling to destination...");
+        StartCoroutine(FlashBusStillTravelingFeedback());
+    }
+
+    private IEnumerator FlashBusStillTravelingFeedback()
+    {
+        Material originalMaterial = meshRenderer != null ? meshRenderer.material : null;
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (meshRenderer != null && hoveredMaterial != null)
+            {
+                meshRenderer.material = hoveredMaterial;
+            }
+            yield return new WaitForSeconds(0.2f);
+
+            if (meshRenderer != null && originalMaterial != null)
+            {
+                meshRenderer.material = originalMaterial;
+            }
+            yield return new WaitForSeconds(0.2f);
+        }
+    }
+
+    private void AnimateButton(float pressAmount)
+    {
+        transform.localPosition = Vector3.Lerp(originalButtonPosition, pressedButtonPosition, pressAmount);
+
+        if (pressVisual != null)
+        {
+            pressVisual.localPosition = Vector3.Lerp(originalPressPosition, pressedPressPosition, pressAmount);
+        }
+
+        if (buttonText != null)
+        {
+            buttonText.localPosition = Vector3.Lerp(originalTextPosition, pressedTextPosition, pressAmount);
+        }
+    }
+
+    private IEnumerator ButtonPressVisualFeedback()
+    {
+        Material originalMaterial = meshRenderer?.material;
+
+        // Show pressed state
+        if (meshRenderer != null && pressedMaterial != null)
+        {
+            meshRenderer.material = pressedMaterial;
+        }
+
+        AnimateButton(1f); // Fully pressed
+
+        yield return new WaitForSeconds(0.2f);
+
+        // Restore state
+        if (meshRenderer != null)
+        {
+            if (!buttonEnabled && disabledMaterial != null)
+            {
+                meshRenderer.material = disabledMaterial;
+            }
+            else
+            {
+                meshRenderer.material = isHovered ? hoveredMaterial : originalMaterial;
+            }
+        }
+
+        // Restore position based on hover state
+        AnimateButton(isHovered && buttonEnabled ? 0.3f : 0f);
+    }
+
+    private void PlaySuccessSound()
+    {
+        if (audioSource != null && successSound != null)
+        {
+            audioSource.PlayOneShot(successSound);
+        }
+    }
+
+    private void PlayErrorSound()
+    {
+        if (audioSource != null && errorSound != null)
+        {
+            audioSource.PlayOneShot(errorSound);
+        }
+    }
+
+    // Public methods for external configuration
+    public void SetupAsSmartBusButton()
+    {
+        buttonFunction = ButtonFunction.SmartBusButton;
+        if (busSpawner == null)
+        {
+            busSpawner = FindObjectOfType<BusSpawnerSimple>();
+        }
+        isSetup = false;
+        SetupButton();
+        Debug.Log($"Button {gameObject.name} configured as smart bus button");
+    }
+
     public void SetButtonEnabled(bool enabled)
     {
         buttonEnabled = enabled;
@@ -541,7 +603,6 @@ public class SimpleTeleportButton : MonoBehaviour
             }
         }
 
-        // Optional: Disable the interactable entirely when disabled
         if (interactable != null)
         {
             interactable.enabled = enabled;
@@ -550,121 +611,28 @@ public class SimpleTeleportButton : MonoBehaviour
         Debug.Log($"Button {gameObject.name} {(enabled ? "enabled" : "disabled")}");
     }
 
-    // NEW: Reset button for new scenario
     public void ResetForNewScenario()
     {
-        // Reset button state
         SetButtonEnabled(true);
-
-        // Clear any runtime-found references that might be stale
         ClearRuntimeAssignments();
-
-        // Force re-setup for new scenario
         isSetup = false;
-
         Debug.Log($"Smart bus button {gameObject.name} reset for new scenario");
     }
 
-    private System.Collections.IEnumerator ButtonPressVisualFeedback()
-    {
-        // Store original material
-        Material originalMaterial = null;
-        if (meshRenderer != null)
-        {
-            originalMaterial = meshRenderer.material;
-        }
-
-        // Show pressed state (visual + position)
-        if (meshRenderer != null && pressedMaterial != null)
-        {
-            meshRenderer.material = pressedMaterial;
-        }
-
-        // Move everything to pressed position
-        transform.localPosition = pressedButtonPosition;
-
-        if (pressVisual != null)
-        {
-            pressVisual.localPosition = pressedPressPosition;
-        }
-
-        if (buttonText != null)
-        {
-            buttonText.localPosition = pressedTextPosition;
-        }
-
-        // Wait a moment
-        yield return new WaitForSeconds(0.2f);
-
-        // Restore based on current state
-        if (meshRenderer != null)
-        {
-            if (!buttonEnabled && disabledMaterial != null)
-            {
-                meshRenderer.material = disabledMaterial;
-            }
-            else
-            {
-                meshRenderer.material = isHovered ? hoveredMaterial : originalMaterial;
-            }
-        }
-
-        // Restore positions based on hover state
-        if (isHovered && buttonEnabled)
-        {
-            float hoverAmount = 0.3f;
-            transform.localPosition = Vector3.Lerp(originalButtonPosition, pressedButtonPosition, hoverAmount);
-
-            if (pressVisual != null)
-            {
-                pressVisual.localPosition = Vector3.Lerp(originalPressPosition, pressedPressPosition, hoverAmount);
-            }
-
-            if (buttonText != null)
-            {
-                buttonText.localPosition = Vector3.Lerp(originalTextPosition, pressedTextPosition, hoverAmount);
-            }
-        }
-        else
-        {
-            transform.localPosition = originalButtonPosition;
-
-            if (pressVisual != null)
-            {
-                pressVisual.localPosition = originalPressPosition;
-            }
-
-            if (buttonText != null)
-            {
-                buttonText.localPosition = originalTextPosition;
-            }
-        }
-    }
-
-    // Add these methods to   SimpleTeleportButton.cs class
-
-    // NEW: Method to force setup as a bus button (called by ScenarioManager)
     public void SetupAsBusButton()
     {
         buttonFunction = ButtonFunction.SpawnBus;
-
-        // Force find the bus spawner
         if (busSpawner == null)
         {
             busSpawner = FindObjectOfType<BusSpawnerSimple>();
         }
-
-        // Force setup
-        isSetup = false; // Reset setup flag to force re-setup
+        isSetup = false;
         SetupButton();
-
         Debug.Log($"Button {gameObject.name} configured as bus button");
     }
 
-    // NEW: Method to clear runtime assignments when scene changes
     public void ClearRuntimeAssignments()
     {
-        // Check if current references are still valid
         if (busSpawner != null)
         {
             BusSpawnerSimple currentSpawner = FindObjectOfType<BusSpawnerSimple>();
@@ -672,7 +640,6 @@ public class SimpleTeleportButton : MonoBehaviour
             {
                 busSpawner = null;
                 isSetup = false;
-                Debug.Log("Cleared stale bus spawner reference");
             }
         }
 
@@ -683,19 +650,8 @@ public class SimpleTeleportButton : MonoBehaviour
             {
                 scenarioManager = null;
                 isSetup = false;
-                Debug.Log("Cleared stale scenario manager reference");
             }
         }
-    }
-
-    // NEW: Check if this button should be a bus button based on naming convention
-    private bool ShouldBeBusButton()
-    {
-        string name = gameObject.name.ToLower();
-        return name.Contains("bus") ||
-               name.Contains("stop") ||
-               name.Contains("call") ||
-               gameObject.CompareTag("BusButton"); // If you want to use tags
     }
 
     private void OnDestroy()

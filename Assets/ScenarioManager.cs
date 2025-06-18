@@ -1103,14 +1103,144 @@ public class ScenarioManager : MonoBehaviour
     /// </summary>
     public void QuitApplication()
     {
-        Debug.Log("Quitting application");
+        Debug.Log("ScenarioManager: Quitting application with proper XR cleanup");
+        StartCoroutine(QuitApplicationWithXRCleanup());
+    }
+
+    private IEnumerator QuitApplicationWithXRCleanup()
+    {
+        Debug.Log("Starting application quit sequence...");
+
+        // Step 1: Stop data collection if active
+        if (dataCollector != null)
+        {
+            try
+            {
+                dataCollector.StopRecording();
+                // Force save data before quitting
+                var saveMethod = dataCollector.GetType().GetMethod("SaveAllData",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (saveMethod != null)
+                {
+                    saveMethod.Invoke(dataCollector, null);
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"Data collection cleanup failed: {e.Message}");
+            }
+
+            // Move yield outside try-catch
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        // Step 2: Clean up RDW experiment
+        if (rdwGlobalConfiguration != null)
+        {
+            rdwGlobalConfiguration.experimentInProgress = false;
+            rdwGlobalConfiguration.readyToStart = false;
+        }
+
+        // Step 3: Clean up traffic system
+        if (AITrafficController.Instance != null)
+        {
+            try
+            {
+                AITrafficController.Instance.MoveAllCarsToPool();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"Traffic cleanup failed: {e.Message}");
+            }
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+#if UNITY_XR_MANAGEMENT
+    // Step 4: XR cleanup - FIXED: Move all yields outside try-catch
+    bool xrStopSucceeded = false;
+    bool xrDeinitSucceeded = false;
+    
+    try
+    {
+        var xrManager = UnityEngine.XR.Management.XRGeneralSettings.Instance?.Manager;
+        if (xrManager != null && xrManager.isInitializationComplete)
+        {
+            Debug.Log("Stopping XR subsystems...");
+            xrManager.StopSubsystems();
+            xrStopSucceeded = true;
+        }
+    }
+    catch (System.Exception e)
+    {
+        Debug.LogWarning($"XR stop error: {e.Message}");
+    }
+    
+    // Yield outside try-catch
+    if (xrStopSucceeded)
+    {
+        yield return new WaitForSeconds(0.5f);
+    }
+    
+    try
+    {
+        var xrManager = UnityEngine.XR.Management.XRGeneralSettings.Instance?.Manager;
+        if (xrManager != null && xrStopSucceeded)
+        {
+            Debug.Log("Deinitializing XR...");
+            xrManager.DeinitializeLoader();
+            xrDeinitSucceeded = true;
+        }
+    }
+    catch (System.Exception e)
+    {
+        Debug.LogWarning($"XR deinit error: {e.Message}");
+    }
+    
+    // Yield outside try-catch
+    if (xrDeinitSucceeded)
+    {
+        yield return new WaitForSeconds(0.5f);
+    }
+#endif
+
+        // Step 5: Platform-specific quit
+        Debug.Log("Executing platform quit...");
 
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
-#else
+#elif UNITY_ANDROID
+    // For Quest/Oculus - FIXED: Move yield outside try-catch
+    bool androidQuitSucceeded = false;
+    
+    try
+    {
+        using (AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+        {
+            AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+            currentActivity.Call("finish");
+            androidQuitSucceeded = true;
+        }
+    }
+    catch (System.Exception e)
+    {
+        Debug.LogWarning($"Android quit failed: {e.Message}");
+        androidQuitSucceeded = false;
+    }
+    
+    // Move yield outside try-catch
+    yield return new WaitForSeconds(0.1f);
+    
+    // If Android quit failed, use fallback
+    if (!androidQuitSucceeded)
+    {
         Application.Quit();
+    }
+#else
+    Application.Quit();
 #endif
     }
+
 
 
     /// <summary>

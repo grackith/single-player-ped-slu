@@ -35,6 +35,13 @@ public class BusSpawnerSimple : MonoBehaviour
     [Tooltip("Check for arrival every X seconds")]
     public float arrivalCheckInterval = 0.5f;
 
+    [Header("VR Reset Handling")]
+    [Tooltip("Pause bus AI during VR resets to prevent interference")]
+    public bool pauseDuringResets = true;
+    private RedirectionManager redirectionManager;
+    private bool isResetInProgress = false;
+    private float resetEndTime = 0f;
+
     private float timer;
     private AITrafficCar spawnedBus;
     private bool busIsPermanentlyStopped = false;
@@ -52,8 +59,14 @@ public class BusSpawnerSimple : MonoBehaviour
 
         Debug.Log($"🛑 FORCING BUS TO STOP (BUT STAY VISIBLE): {spawnedBus.name}");
 
+        if (IsSystemPaused())
+        {
+            Debug.Log("Reset in progress - skipping AI disable (reset protection active)");
+            busIsPermanentlyStopped = true;
+            return;
+        }
+
         // STEP 1: Let the traffic system stop it naturally first
-        // Only call StopDriving if the bus is still driving
         if (spawnedBus.isDriving)
         {
             spawnedBus.StopDriving();
@@ -87,6 +100,122 @@ public class BusSpawnerSimple : MonoBehaviour
 
             Debug.Log($"✅ Bus completely stopped at {spawnedBus.transform.position}");
         }
+    }
+
+    private void FindRedirectionManager()
+    {
+        if (redirectionManager == null)
+        {
+            redirectionManager = FindObjectOfType<RedirectionManager>();
+            if (redirectionManager != null)
+            {
+                Debug.Log("BusSpawner: Found RedirectionManager for reset detection");
+            }
+            else
+            {
+                Debug.LogWarning("BusSpawner: No RedirectionManager found - reset detection disabled");
+            }
+        }
+    }
+
+    private void CheckResetStatus()
+    {
+        if (redirectionManager == null) return;
+
+        bool wasInReset = isResetInProgress;
+        isResetInProgress = redirectionManager.inReset;
+
+        // Handle reset start - immediately clear bus states
+        if (!wasInReset && isResetInProgress && pauseDuringResets)
+        {
+            Debug.Log("BusSpawner: Reset started - protecting bus from interference");
+            ProtectBusDuringReset();
+        }
+
+        // Handle reset end
+        if (wasInReset && !isResetInProgress)
+        {
+            resetEndTime = Time.time + 0.5f; // Wait 0.5s after reset ends
+            Debug.Log("BusSpawner: Reset ended - will resume bus AI after delay");
+        }
+    }
+
+    private bool IsSystemPaused()
+    {
+        if (!pauseDuringResets) return false;
+
+        // Pause during active reset
+        if (isResetInProgress) return true;
+
+        // Pause during post-reset delay
+        if (Time.time < resetEndTime) return true;
+
+        return false;
+    }
+
+    private void ProtectBusDuringReset()
+    {
+        if (spawnedBus == null) return;
+
+        Debug.Log("🛡️ PROTECTING BUS during VR reset");
+
+        // Temporarily disable AI processing to prevent interference
+        spawnedBus.DisableAIProcessing();
+
+        // Stop the bus safely
+        if (spawnedBus.isDriving)
+        {
+            spawnedBus.StopDriving();
+        }
+
+        // Clear any tracking states in traffic controller
+        if (spawnedBus.assignedIndex >= 0 && AITrafficController.Instance != null)
+        {
+            AITrafficController.Instance.Set_CanProcess(spawnedBus.assignedIndex, false);
+            AITrafficController.Instance.Set_IsDrivingArray(spawnedBus.assignedIndex, false);
+        }
+
+        // Stabilize physics
+        Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
+        if (busRb != null)
+        {
+            busRb.velocity = Vector3.zero;
+            busRb.angularVelocity = Vector3.zero;
+            busRb.drag = 999f;
+            busRb.angularDrag = 999f;
+        }
+    }
+
+    private void RestoreBusAfterReset()
+    {
+        if (spawnedBus == null || busIsPermanentlyStopped) return;
+
+        Debug.Log("🔄 RESTORING BUS after VR reset");
+
+        // Re-enable AI processing
+        spawnedBus.EnableAIProcessing();
+
+        // Restore physics
+        Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
+        if (busRb != null)
+        {
+            busRb.drag = 0.3f; // Normal drag
+            busRb.angularDrag = 3f; // Normal angular drag
+        }
+
+        // Restore traffic controller state
+        if (spawnedBus.assignedIndex >= 0 && AITrafficController.Instance != null)
+        {
+            AITrafficController.Instance.Set_CanProcess(spawnedBus.assignedIndex, true);
+
+            if (!busIsPermanentlyStopped)
+            {
+                AITrafficController.Instance.Set_IsDrivingArray(spawnedBus.assignedIndex, true);
+                spawnedBus.StartDriving();
+            }
+        }
+
+        Debug.Log("Bus restoration complete");
     }
 
     private void DebugBusState()
@@ -198,6 +327,9 @@ public class BusSpawnerSimple : MonoBehaviour
         busIsPermanentlyStopped = false;
         finalWaypointConfigured = false;
 
+        // NEW: Find RedirectionManager for reset detection
+        FindRedirectionManager();
+
         // Initialize route connections on start
         if (initialRoute != null && intersectionRoute != null && busStopRoute != null)
         {
@@ -215,6 +347,32 @@ public class BusSpawnerSimple : MonoBehaviour
 
     private void Update()
     {
+        // NEW: Check for reset status first
+        CheckResetStatus();
+
+        // Skip normal processing if system is paused during reset
+        if (IsSystemPaused())
+        {
+            // During reset, just keep bus stable
+            if (spawnedBus != null)
+            {
+                Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
+                if (busRb != null && busRb.velocity.magnitude > 0.1f)
+                {
+                    busRb.velocity = Vector3.zero;
+                    busRb.angularVelocity = Vector3.zero;
+                }
+            }
+            return; // Skip all other processing during reset
+        }
+
+        // Check if we need to restore bus after reset
+        if (Time.time > resetEndTime && resetEndTime > 0 && spawnedBus != null && !busIsPermanentlyStopped)
+        {
+            RestoreBusAfterReset();
+            resetEndTime = 0; // Clear the timer
+        }
+
         // Handle timer-based spawning (existing logic)
         if (!hasSpawned && !spawnTriggeredByButton && timer > 0)
         {

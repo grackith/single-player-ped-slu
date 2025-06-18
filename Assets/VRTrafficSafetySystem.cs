@@ -45,8 +45,8 @@ public class VRTrafficSafetySystem : MonoBehaviour
     [Tooltip("Pause safety system during resets to prevent car interference")]
     public bool pauseDuringResets = true;
     [Tooltip("Time to wait after reset ends before resuming safety checks")]
-    [Range(0.1f, 2f)]
-    public float postResetDelay = 0.5f;
+    [Range(0.5f, 3f)]  // Increased minimum
+    public float postResetDelay = 1.5f;  //  Increased default
     [Tooltip("Maximum distance change per frame to detect rapid position changes")]
     [Range(1f, 10f)]
     public float maxPositionChangeThreshold = 5f;
@@ -113,13 +113,19 @@ public class VRTrafficSafetySystem : MonoBehaviour
         Debug.Log($"VRTrafficSafetySystem initialized - monitoring {carList.Length} cars");
     }
 
-    void Update()
+    private void Update()
     {
         if (!enableSafetySystem || playerTransform == null || trafficController == null)
             return;
 
         // Check for reset status
         CheckResetStatus();
+
+        // ✅ Add this debug info
+        if (showDebug && IsSystemPaused())
+        {
+            Debug.Log($"System paused: inReset={isResetInProgress}, postResetDelay={Time.time < resetEndTime}");
+        }
 
         // Only process cars if not in reset or paused
         if (!IsSystemPaused() && Time.time - lastCheckTime >= checkInterval)
@@ -167,7 +173,7 @@ public class VRTrafficSafetySystem : MonoBehaviour
         {
             isResetInProgress = redirectionManager.inReset;
         }
-        else
+        else if (!isResetInProgress)  // ✅ Only use fallback if not already in reset
         {
             // Fallback: detect rapid position changes
             Vector3 currentPos = GetPlayerPosition();
@@ -184,6 +190,18 @@ public class VRTrafficSafetySystem : MonoBehaviour
             }
         }
 
+        //  NEW: Handle reset start - IMMEDIATELY clear all car states
+        if (!wasInReset && isResetInProgress && pauseDuringResets)
+        {
+            if (showDebug)
+            {
+                Debug.Log("Reset started - pausing safety system and clearing car states");
+            }
+
+            // CRITICAL: Clear all car states immediately when reset starts
+            ClearAllCarStatesImmediately();
+        }
+
         // Handle reset end
         if (wasInReset && !isResetInProgress)
         {
@@ -193,15 +211,44 @@ public class VRTrafficSafetySystem : MonoBehaviour
                 Debug.Log($"Reset ended - pausing safety system for {postResetDelay}s");
             }
         }
+    }
 
-        // Handle reset start
-        if (!wasInReset && isResetInProgress && pauseDuringResets)
+
+    private void ClearAllCarStatesImmediately()
+    {
+        if (showDebug)
         {
-            if (showDebug)
+            Debug.Log("🔧 CLEARING ALL CAR STATES due to reset start");
+        }
+
+        // Force resume all affected cars immediately
+        foreach (var kvp in originalSpeeds)
+        {
+            int carIndex = kvp.Key;
+
+            if (carIndex >= 0 && carIndex < carList.Length && carList[carIndex] != null)
             {
-                Debug.Log("Reset started - pausing safety system");
+                AITrafficCar car = carList[carIndex];
+
+                // Restore everything immediately
+                trafficController.Set_CanProcess(carIndex, true);
+                trafficController.SetTopSpeed(carIndex, kvp.Value);
+                car.SetTopSpeed(kvp.Value);
+                car.StartDriving();
+                trafficController.Set_IsDrivingArray(carIndex, true);
+
+                if (showDebug)
+                {
+                    Debug.Log($"Cleared state for car: {car.name}");
+                }
             }
         }
+
+        // Clear all tracking dictionaries
+        carStoppedByPlayer.Clear();
+        carSlowedByPlayer.Clear();
+        carStoppedTime.Clear();
+        // Keep originalSpeeds for future use
     }
 
     private bool IsSystemPaused()
