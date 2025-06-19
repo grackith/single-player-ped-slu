@@ -49,7 +49,7 @@ public class ScenarioManager : MonoBehaviour
     public AITrafficWaypointRoute intersectionRoute; // NEW: Intersection route
     public AITrafficWaypointRoute busStopRoute; // Bus stop route
     private Coroutine busSpawnCoroutine;
-    private BusSpawnerSimple BusSpawnerSimple;
+    private EnhancedBusSpawner busSpawner;
 
     [Header("Bus Stop Button Integration")]
     public bool enableBusStopButtons = true;
@@ -262,20 +262,19 @@ public class ScenarioManager : MonoBehaviour
         }
 
         // Find or create the bus spawner
-        BusSpawnerSimple = FindObjectOfType<BusSpawnerSimple>();
-        if (BusSpawnerSimple == null)
+        busSpawner = FindObjectOfType<EnhancedBusSpawner>();
+        if (busSpawner == null)
         {
-            Debug.LogWarning("No BusSpawnerSimple found in scene, creating one");
-            GameObject spawnerObj = new GameObject("BusSpawnerSimple");
-            BusSpawnerSimple = spawnerObj.AddComponent<BusSpawnerSimple>();
+            Debug.LogWarning("No EnhancedBusSpawner found in scene, creating one");
+            GameObject spawnerObj = new GameObject("EnhancedBusSpawner");
+            busSpawner = spawnerObj.AddComponent<EnhancedBusSpawner>();
             DontDestroyOnLoad(spawnerObj);
 
             // Assign default values if available
-            BusSpawnerSimple.busPrefab = busPrefab;
-            BusSpawnerSimple.initialRoute = initialRoute;
-            BusSpawnerSimple.intersectionRoute = intersectionRoute;
-            BusSpawnerSimple.busStopRoute = busStopRoute;
-
+            busSpawner.busPrefab = busPrefab;
+            busSpawner.initialRoute = initialRoute;
+            busSpawner.intersectionRoute = intersectionRoute;
+            busSpawner.busStopRoute = busStopRoute;
         }
     }
 
@@ -452,11 +451,13 @@ public class ScenarioManager : MonoBehaviour
     {
         if (isTransitioning) return;
 
-        // Only check inputs every few frames to reduce CPU load
-        if (Time.frameCount % 3 == 0) // Check every 3rd frame
+        // Check scenario inputs EVERY frame for better responsiveness
+        HandleScenarioInputs();
+
+        // Check other inputs every few frames to reduce CPU load
+        if (Time.frameCount % 3 == 0)
         {
             HandleOpenRDWInputs();
-            HandleScenarioInputs();
             HandleDiagnosticInputs();
         }
     }
@@ -478,30 +479,32 @@ public class ScenarioManager : MonoBehaviour
 
     private void HandleScenarioInputs()
     {
-        // Scenario launching with number keys
+        // Scenario launching with number keys - FIXED to match array order
         if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
         {
-            LaunchScenarioByIndex(0);
+            Debug.Log("Key 1 pressed - launching Acclimitization (index 0)");
+            LaunchScenarioByIndex(0); // Acclimitization
         }
         else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
         {
-            LaunchScenarioByIndex(1);
+            Debug.Log("Key 2 pressed - launching light-traffic (index 1)");
+            LaunchScenarioByIndex(1); // light-traffic
         }
         else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
         {
-            LaunchScenarioByIndex(2);
+            Debug.Log("Key 3 pressed - launching medium-traffic (index 2)");
+            LaunchScenarioByIndex(2); // medium-traffic
         }
         else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4))
         {
-            LaunchScenarioByIndex(3);
+            Debug.Log("Key 4 pressed - launching heavy-traffic (index 3)");
+            LaunchScenarioByIndex(3); // heavy-traffic
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5))
-        {
-            LaunchScenarioByIndex(4);
-        }
+        // Remove key 5 since you only have 4 scenarios
         // Emergency controls
         else if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0) || Input.GetKeyDown(KeyCode.Escape))
         {
+            Debug.Log("Emergency key pressed - ending current scenario");
             EndCurrentScenario();
         }
     }
@@ -1016,12 +1019,12 @@ public class ScenarioManager : MonoBehaviour
             Debug.LogError("No AITrafficController instance found!");
         }
 
-        if (BusSpawnerSimple != null)
+        if (busSpawner != null)
         {
-            Debug.Log($"Bus spawner state: {(BusSpawnerSimple.hasSpawned ? "Bus spawned" : "No bus spawned")}");
-            if (BusSpawnerSimple.hasSpawned)
+            Debug.Log($"Bus spawner state: {(busSpawner.hasSpawned ? "Bus spawned" : "No bus spawned")}");
+            if (busSpawner.hasSpawned)
             {
-                BusSpawnerSimple.CheckBusStatus();
+                busSpawner.CheckBusStatus();
             }
         }
     }
@@ -1067,9 +1070,9 @@ public class ScenarioManager : MonoBehaviour
         Debug.Log("EndCurrentScenario called");
 
         // Reset bus spawner
-        if (BusSpawnerSimple != null)
+        if (busSpawner != null)
         {
-            BusSpawnerSimple.Reset();
+            busSpawner.Reset();
         }
 
         // Reset persistent bus button for next scenario
@@ -1455,11 +1458,11 @@ public class ScenarioManager : MonoBehaviour
         }
 
         // Set up bus if needed
-        if (scenario.spawnBus && BusSpawnerSimple != null)
+        if (scenario.spawnBus && busSpawner != null)
         {
             Debug.Log($"Setting up bus spawn with delay: {scenario.busSpawnDelay}");
-            BusSpawnerSimple.Reset();
-            BusSpawnerSimple.TriggerBusSpawn(scenario.busSpawnDelay);
+            busSpawner.Reset();
+            busSpawner.TriggerBusSpawn(scenario.busSpawnDelay);
 
             // CRITICAL: Protect buses from traffic controller interference
             StartCoroutine(ProtectBusesAfterSpawn(scenario.busSpawnDelay + 2f));

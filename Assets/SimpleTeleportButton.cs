@@ -24,7 +24,7 @@ public class SimpleTeleportButton : MonoBehaviour
 
     [Header("Button Function")]
     [SerializeField] public ButtonFunction buttonFunction = ButtonFunction.SmartBusButton;
-    [SerializeField] private BusSpawnerSimple busSpawner;
+    [SerializeField] private EnhancedBusSpawner busSpawner;
 
     // Visual feedback elements
     [SerializeField] private Material defaultMaterial;
@@ -110,17 +110,17 @@ public class SimpleTeleportButton : MonoBehaviour
             Debug.Log($"Auto-detected smart bus button function for {gameObject.name}");
         }
 
-        // Find BusSpawnerSimple for bus-related buttons
+        // Find EnhancedBusSpawner for bus-related buttons
         if (buttonFunction == ButtonFunction.SpawnBus ||
             buttonFunction == ButtonFunction.Both ||
             buttonFunction == ButtonFunction.SmartBusButton)
         {
             if (busSpawner == null)
             {
-                busSpawner = FindObjectOfType<BusSpawnerSimple>();
+                busSpawner = FindObjectOfType<EnhancedBusSpawner>();
                 if (busSpawner == null)
                 {
-                    Debug.LogWarning("BusSpawnerSimple not found yet, will keep trying");
+                    Debug.LogWarning("EnhancedBusSpawner not found yet, will keep trying");
                     return;
                 }
             }
@@ -328,7 +328,7 @@ public class SimpleTeleportButton : MonoBehaviour
 
         if (busSpawner == null)
         {
-            Debug.LogError("No BusSpawnerSimple assigned to smart bus button!");
+            Debug.LogError("No EnhancedBusSpawner assigned to smart bus button!");
             return false;
         }
 
@@ -364,14 +364,14 @@ public class SimpleTeleportButton : MonoBehaviour
         // Use multiple methods to check if bus is at final destination
         bool busAtFinalStop = false;
 
-        // Method 1: Use BusSpawnerSimple's method if available
+        // Method 1: Use EnhancedBusSpawner's method if available
         try
         {
             busAtFinalStop = busSpawner.IsBusAtFinalStop();
         }
         catch (System.Exception e)
         {
-            Debug.LogWarning($"BusSpawnerSimple.IsBusAtFinalStop() failed: {e.Message}");
+            Debug.LogWarning($"EnhancedBusSpawner.IsBusAtFinalStop() failed: {e.Message}");
         }
 
         // Method 2: Direct check of spawned bus
@@ -402,7 +402,7 @@ public class SimpleTeleportButton : MonoBehaviour
     {
         if (busSpawner == null)
         {
-            Debug.LogError("No BusSpawnerSimple assigned to this button!");
+            Debug.LogError("No EnhancedBusSpawner assigned to this button!");
             return false;
         }
 
@@ -580,7 +580,7 @@ public class SimpleTeleportButton : MonoBehaviour
         buttonFunction = ButtonFunction.SmartBusButton;
         if (busSpawner == null)
         {
-            busSpawner = FindObjectOfType<BusSpawnerSimple>();
+            busSpawner = FindObjectOfType<EnhancedBusSpawner>();
         }
         isSetup = false;
         SetupButton();
@@ -624,7 +624,7 @@ public class SimpleTeleportButton : MonoBehaviour
         buttonFunction = ButtonFunction.SpawnBus;
         if (busSpawner == null)
         {
-            busSpawner = FindObjectOfType<BusSpawnerSimple>();
+            busSpawner = FindObjectOfType<EnhancedBusSpawner>();
         }
         isSetup = false;
         SetupButton();
@@ -635,7 +635,7 @@ public class SimpleTeleportButton : MonoBehaviour
     {
         if (busSpawner != null)
         {
-            BusSpawnerSimple currentSpawner = FindObjectOfType<BusSpawnerSimple>();
+            EnhancedBusSpawner currentSpawner = FindObjectOfType<EnhancedBusSpawner>();
             if (currentSpawner != busSpawner)
             {
                 busSpawner = null;

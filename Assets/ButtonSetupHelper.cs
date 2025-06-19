@@ -183,17 +183,15 @@ public class ButtonSetupHelper : MonoBehaviour
     // Automatically set up buttons when the application starts
     private void Start()
     {
-        // In ButtonSetupHelper.Start()
         if (keyMappings.Count == 0 && assignKeyboardShortcuts)
         {
             Debug.Log("Setting up default key mappings");
 
-            // Use regular keyboard number keys (Alpha1-5 are the top row numbers)
+            // FIXED: Use keys 1-4 to match ScenarioManager array order
             keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "acclimitization", keyCode = KeyCode.Alpha1 });
-            //keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "NoTraffic", keyCode = KeyCode.Alpha2 });
-            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "light-traffic", keyCode = KeyCode.Alpha3 });
-            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "medium-traffic", keyCode = KeyCode.Alpha4 });
-            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "heavy-traffic", keyCode = KeyCode.Alpha5 });
+            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "light-traffic", keyCode = KeyCode.Alpha2 });
+            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "medium-traffic", keyCode = KeyCode.Alpha3 });
+            keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "heavy-traffic", keyCode = KeyCode.Alpha4 });
             keyMappings.Add(new ButtonKeyMapping { buttonNameContains = "End", keyCode = KeyCode.Escape });
 
             // Print the mappings to debug log
