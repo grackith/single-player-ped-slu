@@ -351,7 +351,8 @@ public class ScenarioManager : MonoBehaviour
     }
 
 
-    private void PositionVRPlayerAtStart(Vector3 startPosition, Vector3 forwardDirection)
+    // Replace your PositionVRPlayerAtStart method with this simple version
+    private void PositionVRPlayerAtStart(Vector3 groundLevelPosition, Vector3 forwardDirection)
     {
         GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
         if (xrOrigin == null)
@@ -360,31 +361,39 @@ public class ScenarioManager : MonoBehaviour
             return;
         }
 
-        // Get the camera (head) position relative to XR Origin
-        Camera mainCamera = xrOrigin.GetComponentInChildren<Camera>();
-        if (mainCamera == null)
+        // Simply move XR Origin to the ground-level start position
+        // VR will automatically handle the camera height based on user's real height
+        xrOrigin.transform.position = groundLevelPosition;
+
+        // Set rotation to face the desired direction
+        if (forwardDirection != Vector3.zero)
         {
-            Debug.LogError("Main camera not found in XR Origin!");
-            return;
+            forwardDirection.y = 0;
+            forwardDirection.Normalize();
+
+            if (forwardDirection.magnitude > 0.001f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(forwardDirection);
+                xrOrigin.transform.rotation = targetRotation;
+            }
         }
 
-        // Calculate offset between XR Origin and camera
-        Vector3 cameraOffset = mainCamera.transform.position - xrOrigin.transform.position;
-        cameraOffset.y = 0; // Only consider horizontal offset
+        Debug.Log($"VR Player positioned at ground level: {groundLevelPosition}");
+        Debug.Log($"VR system will automatically add user height for camera positioning");
+    }
 
-        // Position XR Origin so camera ends up at start position
-        Vector3 targetXROriginPos = startPosition - cameraOffset;
-        targetXROriginPos.y = startPosition.y - (mainCamera.transform.position.y - xrOrigin.transform.position.y);
+    // Alternative method that explicitly accounts for different ground levels per scenario
+    private void PositionVRPlayerAtGroundLevel(Transform startTransform)
+    {
+        GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
+        if (xrOrigin == null) return;
 
-        xrOrigin.transform.position = targetXROriginPos;
+        // Move XR Origin to exactly where the start position transform is
+        // This should be positioned at ground level in each scenario
+        xrOrigin.transform.position = startTransform.position;
+        xrOrigin.transform.rotation = startTransform.rotation;
 
-        // Set rotation
-        forwardDirection.y = 0;
-        forwardDirection.Normalize();
-        float angle = Mathf.Atan2(forwardDirection.x, forwardDirection.z) * Mathf.Rad2Deg;
-        xrOrigin.transform.rotation = Quaternion.Euler(0, angle, 0);
-
-        Debug.Log($"VR Player positioned: XR Origin at {targetXROriginPos}, Head should be at {startPosition}");
+        Debug.Log($"XR Origin positioned at: {startTransform.position} in scene: {startTransform.gameObject.scene.name}");
     }
 
 

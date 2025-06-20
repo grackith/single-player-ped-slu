@@ -294,55 +294,297 @@ public class EnhancedBusSpawner : MonoBehaviour
         if (!spawnedBus.isDriving && distanceToFinal < arrivalThreshold * 2f)
         {
             Debug.Log($"🚏 Bus reached final stop and stopped naturally! Distance: {distanceToFinal:F2}m");
-            MarkBusAsPermanentlyStopped();
+
+            // Choose ONE of these approaches:
+            MarkBusAsPermanentlyStopped();           // Use the advanced version
+                                                     // MarkBusAsPermanentlyStoppedSimple();     // Use the simple version
+                                                     // MarkBusAsPermanentlyStoppedDisableWheels(); // Use the disable wheels version
         }
     }
+
+    // REPLACE your existing MarkBusAsPermanentlyStopped method with this complete working version:
 
     public void MarkBusAsPermanentlyStopped()
     {
         if (busIsPermanentlyStopped) return;
 
-        Debug.Log("🛑 Marking bus as permanently stopped (STAYING VISIBLE) using proven traffic logic");
+        Debug.Log("🛑 Marking bus as permanently stopped (STAYING VISIBLE) using complete stop logic");
         busIsPermanentlyStopped = true;
 
         if (spawnedBus != null && spawnedBus.assignedIndex >= 0 && AITrafficController.Instance != null)
         {
-            // Use the proven traffic controller stop sequence (but keep bus visible):
             // STEP 1: Stop driving first
             spawnedBus.StopDriving();
 
             // STEP 2: Set controller state to not driving
             AITrafficController.Instance.Set_IsDrivingArray(spawnedBus.assignedIndex, false);
 
-            // STEP 3: Disable AI processing to prevent restart (but keep visible)
+            // STEP 3: Disable AI processing to prevent restart
             AITrafficController.Instance.Set_CanProcess(spawnedBus.assignedIndex, false);
 
-            // STEP 4: Apply physics constraints for stability (but keep bus active and visible)
+            // STEP 4: CRITICAL - Make rigidbody kinematic to stop ALL physics
             Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
             if (busRb != null)
             {
+                busRb.isKinematic = true; // This stops all physics movement
                 busRb.velocity = Vector3.zero;
                 busRb.angularVelocity = Vector3.zero;
                 busRb.drag = 999f;
                 busRb.angularDrag = 999f;
+                Debug.Log("Set bus rigidbody to kinematic - this should stop wheel spinning");
             }
 
-            // IMPORTANT: Do NOT call MoveCarToPool - bus stays visible and in world
+            // STEP 5: Force stop all wheel colliders
+            if (spawnedBus._wheels != null && spawnedBus._wheels.Length > 0)
+            {
+                foreach (var wheel in spawnedBus._wheels)
+                {
+                    if (wheel.collider != null)
+                    {
+                        wheel.collider.motorTorque = 0f;
+                        wheel.collider.brakeTorque = float.MaxValue;
+                        wheel.collider.steerAngle = 0f;
+
+                        // Make wheel collider effectively inactive
+                        wheel.collider.mass = 0.001f;
+
+                        Debug.Log($"Stopped wheel collider: {wheel.collider.name}");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("Bus has no wheels array or empty wheels array!");
+            }
+
+            // STEP 6: Start coroutine to maintain stopped state
+            StartCoroutine(MaintainBusStoppedState());
+
             Debug.Log($"Bus permanently stopped and staying visible at {spawnedBus.transform.position}");
         }
     }
 
+    // ADD this new coroutine to maintain the stopped state:
+    private IEnumerator MaintainBusStoppedState()
+    {
+        while (busIsPermanentlyStopped && spawnedBus != null)
+        {
+            // Keep rigidbody kinematic and motionless
+            Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
+            if (busRb != null)
+            {
+                if (!busRb.isKinematic)
+                {
+                    busRb.isKinematic = true;
+                    Debug.Log("Re-enabled kinematic mode on bus rigidbody");
+                }
+
+                if (busRb.velocity.magnitude > 0.01f || busRb.angularVelocity.magnitude > 0.01f)
+                {
+                    busRb.velocity = Vector3.zero;
+                    busRb.angularVelocity = Vector3.zero;
+                }
+            }
+
+            // Keep wheel colliders stopped
+            if (spawnedBus._wheels != null)
+            {
+                foreach (var wheel in spawnedBus._wheels)
+                {
+                    if (wheel.collider != null)
+                    {
+                        if (wheel.collider.motorTorque != 0f)
+                            wheel.collider.motorTorque = 0f;
+
+                        if (wheel.collider.brakeTorque < 1000f)
+                            wheel.collider.brakeTorque = float.MaxValue;
+
+                        if (Mathf.Abs(wheel.collider.steerAngle) > 0.1f)
+                            wheel.collider.steerAngle = 0f;
+                    }
+
+                    // Keep visual wheels from spinning
+                    if (wheel.meshTransform != null)
+                    {
+                        Vector3 euler = wheel.meshTransform.localEulerAngles;
+                        // Stop X rotation (forward/backward spinning) but allow Y (steering)
+                        euler.x = 0f;
+                        euler.z = 0f;
+                        wheel.meshTransform.localEulerAngles = euler;
+                    }
+                }
+            }
+
+            // Also ensure controller arrays stay stopped
+            if (spawnedBus.assignedIndex >= 0)
+            {
+                try
+                {
+                    AITrafficController.Instance.Set_IsDrivingArray(spawnedBus.assignedIndex, false);
+                    AITrafficController.Instance.Set_CanProcess(spawnedBus.assignedIndex, false);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"Error maintaining controller state: {ex.Message}");
+                }
+            }
+
+            yield return new WaitForSeconds(0.1f); // Check every 0.1 seconds instead of every frame
+        }
+
+        Debug.Log("Stopped maintaining bus stopped state");
+    }
+
+    // UPDATE your existing KeepBusStoppedAtPosition method to this simpler version:
     private void KeepBusStoppedAtPosition()
     {
         if (spawnedBus == null) return;
+
+        // The MaintainBusStoppedState coroutine handles most of this now
+        // This method is called from Update, so just do basic checks
 
         Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
         if (busRb != null && busRb.velocity.magnitude > 0.1f)
         {
             busRb.velocity = Vector3.zero;
             busRb.angularVelocity = Vector3.zero;
+
+            if (!busRb.isKinematic)
+            {
+                busRb.isKinematic = true;
+                Debug.Log("Emergency: Re-enabled kinematic mode on bus");
+            }
         }
     }
+
+    public void MarkBusAsPermanentlyStoppedSimple()
+    {
+        if (busIsPermanentlyStopped) return;
+
+        Debug.Log("🛑 Marking bus as permanently stopped with simplified approach");
+        busIsPermanentlyStopped = true;
+
+        if (spawnedBus != null && spawnedBus.assignedIndex >= 0 && AITrafficController.Instance != null)
+        {
+            int busIndex = spawnedBus.assignedIndex;
+
+            // STEP 1: Stop driving and disable AI processing
+            spawnedBus.StopDriving();
+            AITrafficController.Instance.Set_IsDrivingArray(busIndex, false);
+            AITrafficController.Instance.Set_CanProcess(busIndex, false);
+
+            // STEP 2: Make rigidbody kinematic to prevent ALL physics
+            Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
+            if (busRb != null)
+            {
+                busRb.isKinematic = true; // This is the key - prevents all physics
+                busRb.velocity = Vector3.zero;
+                busRb.angularVelocity = Vector3.zero;
+            }
+
+            // STEP 3: Stop all wheel colliders
+            if (spawnedBus._wheels != null)
+            {
+                foreach (var wheel in spawnedBus._wheels)
+                {
+                    if (wheel.collider != null)
+                    {
+                        wheel.collider.motorTorque = 0f;
+                        wheel.collider.brakeTorque = float.MaxValue;
+                        wheel.collider.steerAngle = 0f;
+
+                        // CRITICAL: Make each wheel collider effectively disabled
+                        wheel.collider.mass = 0.001f;
+                    }
+                }
+            }
+
+            // STEP 4: Visual wheel stop - freeze current rotation
+            if (spawnedBus._wheels != null)
+            {
+                foreach (var wheel in spawnedBus._wheels)
+                {
+                    if (wheel.meshTransform != null)
+                    {
+                        // Store current rotation and keep it there
+                        Quaternion currentRotation = wheel.meshTransform.localRotation;
+                        StartCoroutine(MaintainWheelRotation(wheel.meshTransform, currentRotation));
+                    }
+                }
+            }
+
+            Debug.Log($"Bus stopped with simplified approach at {spawnedBus.transform.position}");
+        }
+    }
+
+    // Helper coroutine to maintain wheel visual rotation
+    private IEnumerator MaintainWheelRotation(Transform wheelTransform, Quaternion targetRotation)
+    {
+        while (busIsPermanentlyStopped && wheelTransform != null)
+        {
+            // Keep the wheel at the exact rotation when it stopped
+            wheelTransform.localRotation = targetRotation;
+            yield return null;
+        }
+    }
+
+    // ALTERNATIVE: Even simpler approach - disable wheel mesh renderers
+    public void MarkBusAsPermanentlyStoppedDisableWheels()
+    {
+        if (busIsPermanentlyStopped) return;
+
+        Debug.Log("🛑 Marking bus as permanently stopped by disabling wheel rendering");
+        busIsPermanentlyStopped = true;
+
+        if (spawnedBus != null && spawnedBus.assignedIndex >= 0 && AITrafficController.Instance != null)
+        {
+            int busIndex = spawnedBus.assignedIndex;
+
+            // Standard stopping
+            spawnedBus.StopDriving();
+            AITrafficController.Instance.Set_IsDrivingArray(busIndex, false);
+            AITrafficController.Instance.Set_CanProcess(busIndex, false);
+
+            // Make rigidbody kinematic
+            Rigidbody busRb = spawnedBus.GetComponent<Rigidbody>();
+            if (busRb != null)
+            {
+                busRb.isKinematic = true;
+                busRb.velocity = Vector3.zero;
+                busRb.angularVelocity = Vector3.zero;
+            }
+
+            // SIMPLE SOLUTION: Hide the wheel meshes entirely
+            if (spawnedBus._wheels != null)
+            {
+                foreach (var wheel in spawnedBus._wheels)
+                {
+                    if (wheel.meshTransform != null)
+                    {
+                        // Option A: Disable the wheel mesh
+                        MeshRenderer wheelRenderer = wheel.meshTransform.GetComponent<MeshRenderer>();
+                        if (wheelRenderer != null)
+                        {
+                            wheelRenderer.enabled = false;
+                        }
+
+                        // Option B: Set a fixed rotation
+                        wheel.meshTransform.localRotation = Quaternion.identity;
+                    }
+
+                    // Stop wheel collider
+                    if (wheel.collider != null)
+                    {
+                        wheel.collider.enabled = false; // Completely disable physics
+                    }
+                }
+            }
+
+            Debug.Log($"Bus stopped with disabled wheels at {spawnedBus.transform.position}");
+        }
+    }
+
+    
 
     // Integration methods for scenario management
     public void SpawnBusImmediately()
