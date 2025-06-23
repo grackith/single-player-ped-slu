@@ -9,6 +9,8 @@ public class StatisticsLogger : MonoBehaviour
     [Tooltip("Reset exceeds this value will make data invalid")]
     public int MaxResetCount = 1000; // reset exceeds this value will make data invalid
     private GlobalConfiguration globalConfiguration;
+    
+
     public class ResultOfTrial
     {
         public int endState;
@@ -192,6 +194,8 @@ public class StatisticsLogger : MonoBehaviour
     //the logging state
     enum LoggingState { not_started, logging, paused, complete };
     LoggingState state = LoggingState.not_started;
+
+    public bool IsLogging => state == LoggingState.logging;
 
     void InitializeAllValues()
     {

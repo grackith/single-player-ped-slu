@@ -1939,6 +1939,35 @@ public class RedirectionManager : MonoBehaviour
         }
     }
 
+    // Add this method to RedirectionManager
+    private void LogRedirectionToStatistics(float translationGain, float rotationGain, float curvatureGain,
+        Vector3 translationApplied, float rotationApplied)
+    {
+        if (globalConfiguration?.statisticsLogger != null && movementManager != null)
+        {
+            var logger = globalConfiguration.statisticsLogger;
+            int userId = movementManager.avatarId;
+
+            // Log translation gain if applied
+            if (translationGain != 1.0f && translationApplied.magnitude > 0.001f)
+            {
+                logger.Event_Translation_Gain(userId, translationGain, translationApplied);
+            }
+
+            // Log rotation gain if applied  
+            if (rotationGain != 1.0f && Mathf.Abs(rotationApplied) > 0.001f)
+            {
+                logger.Event_Rotation_Gain(userId, rotationGain, rotationApplied);
+            }
+
+            // Log curvature gain if applied
+            if (curvatureGain != 1.0f && Mathf.Abs(rotationApplied) > 0.001f)
+            {
+                logger.Event_Curvature_Gain(userId, curvatureGain, rotationApplied);
+            }
+        }
+    }
+
 
     public void UpdateRedirector(System.Type redirectorType)
     {

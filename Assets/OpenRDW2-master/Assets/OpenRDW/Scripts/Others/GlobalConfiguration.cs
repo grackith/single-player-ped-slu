@@ -1083,6 +1083,9 @@ public class GlobalConfiguration : MonoBehaviour
 
     public void MakeOneStepRedirection()
     {
+
+        Debug.Log($"MakeOneStepRedirection called - avatarCount: {redirectedAvatars.Count}, experimentInProgress: {experimentInProgress}");
+
         bool touchWaypoint = false;
         bool triggerSyncReset = false;
 
@@ -1130,6 +1133,9 @@ public class GlobalConfiguration : MonoBehaviour
         {
             redirectedAvatars[avatarIdSortedFromHighPriorityToLow[i]].GetComponent<RedirectionManager>().MakeOneStepRedirection();
         }
+
+        Debug.Log($"Redirection step completed, is logging: {statisticsLogger.IsLogging}");
+
 
         // Log data
         statisticsLogger.UpdateStats();
@@ -2832,6 +2838,27 @@ public class GlobalConfiguration : MonoBehaviour
 
 
         return avatarRoot;
+    }
+
+    void OnApplicationQuit()
+    {
+        Debug.Log("Application quitting - checking if data needs to be saved...");
+
+        if (statisticsLogger != null && statisticsLogger.IsLogging)
+        {
+            Debug.Log("Auto-saving experiment data on application quit...");
+            EndExperiment(1); // Manual termination - this triggers all the proper save logic
+        }
+    }
+
+    void OnDestroy()
+    {
+        // Backup in case OnApplicationQuit doesn't trigger in editor
+        if (statisticsLogger != null && statisticsLogger.IsLogging)
+        {
+            Debug.Log("GlobalConfiguration destroyed - attempting emergency data save...");
+            EndExperiment(1);
+        }
     }
 
 
