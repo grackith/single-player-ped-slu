@@ -600,7 +600,7 @@ public class EnhancedVRTrafficSafetySystem : MonoBehaviour
             Debug.Log("🔧 CLEARING ALL CAR STATES due to VR reset start - using your proven resume logic with traffic light preservation");
         }
 
-        // Use your original proven logic for resuming all affected cars
+
         foreach (var kvp in originalSpeeds)
         {
             int carIndex = kvp.Key;
@@ -609,7 +609,7 @@ public class EnhancedVRTrafficSafetySystem : MonoBehaviour
             {
                 AITrafficCar car = carList[carIndex];
 
-                // Your proven immediate resume logic:
+            
                 // STEP 1: Re-enable AI processing IMMEDIATELY
                 trafficController.Set_CanProcess(carIndex, true);
 
@@ -689,7 +689,7 @@ public class EnhancedVRTrafficSafetySystem : MonoBehaviour
             {
                 AITrafficCar car = carList[carIndex];
 
-                // Use your proven immediate resume logic:
+            
                 trafficController.Set_CanProcess(carIndex, true);
                 trafficController.SetTopSpeed(carIndex, kvp.Value);
                 car.SetTopSpeed(kvp.Value);
@@ -716,12 +716,10 @@ public class EnhancedVRTrafficSafetySystem : MonoBehaviour
         if (trafficController == null)
             return;
 
-        // Use your proven resume logic when safety system is disabled
         foreach (var kvp in originalSpeeds)
         {
             int carIndex = kvp.Key;
 
-            // Your proven immediate resume sequence:
             trafficController.Set_CanProcess(carIndex, true);
             trafficController.Set_IsDrivingArray(carIndex, true);
             trafficController.SetTopSpeed(carIndex, kvp.Value);

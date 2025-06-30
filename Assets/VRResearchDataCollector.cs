@@ -90,7 +90,7 @@ public class VRResearchDataCollector : MonoBehaviour
     public bool useRealEyeTracking = true; // Toggle between real and simulated eye tracking
 
 
-    // Also make sure your VehicleTrackingData class has the lastPosition field:
+   
     [System.Serializable]
     public class VehicleTrackingData
     {
@@ -395,9 +395,7 @@ public class VRResearchDataCollector : MonoBehaviour
     }
 
 
-    // Update your SetupVehicleTracking to properly initialize lastPosition:
 
-    // Replace your SetupVehicleTracking method with this version that finds ACTIVE instances:
 
     void SetupVehicleTracking()
     {
@@ -661,7 +659,7 @@ public class VRResearchDataCollector : MonoBehaviour
         participantDataBuilder.AppendLine(line.ToString());
     }
 
-    // Replace your RecordVehicleData method with this fixed version:
+
 
     void RecordVehicleData()
     {

@@ -843,7 +843,7 @@ public class TrackingSpaceGenerator
     {
         Debug.Log("Creating default tracking space");
 
-        // Create a default 4.5m x 12.5m rectangular space (matching your file content)
+        // Create a default 4.5m x 12.5m rectangular space 
         var defaultTrackingSpace = new List<Vector2>
     {
         new Vector2(2.25f, 6.25f),   // Front Right

@@ -351,7 +351,7 @@ public class ScenarioManager : MonoBehaviour
     }
 
 
-    // Replace your PositionVRPlayerAtStart method with this simple version
+    
     private void PositionVRPlayerAtStart(Vector3 groundLevelPosition, Vector3 forwardDirection)
     {
         GameObject xrOrigin = GameObject.Find("XR Origin Hands (XR Rig)");
@@ -2071,8 +2071,7 @@ public class ScenarioManager : MonoBehaviour
     }
     private void PositionBusButtonForScenario(SimpleTeleportButton busButton, Scenario scenario)
     {
-        // You can customize this based on your needs
-        // For now, just ensure it's active and visible
+
 
         if (busButton.gameObject.activeSelf == false)
         {
@@ -2080,7 +2079,7 @@ public class ScenarioManager : MonoBehaviour
         }
 
         // Optional: Move button to a specific location for each scenario
-        // This depends on your scene layout
+
         /*
         if (scenario.playerStartPosition != null)
         {

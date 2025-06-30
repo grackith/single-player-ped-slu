@@ -57,7 +57,7 @@ public abstract class Resetter : MonoBehaviour
 
 
     // Manually update arrow's position and direction and perform the endreset test
-    // Find the UpdatePanel method in Resetter.cs (around line 73) and replace it with:
+    
 
     public void UpdatePanel()
     {

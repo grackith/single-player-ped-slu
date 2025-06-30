@@ -2335,7 +2335,6 @@
                     frontHitDistanceNL[i] = frontSensorLengthNL[i];
                 }
 
-                // Keep your existing left and right sensor processing as-is:
                 // Process left sensor results
                 leftHitNL[i] = leftBoxcastResults[i].collider == null ? false : true;
                 if (leftHitNL[i])

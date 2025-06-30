@@ -302,8 +302,7 @@ public class EnhancedBusSpawner : MonoBehaviour
         }
     }
 
-    // REPLACE your existing MarkBusAsPermanentlyStopped method with this complete working version:
-
+    
     public void MarkBusAsPermanentlyStopped()
     {
         if (busIsPermanentlyStopped) return;
@@ -435,7 +434,6 @@ public class EnhancedBusSpawner : MonoBehaviour
         Debug.Log("Stopped maintaining bus stopped state");
     }
 
-    // UPDATE your existing KeepBusStoppedAtPosition method to this simpler version:
     private void KeepBusStoppedAtPosition()
     {
         if (spawnedBus == null) return;
